@@ -7,13 +7,12 @@ management tool.
 
 **Prototype:** https://claude.ai/artifact/5W2nLqzFLDxhEUUsMzkZyZ
 
-This folder is a working prototype, not the product. It lives here to be under
-version control and to be easy to show; it is written to be lifted out into its
-own repo and Netlify site (see *Splitting it out*). Nothing here is wired into
-the Impact Suite, and `netlify.toml`'s build-ignore rule does not watch this
-path, so changes here never rebuild a client site.
+This folder lifts out into its own repo and Netlify site (see *Splitting it
+out*). Nothing here imports from the Impact Suite, and `netlify.toml`'s
+build-ignore rule does not watch this path, so changes here never rebuild a
+client site.
 
-## The four sections
+## The five sections
 
 | § | Section | What it replaces |
 |---|---|---|
@@ -21,49 +20,109 @@ path, so changes here never rebuild a client site.
 | 2 | The plan | The board PDF |
 | 3 | Findings | The 60-page response appendix |
 | 4 | Workplan | The spreadsheet, and ClickUp/Asana for clients without one |
+| 5 | Dashboard | The status slide somebody rebuilds every quarter |
 
-## The thing that makes it not just four documents in a trench coat
+Navigation is two layers. The rail (or the tab strip on a phone) picks the
+section; the bar under the masthead picks the scope **within** it — the whole
+plan or one strategic priority — and every count, chart and export below obeys
+it. In §1 and §3 that second layer carries sub-views and the SWOT filter
+instead.
 
-Every workplan task names the objective it serves; every objective names the
-findings that produced it, with live source counts. So a task opens onto
-"this exists because 49 of 105 people said so." Clicking a chip anywhere jumps
-to that finding; a finding lists the objectives it drives. That chain is the
-reason this beats a PDF plus a spreadsheet plus a ClickUp board — none of those
-three can point at the other two.
+## Taxonomy
 
-The counts in §2 are read from the §3 dataset at render time, not typed in. If
-the findings change, the plan's citations change with them.
+```
+Strategic priority   P1   "Life Groups that multiply"      — carries the KPIs
+  Initiative         1.1  "Define what a Life Group is for"
+    Task             T-102  "Draft the one-page charter"
+      Subtask        T-102.1  "Purpose statement"
+```
 
-## Content model
+A **subtask is a task with a parent** — one table, one status vocabulary, one
+set of permissions, rather than a second entity that needs all three again.
+Nesting stops at one level on purpose: a subtask of a subtask is a project plan
+pretending to be a checklist.
 
-Three files, and only one of them is product:
+KPIs hang off the **priority**, not the initiative, matching how these get built
+in Asana today (a KPIs section at the top of each priority project).
 
-- `index.html` — the product. Contains no client names or content.
-- `data/plan.js` — `window.PORTAL`: client, phases, scope, plan (pillars →
-  objectives → measures), and the seed workplan. One per client.
-- `data/findings.js` — `window.FINDINGS`: themes with source counts and a
-  deduplicated quote pool. Generated, not hand-edited.
+## The thing that makes it not five documents in a trench coat
 
-`gen-findings.mjs` builds `data/findings.js` from a SWOT Explorer export. The
-explorer repeated every survey quote inside each theme that cited it; this
-stores each quote once and has themes reference it by index (680 KB → 322 KB).
+Every task names the initiative it serves; every initiative names the findings
+that produced it, with live source counts; every finding lists the initiatives
+it drives. So a task opens onto "this exists because 49 of 105 people said so."
+
+The counts in §2 are read from the §3 dataset at render time, not typed in.
+Change the findings and the plan's citations change with them.
+
+## Accounts and roles
+
+Three roles, per portal rather than global — a consultant runs many
+engagements, and a board member of one client is not a board member of the next:
+
+| Role | Reads | Writes |
+|---|---|---|
+| `owner` | everything | the plan document and the workplan |
+| `staff` | everything | the workplan |
+| `board` | everything | nothing |
+
+Sign-in is **email plus a one-time code**. No magic link — for exactly the
+reasons in `docs/AUTH-SETUP-SUPABASE.md`: a one-time URL in an email looks like
+phishing, gets quarantined, and the scanner that releases it *spends the token
+first*. Use the code-only email template from that doc.
+
+`gw_tenant` in a user's `app_metadata` scopes which portals exist for them at
+all; `portal_members.role` decides what they may do inside one. Both are
+enforced in RLS, so a stolen anon key reaches nothing. `gw_tenant: "*"` is Good
+Work's own staff and reaches every client, as in the Impact Suite.
+
+## Storage
+
+One interface, three backings, picked at boot:
+
+| Mode | When | What it gives you |
+|---|---|---|
+| `supabase` | `SUPABASE_URL` + `SUPABASE_ANON_KEY` are set | real accounts, RLS, realtime across viewers, an audit trail |
+| `artifact` | running as a published Artifact | shared with everyone holding the link, no accounts |
+| `local` | neither | this browser only |
+
+The masthead always says which one is live. **A published Artifact cannot reach
+Supabase** — its CSP blocks fetch/XHR/WebSocket to every external host — which
+is why the prototype link runs on the middle row and shows a *Preview as*
+switch instead of a sign-in. On Netlify that restriction does not exist.
+
+`supabase-js` is only fetched when a project is configured, so the prototype
+never pays for the bundle.
+
+## Export
+
+In §2, §4 and §5, **Export** writes whatever the scope picker has selected —
+one strategic priority or the whole plan:
+
+- **Board packet (PDF)** — the print stylesheet, chrome stripped, one page per
+  priority. This is the PDF that used to be built by hand, from the same source
+  as the portal, so the two cannot drift.
+- **Workplan (CSV)** — tasks *and* subtasks with owners, dates and status.
+  Opens in Excel; imports to Asana or ClickUp.
+- **Everything (JSON)** — priorities, KPIs, initiatives, tasks, subtasks, and
+  the findings each one cites.
+
+## Layout
+
+```
+index.html              the product — no client names, ever
+data/plan.js            window.PORTAL   — one client's engagement, plan, workplan
+data/findings.js        window.FINDINGS — themes, counts, deduplicated quote pool
+data/config.js          generated at deploy time; empty in the repo
+scripts/build-portal.mjs  Netlify build — writes public/
+scripts/gen-findings.mjs  findings.js from a SWOT Explorer export
+scripts/xform-plan.mjs    the one-time pillars/objectives → priorities/initiatives migration
+supabase/schema.sql       tables, RLS, audit trigger, realtime
+supabase/test-schema.sh   runs the schema on a throwaway Postgres and exercises RLS
+```
 
 Current data: Resonate Church's real discovery findings — 43 themes across 105
 sources. **The plan and workplan content is illustrative**, written against
 those findings to show the shape. Owner names are placeholders.
-
-## Roles
-
-`Board view` / `Staff view` in the header. Board view is read-only: scope, plan
-and findings, with the workplan visible as progress but not editable. Staff view
-can advance a status, reassign, change dates, and leave notes.
-
-In the prototype this is a manual switch, so one person can demo both. In
-production it is the signed-in user's role — see *What production needs*.
-
-`Print board packet` in §2 prints the plan alone, chrome and interactive chips
-stripped. That is the board PDF, generated from the same source as the portal,
-so the two can never drift.
 
 ## Running it locally
 
@@ -71,42 +130,55 @@ so the two can never drift.
 npx http-server strategic-plan-portal -p 8080 -c-1
 ```
 
-Open `http://localhost:8080`. It needs a server, not `file://`, only because of
-the two data scripts. There is no build step.
+It needs a server rather than `file://` only because of the data scripts. There
+is no build step for local work.
 
-## What production needs
+To check the database layer without a Supabase project:
 
-The prototype persists the workplan to the Artifact runtime's `db` capability
-when it is available, and falls back to `localStorage` otherwise. Everything
-else is decided but not built:
+```
+supabase/test-schema.sh     # needs postgresql-16; runs as the postgres user
+```
 
-1. **Auth and roles.** Supabase, same as the Impact Suite (`docs/AUTH-SETUP-SUPABASE.md`).
-   Three roles: `owner` (the consultant), `staff` (edit the workplan), `board`
-   (read-only). The view switcher becomes a role claim.
-2. **Storage.** Netlify Blobs, keyed `C:<client>:plan`, `C:<client>:findings`,
-   `C:<client>:tasks:<id>`. One blob per task, not one per workplan — two people
-   editing different tasks must not clobber each other. Follow the Impact
-   Suite's rule: schema changes self-heal on read, never a migration script.
-3. **Multi-client build.** Same pattern as the Impact Suite: `src/` is the
-   product, `clients/<id>/` is who a deploy is for, one Netlify site per client
-   with `CLIENT_ID` set. Port `scripts/check-product-clean.mjs` — it is what
-   keeps client names out of the shared artifact.
-4. **An editor.** Right now a plan is a JS file. The consultant needs to write
-   pillars, objectives, measures and tasks in the browser.
-5. **Notifications.** Due-date reminders to task owners. The Impact Suite
-   already does this in `netlify/functions/grant-tasks.mjs`.
-6. **Public sharing.** The prototype declares the `db` capability, which makes
-   an artifact organization-internal — fine for a demo, wrong for a client
-   board. On its own Netlify site this constraint does not exist.
+It stubs `auth.users` and `auth.uid()`, applies `schema.sql` twice (it is
+idempotent), then signs in as four different people and asserts who can read and
+write what.
 
-Deferred on purpose: ClickUp/Asana push (`Native, with push` was the runner-up
-choice — worth revisiting once the native workplan has been used on one real
-engagement), Gantt/dependency visualization, time tracking.
+## Deploying
+
+Per Netlify site:
+
+| Variable | Value |
+|---|---|
+| `PORTAL_SLUG` | the `portals.slug` row this site serves, e.g. `resonate` |
+| `SUPABASE_URL` | `https://<ref>.supabase.co` — public by design |
+| `SUPABASE_ANON_KEY` | the anon/publishable key — public by design |
+
+Build command `node scripts/build-portal.mjs`, publish directory `public`.
+Never put the service-role key in this site's environment; the browser never
+needs it and the build does not read it.
+
+Then, once per project: run `supabase/schema.sql`, insert the `portals` row and
+the owner's `portal_members` row (the seed block at the bottom of the schema
+shows both), and tag each user's `app_metadata` with `gw_role` and `gw_tenant`.
+
+## Still to build
+
+1. **A plan editor.** A plan is still a JS file. The consultant needs to write
+   priorities, initiatives, KPIs and tasks in the browser. This is the last
+   thing standing between this and something sellable.
+2. **Task assignment to real users.** `tasks.owner_user_id` exists in the schema
+   and nothing populates it yet — owners are free text.
+3. **Due-date reminders.** The Impact Suite already does this in
+   `netlify/functions/grant-tasks.mjs`; port it.
+4. **Findings ingest.** `gen-findings.mjs` reads one hand-made explorer export.
+5. **The audit trail has no UI.** `task_events` records every field change with
+   who and when; nothing shows it yet.
+
+Deferred on purpose: ClickUp/Asana push (CSV import covers the common case;
+revisit after one real engagement runs on the native workplan), Gantt and
+dependency visualisation, time tracking.
 
 ## Splitting it out
-
-Nothing here imports from the Impact Suite, and the only build input is
-`gen-findings.mjs`. To move it:
 
 ```
 git subtree split -P strategic-plan-portal -b spp-standalone

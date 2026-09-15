@@ -13,9 +13,10 @@
     --ink-3: #8b919b;
     --rule: #ded9d1;
     --rule-2: #ebe8e2;
-    --accent: #3a4a9c;
-    --accent-soft: #e9ebf7;
-    --accent-line: #c3c9e8;
+    --accent: #4f3d9e;
+    --accent-soft: #eeeaf8;
+    --accent-line: #c9bfe8;
+    --on-accent: #ffffff;
     --s: #3d7a55;
     --w: #a9752a;
     --o: #2b5f8a;
@@ -24,344 +25,169 @@
     --w-soft: #f5ece0;
     --o-soft: #e5edf4;
     --t-soft: #f5e6e4;
-    --done: #3d7a55;
-    --doing: #106b7d;
-    --next: #9aa0aa;
-    --stop: #98423c;
+    /* Status palette — validated for CVD and normal-vision separation against
+       both surfaces. "next" is deliberately a recessive neutral: it fails a
+       chroma floor on purpose, and every chart using it carries a legend,
+       direct labels and a table view. */
+    --st-done: #2e7d4f;
+    --st-doing: #2563a8;
+    --st-next: #9aa0aa;
+    --st-blocked: #a63a30;
+    --stop: #a63a30;
     --shadow: 0 1px 2px rgba(20, 24, 30, .05), 0 6px 18px -10px rgba(20, 24, 30, .16);
     --display: "Newsreader", Georgia, "Times New Roman", serif;
     --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-    --rail: 244px;
+    --rail: 248px;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --paper: #13161b;
-      --surface: #1a1e24;
-      --raise: #20242b;
-      --ink: #e9e7e2;
-      --ink-2: #a5abb6;
-      --ink-3: #767d89;
-      --rule: #2f343c;
-      --rule-2: #252a31;
-      --accent: #929fef;
-      --accent-soft: #232a45;
-      --accent-line: #3c4676;
-      --s: #6cb68a;
-      --w: #d6a860;
-      --o: #74a6d6;
-      --t: #d6857e;
-      --s-soft: #1c2c23;
-      --w-soft: #2e2519;
-      --o-soft: #1b2733;
-      --t-soft: #2f1f1e;
-      --done: #6cb68a;
-      --doing: #5fb6cb;
-      --next: #767d89;
-      --stop: #d6857e;
-      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 18px -10px rgba(0, 0, 0, .55);
+      --paper: #13161b; --surface: #1a1e24; --raise: #20242b;
+      --ink: #e9e7e2; --ink-2: #a5abb6; --ink-3: #767d89;
+      --rule: #2f343c; --rule-2: #252a31;
+      --accent: #a89af2; --accent-soft: #272044; --accent-line: #473b7a; --on-accent: #14121f;
+      --s: #6cb68a; --w: #d6a860; --o: #74a6d6; --t: #d6857e;
+      --s-soft: #1c2c23; --w-soft: #2e2519; --o-soft: #1b2733; --t-soft: #2f1f1e;
+      --st-done: #45936a; --st-doing: #5486cc; --st-next: #4b525c; --st-blocked: #c96a60;
+      --stop: #c96a60;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px -10px rgba(0,0,0,.55);
     }
   }
   :root[data-theme="dark"] {
-    --paper: #13161b;
-    --surface: #1a1e24;
-    --raise: #20242b;
-    --ink: #e9e7e2;
-    --ink-2: #a5abb6;
-    --ink-3: #767d89;
-    --rule: #2f343c;
-    --rule-2: #252a31;
-    --accent: #929fef;
-    --accent-soft: #232a45;
-    --accent-line: #3c4676;
-    --s: #6cb68a;
-    --w: #d6a860;
-    --o: #74a6d6;
-    --t: #d6857e;
-    --s-soft: #1c2c23;
-    --w-soft: #2e2519;
-    --o-soft: #1b2733;
-    --t-soft: #2f1f1e;
-    --done: #6cb68a;
-    --doing: #5fb6cb;
-    --next: #767d89;
-    --stop: #d6857e;
-    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 18px -10px rgba(0, 0, 0, .55);
+    --paper: #13161b; --surface: #1a1e24; --raise: #20242b;
+    --ink: #e9e7e2; --ink-2: #a5abb6; --ink-3: #767d89;
+    --rule: #2f343c; --rule-2: #252a31;
+    --accent: #a89af2; --accent-soft: #272044; --accent-line: #473b7a; --on-accent: #14121f;
+    --s: #6cb68a; --w: #d6a860; --o: #74a6d6; --t: #d6857e;
+    --s-soft: #1c2c23; --w-soft: #2e2519; --o-soft: #1b2733; --t-soft: #2f1f1e;
+    --st-done: #45936a; --st-doing: #5486cc; --st-next: #4b525c; --st-blocked: #c96a60;
+    --stop: #c96a60;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px -10px rgba(0,0,0,.55);
   }
 
   * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: var(--paper);
-    color: var(--ink);
-    font-family: var(--sans);
-    font-size: 15px;
-    line-height: 1.55;
-    -webkit-font-smoothing: antialiased;
-  }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
   h1, h2, h3, h4 { margin: 0; font-weight: 500; text-wrap: balance; }
-  p, blockquote { margin: 0; }
+  p, blockquote, figure { margin: 0; }
   button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
   a { color: var(--accent); text-underline-offset: 2px; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
   .num { font-variant-numeric: tabular-nums; }
-  .eyebrow {
-    font-family: var(--mono);
-    font-size: 10.5px;
-    font-weight: 500;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    color: var(--ink-3);
-  }
+  .eyebrow { font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-  /* ---------- shell ---------- */
-  .masthead {
-    position: sticky;
-    top: env(safe-area-inset-top, 0px);
-    z-index: 30;
-    background: var(--surface);
-    border-bottom: 1px solid var(--rule);
-  }
-  .masthead-in {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
-    padding: 11px 20px;
-  }
+  /* ---------- masthead ---------- */
+  .masthead { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: var(--surface); border-bottom: 1px solid var(--rule); }
+  .masthead-in { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 10px 20px; }
   .brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; flex: 1 1 auto; }
   .brand-name { font-family: var(--display); font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
   .brand-sub { font-size: 12.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .viewswitch { display: flex; align-items: center; gap: 8px; }
+  .mast-right { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
   .seg { display: flex; border: 1px solid var(--rule); border-radius: 7px; overflow: hidden; background: var(--raise); }
-  .seg button {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: .05em;
-    text-transform: uppercase;
-    padding: 5px 11px;
-    color: var(--ink-2);
-  }
+  .seg button { font-family: var(--mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; padding: 5px 11px; color: var(--ink-2); }
   .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .whoami { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink-2); }
+  .avatar { width: 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-family: var(--mono); font-size: 10px; font-weight: 600; flex: 0 0 auto; }
+  .syncpill { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); display: inline-flex; align-items: center; gap: 5px; }
+  .syncpill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); }
+  .syncpill.live::before { background: var(--st-done); }
+
+  /* ---------- nav layer two ---------- */
+  .subnav { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 52px); z-index: 28; background: var(--paper); border-bottom: 1px solid var(--rule); }
+  .subnav-in { display: flex; gap: 3px; align-items: center; overflow-x: auto; padding: 7px 20px; scrollbar-width: none; }
+  .subnav-in::-webkit-scrollbar { display: none; }
+  .subnav button { white-space: nowrap; padding: 5px 11px; border-radius: 7px; font-size: 13px; color: var(--ink-2); border: 1px solid transparent; }
+  .subnav button:hover { background: var(--rule-2); }
+  .subnav button[aria-current="true"] { background: var(--accent-soft); border-color: var(--accent-line); color: var(--ink); font-weight: 500; }
+  .sn-sep { width: 1px; height: 18px; background: var(--rule); margin: 0 6px; flex: 0 0 auto; }
+  .sn-spacer { flex: 1 1 auto; min-width: 8px; }
 
   .layout { display: flex; align-items: flex-start; }
-  .rail {
-    position: sticky;
-    top: calc(env(safe-area-inset-top, 0px) + 54px);
-    flex: 0 0 var(--rail);
-    width: var(--rail);
-    padding: 22px 14px 32px 20px;
-    border-right: 1px solid var(--rule);
-    align-self: stretch;
-    min-height: calc(100vh - 54px);
-  }
-  .railnav { display: flex; flex-direction: column; gap: 2px; margin-bottom: 26px; }
-  .railnav button {
-    display: grid;
-    grid-template-columns: 22px 1fr auto;
-    align-items: baseline;
-    gap: 8px;
-    text-align: left;
-    padding: 8px 10px;
-    border-radius: 7px;
-    color: var(--ink-2);
-    border-left: 2px solid transparent;
-  }
+  .rail { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 96px); flex: 0 0 var(--rail); width: var(--rail); padding: 20px 14px 32px 20px; border-right: 1px solid var(--rule); align-self: stretch; min-height: calc(100vh - 96px); }
+  .railnav { display: flex; flex-direction: column; gap: 2px; margin-bottom: 24px; }
+  .railnav button { display: grid; grid-template-columns: 22px 1fr auto; align-items: baseline; gap: 8px; text-align: left; padding: 8px 10px; border-radius: 7px; color: var(--ink-2); border-left: 2px solid transparent; }
   .railnav button:hover { background: var(--rule-2); }
-  .railnav button[aria-current="true"] {
-    background: var(--accent-soft);
-    border-left-color: var(--accent);
-    color: var(--ink);
-  }
+  .railnav button[aria-current="true"] { background: var(--accent-soft); border-left-color: var(--accent); color: var(--ink); }
   .railnav .rn-n { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
   .railnav button[aria-current="true"] .rn-n { color: var(--accent); }
   .railnav .rn-t { font-size: 14px; font-weight: 450; }
   .railnav .rn-c { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+  .railcard { border-top: 1px solid var(--rule); padding-top: 15px; }
+  .railcard + .railcard { margin-top: 16px; }
+  .railcard h4 { margin-bottom: 9px; }
 
-  .railcard { border-top: 1px solid var(--rule); padding-top: 16px; }
-  .railcard + .railcard { margin-top: 18px; }
-  .railcard h4 { margin-bottom: 10px; }
-
-  .main { flex: 1 1 auto; min-width: 0; padding: 26px 24px 80px; }
-  .wrap { max-width: 980px; margin: 0 auto; }
-  .read { max-width: 68ch; }
-
+  .main { flex: 1 1 auto; min-width: 0; padding: 24px 24px 80px; }
+  .wrap { max-width: 1000px; margin: 0 auto; }
   .tabstrip { display: none; }
 
   /* ---------- section headers ---------- */
-  .shead { margin-bottom: 22px; }
+  .shead { margin-bottom: 20px; }
   .shead h2 { font-family: var(--display); font-size: 27px; letter-spacing: -.015em; margin-top: 3px; }
   .shead p { color: var(--ink-2); margin-top: 7px; max-width: 64ch; }
+  .callout { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--rule); border-left: 2px solid var(--accent); background: var(--raise); border-radius: 0 8px 8px 0; padding: 11px 14px; font-size: 13px; color: var(--ink-2); margin-bottom: 20px; }
+  .panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 17px 19px; }
+  .panel + .panel { margin-top: 13px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
 
-  .callout {
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    border: 1px solid var(--rule);
-    border-left: 2px solid var(--accent);
-    background: var(--raise);
-    border-radius: 0 8px 8px 0;
-    padding: 11px 14px;
-    font-size: 13px;
-    color: var(--ink-2);
-    margin-bottom: 24px;
-  }
-
-  /* ---------- phase rail ---------- */
-  .phases { position: relative; margin: 6px 0 30px; }
-  .phasetrack {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 3px;
-  }
-  .phasebtn {
-    text-align: left;
-    padding: 11px 12px 12px;
-    background: var(--surface);
-    border: 1px solid var(--rule);
-    border-radius: 7px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    position: relative;
-  }
+  /* ---------- scope ---------- */
+  .phasetrack { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-bottom: 18px; }
+  .phasebtn { text-align: left; padding: 11px 12px 12px; background: var(--surface); border: 1px solid var(--rule); border-radius: 7px; display: flex; flex-direction: column; gap: 3px; position: relative; }
   .phasebtn:hover { border-color: var(--accent-line); }
   .phasebtn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
   .phasebtn .pb-bar { height: 3px; border-radius: 2px; background: var(--rule); margin-bottom: 6px; }
-  .phasebtn.done .pb-bar { background: var(--done); }
+  .phasebtn.done .pb-bar { background: var(--st-done); }
   .phasebtn.active .pb-bar { background: linear-gradient(90deg, var(--accent) 0 var(--pct), var(--rule) var(--pct) 100%); }
   .phasebtn .pb-n { font-family: var(--mono); font-size: 10px; letter-spacing: .09em; color: var(--ink-3); text-transform: uppercase; }
   .phasebtn .pb-name { font-size: 14px; font-weight: 500; }
   .phasebtn .pb-date { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
-  .phasebtn .pb-now {
-    position: absolute; top: -8px; right: 8px;
-    font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
-    background: var(--accent); color: #fff; padding: 1px 6px; border-radius: 99px;
-  }
-  :root[data-theme="dark"] .phasebtn .pb-now,
-  :root:not([data-theme="light"]) .phasebtn .pb-now { color: #12151c; }
-
-  .panel {
-    background: var(--surface);
-    border: 1px solid var(--rule);
-    border-radius: 10px;
-    padding: 18px 20px;
-  }
-  .panel + .panel { margin-top: 14px; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-
+  .phasebtn .pb-now { position: absolute; top: -8px; right: 8px; font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; background: var(--accent); color: var(--on-accent); padding: 1px 6px; border-radius: 99px; }
   .ticklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
   .ticklist li { display: grid; grid-template-columns: 16px 1fr; gap: 9px; font-size: 13.5px; color: var(--ink-2); }
   .ticklist .mk { font-family: var(--mono); font-size: 12px; line-height: 1.5; }
-  .ticklist.yes .mk { color: var(--done); }
+  .ticklist.yes .mk { color: var(--st-done); }
   .ticklist.no .mk { color: var(--ink-3); }
-
   .deflist { display: grid; grid-template-columns: auto 1fr; gap: 7px 16px; font-size: 13.5px; align-items: baseline; }
   .deflist dt { font-family: var(--mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
   .deflist dd { margin: 0; color: var(--ink-2); }
 
   /* ---------- plan ---------- */
-  .vision {
-    font-family: var(--display);
-    font-size: 21px;
-    line-height: 1.45;
-    letter-spacing: -.01em;
-    max-width: 44ch;
-  }
-  .pillar { margin-top: 30px; border-top: 1px solid var(--rule); padding-top: 22px; }
-  .pillar-head { display: flex; gap: 14px; align-items: baseline; }
-  .pillar-n {
-    font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .08em;
-    color: var(--accent); padding-top: 4px; white-space: nowrap;
-  }
-  .pillar h3 { font-family: var(--display); font-size: 25px; letter-spacing: -.015em; }
+  .vision { font-family: var(--display); font-size: 21px; line-height: 1.45; letter-spacing: -.01em; max-width: 44ch; }
+  .priority { margin-top: 28px; border-top: 1px solid var(--rule); padding-top: 20px; }
+  .priority-head { display: flex; gap: 14px; align-items: baseline; }
+  .pri-n { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .08em; color: var(--accent); padding-top: 4px; white-space: nowrap; }
+  .priority h3 { font-family: var(--display); font-size: 25px; letter-spacing: -.015em; }
   .thesis { color: var(--ink-2); margin-top: 9px; max-width: 66ch; font-size: 14.5px; }
-  .obj {
-    margin-top: 16px;
-    background: var(--surface);
-    border: 1px solid var(--rule);
-    border-radius: 9px;
-    padding: 15px 17px;
-  }
-  .obj-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
-  .obj-id { font-family: var(--mono); font-size: 11.5px; font-weight: 600; color: var(--ink-3); }
-  .obj h4 { font-size: 16px; font-weight: 500; }
-  .obj-detail { color: var(--ink-2); font-size: 13.5px; margin-top: 6px; max-width: 64ch; }
-  .measures { margin-top: 12px; border-top: 1px solid var(--rule-2); padding-top: 11px; display: flex; flex-direction: column; gap: 8px; }
-  .measure { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: baseline; font-size: 13px; }
-  .measure .m-t { color: var(--ink); }
-  .measure .m-now { font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); text-align: right; }
-  .measure .m-tgt { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); text-align: right; white-space: nowrap; }
-
-  .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 11px; align-items: center; }
+  .kpibox { margin-top: 14px; background: var(--raise); border: 1px solid var(--rule); border-radius: 9px; padding: 13px 16px; }
+  .kpi { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: baseline; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--rule-2); }
+  .kpi:last-child { border-bottom: 0; }
+  .kpi .k-now { font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); text-align: right; }
+  .kpi .k-tgt { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); text-align: right; white-space: nowrap; }
+  .init { margin-top: 13px; background: var(--surface); border: 1px solid var(--rule); border-radius: 9px; padding: 14px 17px; }
+  .init-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .init-id { font-family: var(--mono); font-size: 11.5px; font-weight: 600; color: var(--ink-3); }
+  .init h4 { font-size: 16px; font-weight: 500; }
+  .init-detail { color: var(--ink-2); font-size: 13.5px; margin-top: 6px; max-width: 64ch; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; align-items: center; }
   .chips-label { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-right: 3px; }
-  .chip {
-    display: inline-flex; align-items: center; gap: 5px;
-    border: 1px solid var(--rule); border-radius: 99px;
-    padding: 2px 9px 2px 6px;
-    font-size: 11.5px; color: var(--ink-2);
-    background: var(--raise);
-    max-width: 100%;
-  }
+  .chip { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--rule); border-radius: 99px; padding: 2px 9px 2px 6px; font-size: 11.5px; color: var(--ink-2); background: var(--raise); max-width: 100%; }
   .chip:hover { border-color: var(--accent-line); color: var(--ink); background: var(--accent-soft); }
-  .chip .ck {
-    font-family: var(--mono); font-size: 9.5px; font-weight: 600;
-    width: 15px; height: 15px; border-radius: 4px;
-    display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
-  }
+  .chip .ck { font-family: var(--mono); font-size: 9.5px; font-weight: 600; width: 15px; height: 15px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
   .chip .cn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 26ch; }
   .chip .cc { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
   .k-S { background: var(--s-soft); color: var(--s); }
   .k-W { background: var(--w-soft); color: var(--w); }
   .k-O { background: var(--o-soft); color: var(--o); }
   .k-T { background: var(--t-soft); color: var(--t); }
-
   .track-mile { display: grid; grid-template-columns: 14px 1fr auto; gap: 11px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--rule-2); font-size: 13.5px; }
   .track-mile:last-child { border-bottom: 0; }
 
   /* ---------- findings ---------- */
-  .filterbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
-  .filterbar input[type="search"] {
-    font: inherit; font-size: 13.5px;
-    padding: 6px 11px;
-    border: 1px solid var(--rule); border-radius: 7px;
-    background: var(--surface); color: var(--ink);
-    min-width: 200px; flex: 1 1 200px; max-width: 320px;
-  }
-  .catseg { display: flex; gap: 4px; flex-wrap: wrap; }
-  .catbtn {
-    border: 1px solid var(--rule); border-radius: 7px;
-    padding: 5px 10px; font-size: 12.5px; color: var(--ink-2);
-    background: var(--surface);
-    display: inline-flex; align-items: center; gap: 6px;
-  }
-  .catbtn .cbn { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
-  .catbtn[aria-pressed="true"] { color: var(--ink); border-color: currentColor; }
-  .catbtn[data-c="S"][aria-pressed="true"] { background: var(--s-soft); border-color: var(--s); }
-  .catbtn[data-c="W"][aria-pressed="true"] { background: var(--w-soft); border-color: var(--w); }
-  .catbtn[data-c="O"][aria-pressed="true"] { background: var(--o-soft); border-color: var(--o); }
-  .catbtn[data-c="T"][aria-pressed="true"] { background: var(--t-soft); border-color: var(--t); }
-  .catbtn[data-c="ALL"][aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
-
+  .filterbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 15px; }
+  .filterbar input[type="search"] { font: inherit; font-size: 13.5px; padding: 6px 11px; border: 1px solid var(--rule); border-radius: 7px; background: var(--surface); color: var(--ink); min-width: 200px; flex: 1 1 200px; max-width: 320px; }
   .themelist { display: flex; flex-direction: column; gap: 6px; }
-  .themerow {
-    display: grid;
-    grid-template-columns: 20px 1fr 148px 54px;
-    gap: 12px;
-    align-items: center;
-    text-align: left;
-    background: var(--surface);
-    border: 1px solid var(--rule);
-    border-radius: 8px;
-    padding: 10px 13px;
-  }
+  .themerow { display: grid; grid-template-columns: 20px 1fr 148px 54px; gap: 12px; align-items: center; text-align: left; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 13px; }
   .themerow:hover { border-color: var(--accent-line); }
-  .themerow .tk {
-    font-family: var(--mono); font-size: 10px; font-weight: 600;
-    width: 20px; height: 20px; border-radius: 5px;
-    display: flex; align-items: center; justify-content: center;
-  }
+  .themerow .tk { font-family: var(--mono); font-size: 10px; font-weight: 600; width: 20px; height: 20px; border-radius: 5px; display: flex; align-items: center; justify-content: center; }
   .themerow .tn { font-size: 14px; font-weight: 450; }
   .themerow .tsub { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-top: 1px; }
   .bar { height: 7px; border-radius: 4px; background: var(--rule-2); overflow: hidden; display: flex; }
@@ -370,7 +196,6 @@
   .bar .b-qual { background: currentColor; opacity: .42; }
   .themerow .tc { font-family: var(--mono); font-size: 14px; text-align: right; }
   .themerow .tcl { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); text-align: right; }
-
   .backbtn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); margin-bottom: 14px; }
   .backbtn:hover { color: var(--accent); }
   .theme-detail h3 { font-family: var(--display); font-size: 24px; letter-spacing: -.015em; margin-top: 4px; max-width: 34ch; }
@@ -378,14 +203,7 @@
   .stat { display: flex; flex-direction: column; }
   .stat .sv { font-family: var(--mono); font-size: 19px; }
   .stat .sl { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
-  .quote {
-    border-left: 2px solid var(--rule);
-    padding: 3px 0 3px 14px;
-    font-family: var(--display);
-    font-size: 16.5px;
-    line-height: 1.5;
-    color: var(--ink);
-  }
+  .quote { border-left: 2px solid var(--rule); padding: 3px 0 3px 14px; font-family: var(--display); font-size: 16.5px; line-height: 1.5; color: var(--ink); }
   .quotes { display: flex; flex-direction: column; gap: 13px; margin-top: 12px; }
   .resp { border-top: 1px solid var(--rule-2); padding: 11px 0; }
   .resp .rp { font-family: var(--mono); font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); }
@@ -400,140 +218,142 @@
   .tile .tl { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-top: 3px; }
   .tile.is-late { border-color: var(--stop); }
   .tile.is-late .tv { color: var(--stop); }
-
-  .progressbig { margin: 16px 0 20px; }
+  .progressbig { margin: 15px 0 18px; }
   .pb-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
-  .pb-track { height: 10px; border-radius: 5px; background: var(--rule-2); display: flex; overflow: hidden; }
+  .pb-track { height: 10px; border-radius: 5px; background: var(--rule-2); display: flex; overflow: hidden; gap: 2px; }
   .pb-track i { display: block; height: 100%; }
-
-  .wpbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
-  .objgroup { margin-top: 18px; }
-  .objgroup-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding-bottom: 7px; border-bottom: 1px solid var(--rule); }
-  .objgroup-head .og-id { font-family: var(--mono); font-size: 11.5px; font-weight: 600; color: var(--ink-3); }
-  .objgroup-head .og-t { font-size: 15px; font-weight: 500; }
-  .objgroup-head .og-p { margin-left: auto; display: flex; align-items: center; gap: 9px; }
-  .objgroup-head .og-pct { font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); }
-  .minitrack { width: 84px; height: 6px; border-radius: 3px; background: var(--rule-2); display: flex; overflow: hidden; }
+  .wpbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .initgroup { margin-top: 16px; }
+  .initgroup-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding-bottom: 7px; border-bottom: 1px solid var(--rule); }
+  .ig-id { font-family: var(--mono); font-size: 11.5px; font-weight: 600; color: var(--ink-3); }
+  .ig-t { font-size: 15px; font-weight: 500; }
+  .ig-p { margin-left: auto; display: flex; align-items: center; gap: 9px; }
+  .ig-pct { font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); }
+  .minitrack { width: 84px; height: 6px; border-radius: 3px; background: var(--rule-2); display: flex; overflow: hidden; gap: 2px; }
   .minitrack i { display: block; height: 100%; }
+  .prihead { display: flex; align-items: baseline; gap: 10px; margin: 26px 0 2px; flex-wrap: wrap; }
+  .ph-n { font-family: var(--mono); font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); }
+  .prihead h3 { font-family: var(--display); font-size: 20px; letter-spacing: -.01em; }
 
-  .task {
-    display: grid;
-    grid-template-columns: 22px 66px 1fr 116px 92px;
-    gap: 11px;
-    align-items: center;
-    padding: 9px 6px 9px 4px;
-    border-bottom: 1px solid var(--rule-2);
-    text-align: left;
-    width: 100%;
-  }
+  .task { display: grid; grid-template-columns: 18px 22px 64px 1fr 112px 88px; gap: 10px; align-items: center; padding: 8px 6px 8px 4px; border-bottom: 1px solid var(--rule-2); text-align: left; width: 100%; }
   .task:hover { background: var(--raise); }
+  .task.sub { padding-left: 30px; background: linear-gradient(90deg, var(--rule-2) 0 2px, transparent 2px); }
+  .task.sub .tt { font-size: 13px; color: var(--ink-2); }
   .task .tid { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
   .task .tt { font-size: 13.8px; }
   .task .town { font-size: 12.5px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .task .tdue { font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); text-align: right; }
   .task.done .tt { color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--rule); }
   .task.overdue .tdue { color: var(--stop); font-weight: 500; }
-  .task .tdep { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+  .tdep { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+  .twist { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; color: var(--ink-3); font-size: 9px; }
+  .twist:hover { background: var(--rule-2); color: var(--ink); }
+  .twist[aria-expanded="true"] .tw-ico { transform: rotate(90deg); }
+  .tw-ico { display: block; transition: transform .12s ease; }
+  .subcount { font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin-left: 6px; }
 
-  .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; position: relative; flex: 0 0 auto; }
-  .dot.next { border: 1.5px solid var(--next); }
-  .dot.doing { border: 1.5px solid var(--doing); background: linear-gradient(90deg, var(--doing) 50%, transparent 50%); }
-  .dot.done { background: var(--done); }
-  .dot.blocked { border: 1.5px solid var(--stop); background: var(--stop); opacity: .28; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; flex: 0 0 auto; }
+  .dot.next { border: 1.5px solid var(--ink-3); }
+  .dot.doing { border: 1.5px solid var(--st-doing); background: linear-gradient(90deg, var(--st-doing) 50%, transparent 50%); }
+  .dot.done { background: var(--st-done); }
+  .dot.blocked { border: 1.5px solid var(--st-blocked); background: var(--st-blocked); opacity: .32; }
   .dot.late { border: 1.5px solid var(--stop); box-shadow: 0 0 0 2.5px color-mix(in srgb, var(--stop) 22%, transparent); }
+  .dot.sm { width: 11px; height: 11px; }
   .statusbtn { display: inline-flex; align-items: center; justify-content: center; padding: 3px; border-radius: 6px; }
   .statusbtn:hover { background: var(--rule-2); }
   .statusbtn[disabled] { cursor: default; }
   .statusbtn[disabled]:hover { background: none; }
-
-  .legend { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; font-size: 11.5px; color: var(--ink-3); margin-top: 14px; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; font-size: 11.5px; color: var(--ink-3); margin-top: 13px; }
   .legend span { display: inline-flex; align-items: center; gap: 5px; }
 
-  /* ---------- drawer ---------- */
-  .scrim { position: fixed; inset: 0; background: rgba(12, 14, 18, .42); z-index: 40; }
-  .drawer {
-    position: fixed; top: 0; right: 0; bottom: 0;
-    width: min(440px, 100%);
-    background: var(--surface);
-    border-left: 1px solid var(--rule);
-    z-index: 41;
-    overflow-y: auto;
-    padding: 20px 22px calc(28px + env(safe-area-inset-bottom, 0px));
-    box-shadow: var(--shadow);
-  }
-  .drawer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-  .drawer h3 { font-family: var(--display); font-size: 20px; letter-spacing: -.01em; margin-top: 6px; }
-  .field { margin-top: 14px; }
-  .field label { display: block; margin-bottom: 5px; }
-  .field input, .field select, .field textarea {
-    font: inherit; font-size: 13.5px; width: 100%;
-    padding: 7px 10px;
-    border: 1px solid var(--rule); border-radius: 7px;
-    background: var(--raise); color: var(--ink);
-  }
-  .field textarea { min-height: 76px; resize: vertical; font-size: 13px; }
-  .savenote { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-top: 12px; }
+  /* ---------- dashboard ---------- */
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+  .chart { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 15px 17px; min-width: 0; }
+  .chart.wide { grid-column: 1 / -1; }
+  .chart h4 { font-size: 14.5px; font-weight: 500; }
+  .csub { font-size: 12.5px; color: var(--ink-3); margin-top: 2px; }
+  .chartbody { margin-top: 13px; overflow-x: auto; }
+  .chartbody svg { display: block; max-width: 100%; height: auto; }
+  .clegend { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; font-size: 11.5px; color: var(--ink-2); margin-top: 11px; }
+  .clegend span { display: inline-flex; align-items: center; gap: 5px; }
+  .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: 0 0 auto; }
+  .hrow { display: grid; grid-template-columns: 150px 1fr 54px; gap: 10px; align-items: center; padding: 5px 0; font-size: 13px; }
+  .hl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
+  .hv { font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); text-align: right; }
+  .hbar { height: 16px; border-radius: 3px; display: flex; gap: 2px; background: var(--rule-2); overflow: hidden; }
+  .hbar i { display: block; height: 100%; }
+  .dtable { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 12px; }
+  .dtable th, .dtable td { text-align: left; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--rule-2); }
+  .dtable th { font-family: var(--mono); font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+  .dtable td.n { font-family: var(--mono); text-align: right; padding-right: 14px; }
+  .tablewrap { overflow-x: auto; }
 
+  /* ---------- controls ---------- */
   .ghost { border: 1px solid var(--rule); border-radius: 7px; padding: 5px 11px; font-size: 12.5px; color: var(--ink-2); background: var(--surface); }
   .ghost:hover { border-color: var(--accent-line); color: var(--ink); }
   .ghost[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+  .solid { background: var(--accent); color: var(--on-accent); border-radius: 7px; padding: 6px 13px; font-size: 13px; font-weight: 500; }
+  .solid:hover { filter: brightness(1.08); }
+  .solid[disabled] { opacity: .5; cursor: default; }
 
-  .syncpill {
-    font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
-    color: var(--ink-3); display: inline-flex; align-items: center; gap: 5px;
-  }
-  .syncpill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--next); }
-  .syncpill.live::before { background: var(--done); }
+  /* ---------- overlays ---------- */
+  .scrim { position: fixed; inset: 0; background: rgba(12, 14, 18, .45); z-index: 40; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 100%); background: var(--surface); border-left: 1px solid var(--rule); z-index: 41; overflow-y: auto; padding: 20px 22px calc(28px + env(safe-area-inset-bottom, 0px)); box-shadow: var(--shadow); }
+  .drawer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .drawer h3 { font-family: var(--display); font-size: 20px; letter-spacing: -.01em; margin-top: 6px; }
+  .modal { position: fixed; z-index: 41; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(430px, calc(100% - 32px)); background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 22px 24px; box-shadow: var(--shadow); max-height: calc(100% - 40px); overflow-y: auto; }
+  .modal h3 { font-family: var(--display); font-size: 21px; letter-spacing: -.01em; }
+  .field { margin-top: 13px; }
+  .field label { display: block; margin-bottom: 5px; }
+  .field input, .field select, .field textarea { font: inherit; font-size: 13.5px; width: 100%; padding: 7px 10px; border: 1px solid var(--rule); border-radius: 7px; background: var(--raise); color: var(--ink); }
+  .field textarea { min-height: 74px; resize: vertical; font-size: 13px; }
+  .field input.code { font-family: var(--mono); font-size: 20px; letter-spacing: .3em; text-align: center; }
+  .savenote { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-top: 12px; }
+  .errnote { font-size: 12.5px; color: var(--stop); margin-top: 10px; }
+  .expopt { text-align: left; padding: 11px 13px; }
+  .expopt strong { font-weight: 500; color: var(--ink); }
+  .expopt span { font-size: 12.5px; }
+  .sublist { margin-top: 14px; border-top: 1px solid var(--rule-2); padding-top: 12px; }
+  .subrow { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: center; padding: 5px 0; font-size: 13px; }
+  .subrow.done span { color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--rule); }
 
   /* ---------- responsive ---------- */
-  @media (max-width: 900px) {
+  @media (max-width: 920px) {
     .rail { display: none; }
-    .main { padding: 18px 16px 90px; }
-    .tabstrip {
-      display: flex;
-      gap: 3px;
-      overflow-x: auto;
-      padding: 7px 16px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--rule);
-      position: sticky;
-      top: calc(env(safe-area-inset-top, 0px) + 53px);
-      z-index: 29;
-      scrollbar-width: none;
-    }
+    .main { padding: 16px 16px 90px; }
+    .tabstrip { display: flex; gap: 3px; overflow-x: auto; padding: 7px 16px; background: var(--surface); border-bottom: 1px solid var(--rule); position: sticky; top: calc(env(safe-area-inset-top, 0px) + 51px); z-index: 29; scrollbar-width: none; }
     .tabstrip::-webkit-scrollbar { display: none; }
-    .tabstrip button {
-      white-space: nowrap; padding: 6px 12px; border-radius: 7px;
-      font-size: 13.5px; color: var(--ink-2); border: 1px solid transparent;
-    }
+    .tabstrip button { white-space: nowrap; padding: 6px 12px; border-radius: 7px; font-size: 13.5px; color: var(--ink-2); border: 1px solid transparent; }
     .tabstrip button[aria-current="true"] { background: var(--accent-soft); border-color: var(--accent-line); color: var(--ink); }
+    .subnav { top: calc(env(safe-area-inset-top, 0px) + 94px); }
+    .subnav-in { padding: 7px 16px; }
     .phasetrack { grid-template-columns: 1fr 1fr; }
-    .grid2, .grid3 { grid-template-columns: 1fr; }
+    .grid2, .charts { grid-template-columns: 1fr; }
     .tiles { grid-template-columns: 1fr 1fr; }
     .themerow { grid-template-columns: 20px 1fr 52px; }
     .themerow .bar { display: none; }
-    .task { grid-template-columns: 22px 1fr 76px; row-gap: 3px; }
+    .task { grid-template-columns: 18px 22px 1fr 74px; row-gap: 3px; }
     .task .tid, .task .town { display: none; }
-    .measure { grid-template-columns: 1fr; gap: 2px; }
-    .measure .m-now, .measure .m-tgt { text-align: left; }
+    .kpi { grid-template-columns: 1fr; gap: 2px; }
+    .kpi .k-now, .kpi .k-tgt { text-align: left; }
+    .hrow { grid-template-columns: 92px 1fr 48px; }
   }
   @media (max-width: 460px) {
     .phasetrack { grid-template-columns: 1fr; }
-    .tiles { grid-template-columns: 1fr 1fr; }
     .brand { flex-basis: 100%; }
   }
-  @media (prefers-reduced-motion: reduce) {
-    * { animation: none !important; transition: none !important; }
-  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
   /* ---------- print: the board packet ---------- */
   @media print {
-    .masthead, .rail, .tabstrip, .chips, .filterbar, .wpbar, .morebtn, .drawer, .scrim, .noprint { display: none !important; }
+    .masthead, .rail, .tabstrip, .subnav, .chips, .filterbar, .wpbar, .morebtn,
+    .drawer, .scrim, .modal, .noprint, .twist { display: none !important; }
     body { background: #fff; color: #000; font-size: 11pt; }
     .main { padding: 0; }
-    .panel, .obj, .themerow { border-color: #bbb; break-inside: avoid; }
-    .pillar { break-before: page; }
-    .pillar:first-of-type { break-before: auto; }
+    .panel, .init, .themerow, .chart { border-color: #bbb; break-inside: avoid; }
+    .priority { break-before: page; }
+    .priority:first-of-type { break-before: auto; }
+    .task { break-inside: avoid; }
   }
 </style>
 
@@ -541,19 +361,14 @@
   <div class="masthead-in">
     <div class="brand">
       <span class="brand-name" id="brandName">Resonate Church</span>
-      <span class="brand-sub" id="brandSub">Strategic Plan 2026–2028 · Belvedere Park, Decatur GA</span>
+      <span class="brand-sub" id="brandSub">Strategic Plan 2026–2028</span>
     </div>
-    <div class="viewswitch">
-      <span class="syncpill" id="syncPill">local only</span>
-      <div class="seg" role="group" aria-label="Who is viewing">
-        <button id="roleBoard" aria-pressed="true">Board view</button>
-        <button id="roleStaff" aria-pressed="false">Staff view</button>
-      </div>
-    </div>
+    <div class="mast-right" id="mastRight"></div>
   </div>
 </div>
 
 <nav class="tabstrip" id="tabstrip" aria-label="Sections"></nav>
+<nav class="subnav" aria-label="Within this section"><div class="subnav-in" id="subnav"></div></nav>
 
 <div class="layout">
   <aside class="rail">
@@ -567,50 +382,48 @@
       <div id="railProgress"></div>
     </div>
   </aside>
-  <main class="main">
-    <div class="wrap" id="view"></div>
-  </main>
+  <main class="main"><div class="wrap" id="view"></div></main>
 </div>
 
 <div id="overlay"></div>
 
+<script src="data/config.js"></script>
 <script src="data/findings.js"></script>
 <script src="data/plan.js"></script>
 <script>
 (function () {
   'use strict';
 
-  var P = window.PORTAL;
-  var F = window.FINDINGS;
+  var P = window.PORTAL, F = window.FINDINGS, CFG = window.SPP_CONFIG || {};
   var TODAY = P.today;
 
   var SECTIONS = [
-    { id: 'scope', n: '01', title: 'Scope & timeline', cap: 'The engagement' },
-    { id: 'plan', n: '02', title: 'The plan', cap: '4 pillars · 12 objectives' },
-    { id: 'findings', n: '03', title: 'Findings', cap: '43 themes · 105 sources' },
-    { id: 'workplan', n: '04', title: 'Workplan', cap: 'Year one' }
+    { id: 'scope', n: '01', title: 'Scope & timeline' },
+    { id: 'plan', n: '02', title: 'The plan' },
+    { id: 'findings', n: '03', title: 'Findings' },
+    { id: 'workplan', n: '04', title: 'Workplan' },
+    { id: 'dashboard', n: '05', title: 'Dashboard' }
   ];
-
   var CATNAME = { S: 'Strengths', W: 'Weaknesses', O: 'Opportunities', T: 'Threats' };
   var STATUS_ORDER = ['next', 'doing', 'done', 'blocked'];
   var STATUS_LABEL = { next: 'Not started', doing: 'In progress', done: 'Done', blocked: 'Blocked' };
+  var STATUS_VAR = { done: '--st-done', doing: '--st-doing', next: '--st-next', blocked: '--st-blocked' };
+  var STACK = ['done', 'doing', 'blocked', 'next'];
+  var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var MONL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-  var themeById = {};
-  F.themes.forEach(function (t) { themeById[t.id] = t; });
-
-  var objById = {};
-  var objPillar = {};
-  P.plan.pillars.forEach(function (p) {
-    p.objectives.forEach(function (o) { objById[o.id] = o; objPillar[o.id] = p; });
+  var themeById = {}; F.themes.forEach(function (t) { themeById[t.id] = t; });
+  var seedById = {}; P.tasks.forEach(function (t) { seedById[t.id] = t; });
+  var initById = {}, initPriority = {};
+  P.plan.priorities.forEach(function (p) {
+    p.initiatives.forEach(function (o) { initById[o.id] = o; initPriority[o.id] = p; });
   });
 
-  /* Which objectives cite a given finding — the back-link that makes the
-     evidence chain run both ways. */
   var themeDrives = {};
-  P.plan.pillars.forEach(function (p) {
-    p.objectives.forEach(function (o) {
+  P.plan.priorities.forEach(function (p) {
+    p.initiatives.forEach(function (o) {
       (o.evidence || []).forEach(function (id) {
-        (themeDrives[id] = themeDrives[id] || []).push({ kind: 'obj', id: o.id, title: o.title });
+        (themeDrives[id] = themeDrives[id] || []).push({ kind: 'init', id: o.id, title: o.title });
       });
     });
   });
@@ -620,97 +433,197 @@
 
   var state = {
     section: 'plan',
-    role: 'board',
-    openPhase: 'p5',
-    cat: 'ALL',
-    q: '',
-    openTheme: null,
-    showAllQuotes: false,
-    wpFilter: 'all',
-    wpGroup: 'objective',
-    openTask: null,
-    overrides: {},
-    dbLive: false
+    sub: { scope: 'timeline', plan: 'all', findings: 'ALL', workplan: 'all', dashboard: 'all' },
+    openPhase: 'p5', q: '', openTheme: null, showAllQuotes: false,
+    wpFilter: 'all', wpGroup: 'initiative', expanded: {},
+    openTask: null, modal: null, dashTable: false,
+    role: 'board', user: null, overrides: {}, mode: 'local', saveErr: false
   };
 
-  /* ---------------- persistence ---------------- */
+  /* ===================================================================
+     STORE — one interface, three backings.
+       supabase : the product on Netlify. Real accounts, per-portal roles,
+                  RLS in the database, realtime across viewers.
+       artifact : this prototype. Shared with everyone who has the link.
+       local    : neither reachable; this browser only.
+     =================================================================== */
+  var Store = (function () {
+    var impl = null, listeners = [];
+    function emit() { listeners.forEach(function (f) { f(); }); }
 
-  var db = null;
-  var LS_KEY = 'spp.resonate.workplan.v1';
+    var localBack = {
+      name: 'local',
+      KEY: 'spp.' + (CFG.portalSlug || 'portal') + '.v2',
+      init: function () {
+        try {
+          var raw = window.localStorage.getItem(this.KEY);
+          if (raw) state.overrides = JSON.parse(raw) || {};
+        } catch (e) { /* private window or blocked storage: the seed still renders */ }
+        return Promise.resolve({ mode: 'local', role: null, user: null });
+      },
+      save: function (id, row) {
+        try { window.localStorage.setItem(this.KEY, JSON.stringify(state.overrides)); } catch (e) {}
+        return Promise.resolve();
+      }
+    };
 
-  function readLocal() {
-    try {
-      var raw = window.localStorage.getItem(LS_KEY);
-      if (raw) state.overrides = JSON.parse(raw) || {};
-    } catch (e) { /* private window, blocked storage — the seed still renders */ }
-  }
-  function writeLocal() {
-    try { window.localStorage.setItem(LS_KEY, JSON.stringify(state.overrides)); } catch (e) {}
-  }
+    var artifactBack = {
+      name: 'artifact', db: null,
+      init: function () {
+        var self = this;
+        if (!window.claude || !window.claude.use) return Promise.resolve(null);
+        return window.claude.use('db').then(function (db) {
+          if (!db) return null;
+          self.db = db;
+          db.collection('tasks').onSnapshot(function (snap) {
+            snap.docs.forEach(function (d) { if (d.exists) state.overrides[d.id] = d.data(); });
+            emit();
+          }, function () {});
+          return { mode: 'artifact', role: null, user: null };
+        }).catch(function () { return null; });
+      },
+      save: function (id, row) {
+        localBack.save(id, row);
+        return this.db ? this.db.doc('tasks/' + id).set(row) : Promise.resolve();
+      }
+    };
 
-  function setSync(live, text) {
-    var el = document.getElementById('syncPill');
-    el.className = 'syncpill' + (live ? ' live' : '');
-    el.textContent = text;
-  }
+    function fromRow(row) {
+      return {
+        status: row.status, owner: row.owner_name, due: row.due_date,
+        start: row.start_date, title: row.title, note: row.note || ''
+      };
+    }
 
-  function connect() {
-    if (!window.claude || !window.claude.use) return;
-    window.claude.use('db').then(function (handle) {
-      if (!handle) return;
-      db = handle;
-      db.collection('tasks').onSnapshot(function (snap) {
-        snap.docs.forEach(function (d) {
-          if (d.exists) state.overrides[d.id] = d.data();
+    var supabaseBack = {
+      name: 'supabase', sb: null, portalId: null,
+      init: function () {
+        var self = this;
+        if (!CFG.supabaseUrl || !CFG.supabaseAnonKey || !window.supabase) return Promise.resolve(null);
+        self.sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey);
+        return self.sb.auth.getSession().then(function (r) {
+          var session = r && r.data && r.data.session;
+          if (!session) return { mode: 'supabase', role: null, user: null };
+          return self.afterSignIn(session);
         });
-        state.dbLive = true;
-        setSync(true, 'shared · live');
-        render();
-      }, function () {
-        state.dbLive = false;
-        setSync(false, 'local only');
-      });
-    }).catch(function () {});
-  }
+      },
+      afterSignIn: function (session) {
+        var self = this;
+        return self.sb.from('portals').select('id').eq('slug', CFG.portalSlug).single()
+          .then(function (r) {
+            if (r.error || !r.data) throw r.error || new Error('This account cannot reach that portal.');
+            self.portalId = r.data.id;
+            return self.sb.from('portal_members').select('role')
+              .eq('portal_id', self.portalId).eq('user_id', session.user.id).maybeSingle();
+          })
+          .then(function (r) {
+            // RLS has already decided what this account may read and write; the
+            // role only shapes the UI. Good Work staff (gw_tenant '*') carry no
+            // member row and are treated as owner.
+            var claims = session.user.app_metadata || {};
+            var role = (r && r.data && r.data.role) || (claims.gw_tenant === '*' ? 'owner' : 'board');
+            return self.sb.from('tasks').select('*').eq('portal_id', self.portalId)
+              .then(function (t) {
+                (t.data || []).forEach(function (row) { state.overrides[row.id] = fromRow(row); });
+                self.watch();
+                return {
+                  mode: 'supabase',
+                  role: role,
+                  user: { email: session.user.email, id: session.user.id }
+                };
+              });
+          });
+      },
+      watch: function () {
+        var self = this;
+        self.sb.channel('tasks-' + self.portalId)
+          .on('postgres_changes',
+              { event: '*', schema: 'public', table: 'tasks', filter: 'portal_id=eq.' + self.portalId },
+              function (payload) {
+                var row = payload['new'];
+                if (!row || !row.id) return;
+                state.overrides[row.id] = fromRow(row);
+                emit();
+              })
+          .subscribe();
+      },
+      save: function (id, row) {
+        var seed = seedById[id] || {};
+        return this.sb.from('tasks').upsert({
+          portal_id: this.portalId, id: id,
+          parent_id: seed.parent || null,
+          initiative: seed.obj || '1.1',
+          title: row.title, owner_name: row.owner,
+          start_date: row.start, due_date: row.due,
+          status: row.status, note: row.note || ''
+        }, { onConflict: 'portal_id,id' }).then(function (r) { if (r.error) throw r.error; });
+      },
+      signIn: function (email) { return this.sb.auth.signInWithOtp({ email: email }); },
+      verify: function (email, token) {
+        var self = this;
+        return self.sb.auth.verifyOtp({ email: email, token: token, type: 'email' })
+          .then(function (r) {
+            if (r.error) throw r.error;
+            return self.afterSignIn(r.data.session);
+          });
+      },
+      signOut: function () { return this.sb.auth.signOut(); }
+    };
 
-  function saveTask(id, patch) {
-    var next = Object.assign({}, state.overrides[id] || {}, patch);
-    state.overrides[id] = next;
-    writeLocal();
-    render();
-    if (db) {
-      db.doc('tasks/' + id).set(next).catch(function () {
-        setSync(false, 'not saved — local only');
+    /* supabase-js is only fetched when a project is actually configured — the
+       prototype never configures one, so it never pays for the bundle. */
+    function loadSupabase() {
+      if (!CFG.supabaseUrl || !CFG.supabaseAnonKey) return Promise.resolve();
+      if (window.supabase) return Promise.resolve();
+      return new Promise(function (resolve) {
+        var el = document.createElement('script');
+        el.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js';
+        el.onload = function () { resolve(); };
+        el.onerror = function () { resolve(); };  // fall through to the next backend
+        document.head.appendChild(el);
       });
     }
-  }
+
+    return {
+      backends: { supabase: supabaseBack, artifact: artifactBack, local: localBack },
+      onChange: function (f) { listeners.push(f); },
+      init: function () {
+        return loadSupabase().then(function () { return supabaseBack.init(); }).then(function (r) {
+          if (r) { impl = supabaseBack; return r; }
+          return artifactBack.init().then(function (r2) {
+            if (r2) { impl = artifactBack; return r2; }
+            impl = localBack; return localBack.init();
+          });
+        }).catch(function () { impl = localBack; return localBack.init(); });
+      },
+      save: function (id, row) { return (impl || localBack).save(id, row); }
+    };
+  })();
 
   /* ---------------- helpers ---------------- */
 
-  function h(html) { var d = document.createElement('div'); d.innerHTML = html; return d; }
   function esc(s) {
-    return String(s).replace(/[&<>"']/g, function (c) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
   function fmt(d) {
     if (!d) return '—';
-    var p = d.split('-');
-    var M = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return +p[2] + ' ' + M[+p[1] - 1] + ' ' + p[0].slice(2);
+    var p = String(d).split('-');
+    return +p[2] + ' ' + MON[+p[1] - 1] + ' ' + p[0].slice(2);
   }
   function fmtLong(d) {
-    var p = d.split('-');
-    var M = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    return +p[2] + ' ' + M[+p[1] - 1] + ' ' + p[0];
+    var p = String(d).split('-');
+    return +p[2] + ' ' + MONL[+p[1] - 1] + ' ' + p[0];
   }
   function pct(a, b) { return b ? Math.round((a / b) * 100) : 0; }
+  function priOf(initId) { return initPriority[initId]; }
+  function canEdit() { return state.role === 'staff' || state.role === 'owner'; }
 
-  /* A task's live shape = seed row merged with whatever anyone has changed. */
   function taskOf(t) {
     var o = state.overrides[t.id] || {};
-    var merged = {
-      id: t.id, obj: t.obj, dep: t.dep,
+    var m = {
+      id: t.id, obj: t.obj, dep: t.dep, parent: t.parent || null,
       title: o.title != null ? o.title : t.title,
       owner: o.owner != null ? o.owner : t.owner,
       start: o.start != null ? o.start : t.start,
@@ -718,18 +631,38 @@
       status: o.status != null ? o.status : (t.status === 'late' ? 'next' : t.status),
       note: o.note != null ? o.note : ''
     };
-    merged.overdue = merged.status !== 'done' && merged.due < TODAY;
-    return merged;
+    m.overdue = m.status !== 'done' && m.due < TODAY;
+    return m;
   }
-  function allTasks() { return P.tasks.map(taskOf); }
+  function allRows() { return P.tasks.map(taskOf); }
+  function topTasks() { return allRows().filter(function (t) { return !t.parent; }); }
+  function subsOf(id) { return allRows().filter(function (t) { return t.parent === id; }); }
 
-  function counts() {
-    var ts = allTasks();
-    var c = { total: ts.length, done: 0, doing: 0, next: 0, blocked: 0, late: 0 };
-    ts.forEach(function (t) { c[t.status]++; if (t.overdue) c.late++; });
+  /* One scope governs §2, §4 and §5: the whole plan, or a single strategic
+     priority. This is the only place that decides what is in view. */
+  function inScope(t) {
+    var s = state.sub[state.section];
+    if (!s || s === 'all') return true;
+    var p = priOf(t.obj);
+    return !!p && p.id === s;
+  }
+  function scopedTop() { return topTasks().filter(inScope); }
+  function scopedPriorities() {
+    var s = state.sub[state.section];
+    return (!s || s === 'all') ? P.plan.priorities
+      : P.plan.priorities.filter(function (p) { return p.id === s; });
+  }
+  function counts(rows) {
+    var c = { total: rows.length, done: 0, doing: 0, next: 0, blocked: 0, late: 0 };
+    rows.forEach(function (t) { c[t.status]++; if (t.overdue) c.late++; });
     return c;
   }
-
+  function segs(c, total) {
+    return STACK.map(function (k) {
+      var w = pct(c[k], total);
+      return w ? '<i style="width:' + w + '%;background:var(' + STATUS_VAR[k] + ')"></i>' : '';
+    }).join('');
+  }
   function catChip(id) {
     var t = themeById[id];
     if (!t) return '';
@@ -740,22 +673,46 @@
   }
   function evidenceRow(ids, label) {
     if (!ids || !ids.length) return '';
-    return '<div class="chips"><span class="chips-label">' + (label || 'Evidence') + '</span>' +
-      ids.map(catChip).join('') + '</div>';
+    return '<div class="chips"><span class="chips-label">' + (label || 'Evidence') + '</span>' + ids.map(catChip).join('') + '</div>';
+  }
+  function head(eyebrow, title, sub) {
+    return '<div class="shead"><span class="eyebrow">' + esc(eyebrow) + '</span><h2>' + esc(title) + '</h2>' +
+      (sub ? '<p>' + sub + '</p>' : '') + '</div>';
   }
 
   /* ---------------- chrome ---------------- */
 
-  function renderNav() {
-    var rail = SECTIONS.map(function (s) {
-      return '<button data-sec="' + s.id + '" aria-current="' + (state.section === s.id) + '">' +
-        '<span class="rn-n">' + s.n + '</span>' +
-        '<span class="rn-t">' + s.title + '</span>' +
-        '<span class="rn-c">' + (s.id === 'workplan' ? counts().done + '/' + counts().total : '') + '</span>' +
-        '</button>';
-    }).join('');
-    document.getElementById('railnav').innerHTML = rail;
+  function renderMast() {
+    var syncText = state.saveErr ? 'not saved'
+      : state.mode === 'supabase' ? (state.user ? 'supabase · live' : 'supabase · signed out')
+      : state.mode === 'artifact' ? 'shared · live' : 'this browser only';
+    var live = !state.saveErr && state.mode !== 'local' && !(state.mode === 'supabase' && !state.user);
 
+    var who;
+    if (state.mode === 'supabase' && state.user) {
+      who = '<span class="whoami"><span class="avatar">' + esc((state.user.email || '?').slice(0, 2).toUpperCase()) + '</span>' +
+        '<span>' + esc(state.user.email) + '</span></span><button class="ghost" id="signOut">Sign out</button>';
+    } else if (state.mode === 'supabase') {
+      who = '<button class="solid" id="signIn">Sign in</button>';
+    } else {
+      /* No account system is reachable on this view, so the switch is a preview
+         of what each account type sees — labelled as exactly that. */
+      who = '<span class="eyebrow">Preview as</span>' +
+        '<div class="seg" role="group" aria-label="Preview role">' +
+        '<button id="roleBoard" aria-pressed="' + (state.role === 'board') + '">Board</button>' +
+        '<button id="roleStaff" aria-pressed="' + (state.role === 'staff') + '">Staff</button></div>';
+    }
+    document.getElementById('mastRight').innerHTML =
+      '<span class="syncpill' + (live ? ' live' : '') + '" id="syncPill">' + syncText + '</span>' + who;
+  }
+
+  function renderNav() {
+    var c = counts(topTasks());
+    document.getElementById('railnav').innerHTML = SECTIONS.map(function (s) {
+      return '<button data-sec="' + s.id + '" aria-current="' + (state.section === s.id) + '">' +
+        '<span class="rn-n">' + s.n + '</span><span class="rn-t">' + s.title + '</span>' +
+        '<span class="rn-c">' + (s.id === 'workplan' ? c.done + '/' + c.total : '') + '</span></button>';
+    }).join('');
     document.getElementById('tabstrip').innerHTML = SECTIONS.map(function (s) {
       return '<button data-sec="' + s.id + '" aria-current="' + (state.section === s.id) + '">' + s.title + '</button>';
     }).join('');
@@ -767,151 +724,161 @@
       '<dt>Adopted</dt><dd class="num">' + fmt(P.client.adopted) + '</dd>' +
       '<dt>Phase</dt><dd>' + active.n + ' · ' + esc(active.name) + '</dd>' +
       '<dt>Today</dt><dd class="num">' + fmt(TODAY) + '</dd>';
-
-    var c = counts();
     document.getElementById('railProgress').innerHTML =
       '<div class="pb-row"><span class="num" style="font-family:var(--mono);font-size:19px">' + pct(c.done, c.total) + '%</span>' +
       '<span class="eyebrow">' + c.done + ' of ' + c.total + ' done</span></div>' +
-      '<div class="pb-track">' +
-        '<i style="width:' + pct(c.done, c.total) + '%;background:var(--done)"></i>' +
-        '<i style="width:' + pct(c.doing, c.total) + '%;background:var(--doing)"></i>' +
-      '</div>' +
+      '<div class="pb-track">' + segs(c, c.total) + '</div>' +
       (c.late ? '<div style="margin-top:9px;font-family:var(--mono);font-size:11px;color:var(--stop)">' + c.late + ' past due</div>' : '');
+  }
+
+  /* Layer two: a scope picker for the sections that carry one, sub-views for
+     the rest. Export lives here because what you export is what is in scope. */
+  function renderSubnav() {
+    var s = state.section, cur = state.sub[s], out = '';
+    function b(v, label, count) {
+      return '<button data-sub="' + v + '" aria-current="' + (cur === v) + '">' + label +
+        (count != null ? ' <span class="num" style="font-family:var(--mono);font-size:10.5px;color:var(--ink-3)">' + count + '</span>' : '') + '</button>';
+    }
+    if (s === 'scope') {
+      out = b('timeline', 'Timeline') + b('agreement', 'Scope &amp; cadence') + b('team', 'Who is on it');
+    } else if (s === 'findings') {
+      var by = { ALL: F.themes.length, S: 0, W: 0, O: 0, T: 0 };
+      F.themes.forEach(function (t) { by[t.cat]++; });
+      out = b('ALL', 'All themes', by.ALL) + '<span class="sn-sep"></span>' +
+        ['S', 'W', 'O', 'T'].map(function (k) { return b(k, CATNAME[k], by[k]); }).join('');
+    } else {
+      var rows = topTasks(), showN = s !== 'plan';
+      out = b('all', 'Whole plan', showN ? rows.length : null) + '<span class="sn-sep"></span>' +
+        P.plan.priorities.map(function (p) {
+          var n = rows.filter(function (t) { return priOf(t.obj) === p; }).length;
+          return b(p.id, 'Priority ' + p.n, showN ? n : null);
+        }).join('');
+    }
+    if (s === 'plan' || s === 'workplan' || s === 'dashboard') {
+      out += '<span class="sn-spacer"></span><button class="ghost" id="exportBtn">Export ▾</button>';
+    }
+    document.getElementById('subnav').innerHTML = out;
   }
 
   /* ---------------- 01 · scope ---------------- */
 
   function renderScope() {
-    var phase = P.phases.filter(function (p) { return p.id === state.openPhase; })[0];
-    var s = P.scope;
+    var view = state.sub.scope, s = P.scope;
 
+    if (view === 'agreement') {
+      return head('01 · Scope &amp; timeline', 'What we agreed to do',
+          'The boundary matters as much as the list — half of these conversations are about what the engagement is not.') +
+        '<div class="grid2">' +
+          '<div class="panel"><h4 class="eyebrow" style="margin-bottom:11px">In scope</h4><ul class="ticklist yes">' +
+            s.inScope.map(function (x) { return '<li><span class="mk">✓</span><span>' + esc(x) + '</span></li>'; }).join('') + '</ul></div>' +
+          '<div class="panel"><h4 class="eyebrow" style="margin-bottom:11px">Out of scope</h4><ul class="ticklist no">' +
+            s.outOfScope.map(function (x) { return '<li><span class="mk">—</span><span>' + esc(x) + '</span></li>'; }).join('') + '</ul></div>' +
+        '</div><div class="panel" style="margin-top:13px"><h4 class="eyebrow" style="margin-bottom:11px">Working cadence</h4><div class="deflist">' +
+          s.cadence.map(function (c) {
+            return '<dt>' + fmt(c.next) + '</dt><dd><strong style="font-weight:500;color:var(--ink)">' + esc(c.label) + '</strong><br>' + esc(c.detail) + '</dd>';
+          }).join('') + '</div></div>';
+    }
+
+    if (view === 'team') {
+      return head('01 · Scope &amp; timeline', 'Who is on it',
+          'Four named parties, plus everyone carrying tasks in §4. The search committee runs its own track.') +
+        '<div class="panel"><h4 class="eyebrow" style="margin-bottom:11px">Engagement</h4><div class="deflist">' +
+          s.team.map(function (m) {
+            return '<dt>' + esc(m.org === P.firm.name ? 'Good Work' : 'Client') + '</dt>' +
+              '<dd><strong style="font-weight:500;color:var(--ink)">' + esc(m.name) + '</strong> · ' + esc(m.role) + '</dd>';
+          }).join('') + '</div></div>' +
+        '<div class="panel"><h4 class="eyebrow" style="margin-bottom:11px">Task owners in the workplan</h4><div class="deflist">' +
+          ownerLoad(topTasks()).map(function (o) {
+            return '<dt>' + o.open + ' open</dt><dd><strong style="font-weight:500;color:var(--ink)">' + esc(o.name) + '</strong>' +
+              (o.late ? ' · <span style="color:var(--stop)">' + o.late + ' past due</span>' : '') + '</dd>';
+          }).join('') + '</div></div>';
+    }
+
+    var phase = P.phases.filter(function (p) { return p.id === state.openPhase; })[0];
     var rail = P.phases.map(function (p) {
       var cls = p.status === 'done' ? 'done' : (p.status === 'active' ? 'active' : '');
       var style = '';
       if (p.status === 'active') {
-        var a = Date.parse(p.start), b = Date.parse(p.end), n = Date.parse(TODAY);
-        style = ' style="--pct:' + Math.max(0, Math.min(100, Math.round(((n - a) / (b - a)) * 100))) + '%"';
+        var a = Date.parse(p.start), b2 = Date.parse(p.end), n = Date.parse(TODAY);
+        style = ' style="--pct:' + Math.max(0, Math.min(100, Math.round(((n - a) / (b2 - a)) * 100))) + '%"';
       }
       return '<button class="phasebtn ' + cls + '"' + style + ' data-phase="' + p.id + '" aria-pressed="' + (state.openPhase === p.id) + '">' +
         (p.status === 'active' ? '<span class="pb-now">You are here</span>' : '') +
-        '<span class="pb-bar"></span>' +
-        '<span class="pb-n">Phase ' + p.n + '</span>' +
+        '<span class="pb-bar"></span><span class="pb-n">Phase ' + p.n + '</span>' +
         '<span class="pb-name">' + esc(p.name) + '</span>' +
-        '<span class="pb-date num">' + fmt(p.start) + ' – ' + fmt(p.end) + '</span>' +
-        '</button>';
+        '<span class="pb-date num">' + fmt(p.start) + ' – ' + fmt(p.end) + '</span></button>';
     }).join('');
 
-    return '' +
-      '<div class="shead"><span class="eyebrow">01 · Scope &amp; timeline</span>' +
-      '<h2>What we agreed to do, and where it stands</h2>' +
-      '<p>Five phases from February 2026 through August 2027. Four are complete; implementation runs for another eleven months.</p></div>' +
-
-      '<div class="phases"><div class="phasetrack">' + rail + '</div></div>' +
-
-      '<div class="panel">' +
-        '<span class="eyebrow">Phase ' + phase.n + ' · ' + esc(phase.name) + ' · ' + fmt(phase.start) + ' – ' + fmt(phase.end) + '</span>' +
+    return head('01 · Scope &amp; timeline', 'Where the engagement stands',
+        'Five phases from February 2026 through August 2027. Four are complete; implementation runs for another eleven months.') +
+      '<div class="phasetrack">' + rail + '</div>' +
+      '<div class="panel"><span class="eyebrow">Phase ' + phase.n + ' · ' + esc(phase.name) + ' · ' + fmt(phase.start) + ' – ' + fmt(phase.end) + '</span>' +
         '<p style="font-family:var(--display);font-size:18px;line-height:1.45;margin-top:7px;max-width:52ch">' + esc(phase.blurb) + '</p>' +
-        '<div class="grid2" style="margin-top:16px">' +
-          '<div><h4 class="eyebrow" style="margin-bottom:9px">Deliverables</h4>' +
-            '<ul class="ticklist ' + (phase.status === 'done' ? 'yes' : 'no') + '">' +
+        '<div class="grid2" style="margin-top:15px">' +
+          '<div><h4 class="eyebrow" style="margin-bottom:9px">Deliverables</h4><ul class="ticklist ' + (phase.status === 'done' ? 'yes' : 'no') + '">' +
             phase.deliverables.map(function (d) {
               return '<li><span class="mk">' + (phase.status === 'done' ? '✓' : '·') + '</span><span>' + esc(d) + '</span></li>';
             }).join('') + '</ul></div>' +
-          '<div><h4 class="eyebrow" style="margin-bottom:9px">Note</h4>' +
-            '<p style="font-size:13.5px;color:var(--ink-2)">' + esc(phase.note) + '</p></div>' +
-        '</div>' +
-      '</div>' +
-
-      '<div class="grid2" style="margin-top:14px">' +
-        '<div class="panel"><h4 class="eyebrow" style="margin-bottom:11px">In scope</h4>' +
-          '<ul class="ticklist yes">' + s.inScope.map(function (x) {
-            return '<li><span class="mk">✓</span><span>' + esc(x) + '</span></li>';
-          }).join('') + '</ul></div>' +
-        '<div class="panel"><h4 class="eyebrow" style="margin-bottom:11px">Out of scope</h4>' +
-          '<ul class="ticklist no">' + s.outOfScope.map(function (x) {
-            return '<li><span class="mk">—</span><span>' + esc(x) + '</span></li>';
-          }).join('') + '</ul></div>' +
-      '</div>' +
-
-      '<div class="grid2" style="margin-top:14px">' +
-        '<div class="panel"><h4 class="eyebrow" style="margin-bottom:11px">Working cadence</h4>' +
-          '<div class="deflist">' + s.cadence.map(function (c) {
-            return '<dt>' + fmt(c.next) + '</dt><dd><strong style="font-weight:500;color:var(--ink)">' + esc(c.label) + '</strong><br>' + esc(c.detail) + '</dd>';
-          }).join('') + '</div></div>' +
-        '<div class="panel"><h4 class="eyebrow" style="margin-bottom:11px">Who is on it</h4>' +
-          '<div class="deflist">' + s.team.map(function (m) {
-            return '<dt>' + esc(m.org === P.firm.name ? 'Good Work' : 'Client') + '</dt><dd><strong style="font-weight:500;color:var(--ink)">' + esc(m.name) + '</strong> · ' + esc(m.role) + '</dd>';
-          }).join('') + '</div></div>' +
-      '</div>';
+          '<div><h4 class="eyebrow" style="margin-bottom:9px">Note</h4><p style="font-size:13.5px;color:var(--ink-2)">' + esc(phase.note) + '</p></div>' +
+        '</div></div>';
   }
 
   /* ---------------- 02 · plan ---------------- */
 
   function renderPlan() {
-    var tr = P.plan.track;
+    var list = scopedPriorities(), scoped = state.sub.plan !== 'all';
 
-    var pillars = P.plan.pillars.map(function (p, i) {
-      var objs = p.objectives.map(function (o) {
-        var ts = allTasks().filter(function (t) { return t.obj === o.id; });
+    var body = list.map(function (p) {
+      var inits = p.initiatives.map(function (o) {
+        var ts = topTasks().filter(function (t) { return t.obj === o.id; });
         var doneN = ts.filter(function (t) { return t.status === 'done'; }).length;
-        return '<div class="obj" id="obj-' + o.id + '">' +
-          '<div class="obj-head"><span class="obj-id">' + o.id + '</span><h4>' + esc(o.title) + '</h4></div>' +
-          '<p class="obj-detail">' + esc(o.detail) + '</p>' +
-          '<div class="measures">' + o.measures.map(function (m) {
-            return '<div class="measure"><span class="m-t">' + esc(m.text) + '</span>' +
-              '<span class="m-now num">' + esc(m.now) + '</span>' +
-              '<span class="m-tgt num">→ ' + esc(m.target) + '</span></div>';
-          }).join('') + '</div>' +
-          evidenceRow(o.evidence) +
+        return '<div class="init" id="init-' + o.id + '">' +
+          '<div class="init-head"><span class="init-id">' + o.id + '</span><h4>' + esc(o.title) + '</h4></div>' +
+          '<p class="init-detail">' + esc(o.detail) + '</p>' + evidenceRow(o.evidence) +
           '<div class="chips noprint"><span class="chips-label">Workplan</span>' +
-            '<button class="chip" data-goto-tasks="' + o.id + '"><span class="cn">' + doneN + ' of ' + ts.length + ' tasks done</span></button>' +
-          '</div>' +
-          '</div>';
+          '<button class="chip" data-goto-tasks="' + o.id + '"><span class="cn">' + doneN + ' of ' + ts.length + ' tasks done</span></button></div></div>';
       }).join('');
 
-      return '<section class="pillar">' +
-        '<div class="pillar-head"><span class="pillar-n">Pillar ' + (i + 1) + '</span>' +
+      return '<section class="priority">' +
+        '<div class="priority-head"><span class="pri-n">Priority ' + p.n + '</span>' +
         '<div style="flex:1 1 auto;min-width:0"><h3>' + esc(p.title) + '</h3>' +
         '<p class="thesis">' + esc(p.thesis) + '</p>' + evidenceRow(p.evidence, 'Drawn from') + '</div></div>' +
-        objs + '</section>';
+        '<div class="kpibox"><h4 class="eyebrow" style="margin-bottom:7px">KPIs · how we will know</h4>' +
+          p.kpis.map(function (k) {
+            return '<div class="kpi"><span>' + esc(k.text) + ' <span class="init-id">' + k.init + '</span></span>' +
+              '<span class="k-now num">' + esc(k.now) + '</span><span class="k-tgt num">→ ' + esc(k.target) + '</span></div>';
+          }).join('') + '</div>' + inits + '</section>';
     }).join('');
 
-    return '' +
-      '<div class="shead"><span class="eyebrow">02 · The plan</span>' +
-      '<h2>Resonate Church · Strategic Plan 2026–2028</h2>' +
-      '<p>Adopted ' + fmtLong(P.client.adopted) + '. ' + esc(P.plan.framing) + '</p></div>' +
+    var track = scoped ? '' :
+      '<section class="priority"><div class="priority-head"><span class="pri-n">Track</span>' +
+      '<div style="flex:1 1 auto;min-width:0"><h3>' + esc(P.plan.track.title) + '</h3>' +
+      '<p class="thesis">' + esc(P.plan.track.note) + '</p>' + evidenceRow(P.plan.track.evidence, 'Drawn from') + '</div></div>' +
+      '<div class="init">' + P.plan.track.milestones.map(function (m) {
+        return '<div class="track-mile"><span class="dot ' + m.status + '"></span><span>' + esc(m.label) + '</span>' +
+          '<span class="num" style="font-family:var(--mono);font-size:11.5px;color:var(--ink-3)">' + fmt(m.date) + '</span></div>';
+      }).join('') + '</div></section>';
 
-      '<div class="panel" style="border-left:2px solid var(--accent)">' +
+    return head('02 · The plan',
+        scoped ? 'Priority ' + list[0].n + ' · ' + list[0].title : P.client.name + ' · ' + P.client.engagement,
+        scoped ? 'One strategic priority, its KPIs, and the initiatives beneath it.'
+               : 'Adopted ' + fmtLong(P.client.adopted) + '. ' + esc(P.plan.framing)) +
+      (scoped ? '' : '<div class="panel" style="border-left:2px solid var(--accent)">' +
         '<h4 class="eyebrow" style="margin-bottom:9px">Where this is going</h4>' +
-        '<p class="vision">' + esc(P.plan.vision) + '</p>' +
-      '</div>' +
-
-      '<div class="callout noprint" style="margin-top:18px">' +
-        '<span aria-hidden="true">↗</span>' +
-        '<span>Every chip below opens the finding it came from — the counts are live from the ' +
-        F.meta.total_sources + ' sources in §3, not a footnote. <button class="ghost" id="printBtn" style="margin-left:6px">Print board packet</button></span>' +
-      '</div>' +
-
-      pillars +
-
-      '<section class="pillar">' +
-        '<div class="pillar-head"><span class="pillar-n">Track</span>' +
-        '<div style="flex:1 1 auto;min-width:0"><h3>' + esc(tr.title) + '</h3>' +
-        '<p class="thesis">' + esc(tr.note) + '</p>' + evidenceRow(tr.evidence, 'Drawn from') + '</div></div>' +
-        '<div class="obj">' + tr.milestones.map(function (m) {
-          return '<div class="track-mile"><span class="dot ' + m.status + '"></span>' +
-            '<span>' + esc(m.label) + '</span>' +
-            '<span class="num" style="font-family:var(--mono);font-size:11.5px;color:var(--ink-3)">' + fmt(m.date) + '</span></div>';
-        }).join('') + '</div>' +
-      '</section>';
+        '<p class="vision">' + esc(P.plan.vision) + '</p></div>') +
+      '<div class="callout noprint" style="margin-top:16px"><span aria-hidden="true">↗</span>' +
+        '<span>Every chip opens the finding it came from — counts are live from the ' + F.meta.total_sources +
+        ' sources in §3. <strong style="font-weight:500;color:var(--ink)">Export</strong> writes ' +
+        (scoped ? 'this priority' : 'the whole plan') + ' to PDF, CSV or JSON.</span></div>' +
+      body + track;
   }
 
   /* ---------------- 03 · findings ---------------- */
 
   function filteredThemes() {
-    var q = state.q.trim().toLowerCase();
+    var q = state.q.trim().toLowerCase(), cat = state.sub.findings;
     return F.themes.filter(function (t) {
-      if (state.cat !== 'ALL' && t.cat !== state.cat) return false;
+      if (cat !== 'ALL' && t.cat !== cat) return false;
       if (!q) return true;
       if (t.name.toLowerCase().indexOf(q) >= 0 || t.summary.toLowerCase().indexOf(q) >= 0) return true;
       return t.more.some(function (i) { return F.quotes[i][1].toLowerCase().indexOf(q) >= 0; });
@@ -920,40 +887,24 @@
 
   function renderFindings() {
     if (state.openTheme) return renderTheme(themeById[state.openTheme]);
-
-    var byCat = { ALL: F.themes.length, S: 0, W: 0, O: 0, T: 0 };
-    F.themes.forEach(function (t) { byCat[t.cat]++; });
-
     var list = filteredThemes();
     var rows = list.map(function (t) {
       var w = Math.round((t.n / t.max) * 100);
-      var sw = Math.round((t.nSurvey / t.max) * 100);
+      var drives = themeDrives[t.id];
       return '<button class="themerow" data-theme="' + t.id + '" style="color:var(--' + t.cat.toLowerCase() + ')">' +
         '<span class="tk k-' + t.cat + '">' + t.cat + '</span>' +
         '<span style="color:var(--ink);min-width:0"><span class="tn">' + esc(t.name) + '</span>' +
-          '<span class="tsub">' + (t.interview ? 'survey + interviews' : 'survey only') +
-          (themeDrives[t.id] ? ' · drives ' + themeDrives[t.id].length + ' objective' + (themeDrives[t.id].length > 1 ? 's' : '') : '') +
-          '</span></span>' +
-        '<span class="bar" style="width:' + Math.max(w, 3) + '%"><i class="b-survey" style="width:' + pct(t.nSurvey, t.n) + '%"></i><i class="b-qual" style="width:' + pct(t.nQual, t.n) + '%"></i></span>' +
-        '<span><span class="tc num" style="color:var(--ink)">' + t.n + '</span><span class="tcl">sources</span></span>' +
-        '</button>';
+        '<span class="tsub">' + (t.interview ? 'survey + interviews' : 'survey only') +
+        (drives ? ' · drives ' + drives.length + ' initiative' + (drives.length > 1 ? 's' : '') : '') + '</span></span>' +
+        '<span class="bar" style="width:' + Math.max(w, 3) + '%"><i class="b-survey" style="width:' + pct(t.nSurvey, t.n) + '%"></i>' +
+        '<i class="b-qual" style="width:' + pct(t.nQual, t.n) + '%"></i></span>' +
+        '<span><span class="tc num" style="color:var(--ink)">' + t.n + '</span><span class="tcl">sources</span></span></button>';
     }).join('');
 
-    return '' +
-      '<div class="shead"><span class="eyebrow">03 · Findings</span>' +
-      '<h2>What ' + F.meta.total_sources + ' sources actually said</h2>' +
-      '<p>' + F.meta.total_survey + ' survey responses and ' + F.meta.qual_breakdown + ', coded into ' +
-      F.themes.length + ' themes. The number on each row is how many separate sources raised it.</p></div>' +
-
-      '<div class="filterbar">' +
-        '<div class="catseg">' +
-        ['ALL', 'S', 'W', 'O', 'T'].map(function (c) {
-          return '<button class="catbtn" data-c="' + c + '" aria-pressed="' + (state.cat === c) + '">' +
-            (c === 'ALL' ? 'All themes' : CATNAME[c]) + ' <span class="cbn num">' + byCat[c] + '</span></button>';
-        }).join('') + '</div>' +
-        '<input type="search" id="themeSearch" placeholder="Search themes and responses…" value="' + esc(state.q) + '" />' +
-      '</div>' +
-
+    return head('03 · Findings', 'What ' + F.meta.total_sources + ' sources actually said',
+        F.meta.total_survey + ' survey responses and ' + F.meta.qual_breakdown + ', coded into ' + F.themes.length +
+        ' themes. The number on each row is how many separate sources raised it.') +
+      '<div class="filterbar"><input type="search" id="themeSearch" placeholder="Search themes and responses…" value="' + esc(state.q) + '" /></div>' +
       (list.length ? '<div class="themelist">' + rows + '</div>'
         : '<div class="panel"><p style="color:var(--ink-2)">No themes match “' + esc(state.q) + '”.</p></div>');
   }
@@ -961,304 +912,579 @@
   function renderTheme(t) {
     var drives = themeDrives[t.id] || [];
     var shown = state.showAllQuotes ? t.more : t.more.slice(0, 6);
-
-    return '' +
-      '<button class="backbtn" id="backThemes">← All themes</button>' +
+    return '<button class="backbtn" id="backThemes">← All themes</button>' +
       '<div class="theme-detail" style="color:var(--' + t.cat.toLowerCase() + ')">' +
-        '<span class="eyebrow" style="color:var(--' + t.cat.toLowerCase() + ')">' + CATNAME[t.cat] + ' · rank ' + t.rank + ' of ' + F.themes.filter(function (x) { return x.cat === t.cat; }).length + '</span>' +
+        '<span class="eyebrow" style="color:var(--' + t.cat.toLowerCase() + ')">' + CATNAME[t.cat] + ' · rank ' + t.rank +
+        ' of ' + F.themes.filter(function (x) { return x.cat === t.cat; }).length + '</span>' +
         '<h3 style="color:var(--ink)">' + esc(t.name) + '</h3>' +
-
         '<div class="statline">' +
           '<span class="stat"><span class="sv" style="color:var(--' + t.cat.toLowerCase() + ')">' + t.n + '</span><span class="sl">of ' + t.max + ' sources</span></span>' +
           '<span class="stat"><span class="sv" style="color:var(--ink)">' + t.nSurvey + '</span><span class="sl">survey</span></span>' +
           '<span class="stat"><span class="sv" style="color:var(--ink)">' + t.nQual + '</span><span class="sl">of ' + t.maxQual + ' interviews</span></span>' +
-        '</div>' +
-
-        '<p style="color:var(--ink-2);max-width:66ch;font-size:14.5px">' + esc(t.summary) + '</p>' +
-
+        '</div><p style="color:var(--ink-2);max-width:66ch;font-size:14.5px">' + esc(t.summary) + '</p>' +
         (drives.length ? '<div class="chips noprint"><span class="chips-label">Drives</span>' +
           drives.map(function (d) {
-            return '<button class="chip" data-goto-' + (d.kind === 'obj' ? 'obj="' + d.id : 'obj="') + '">' +
-              '<span class="ck" style="background:var(--accent-soft);color:var(--accent)">' + (d.kind === 'obj' ? d.id : '↗') + '</span>' +
+            return '<button class="chip" data-goto-init="' + (d.kind === 'init' ? d.id : '') + '">' +
+              '<span class="ck" style="background:var(--accent-soft);color:var(--accent)">' + (d.kind === 'init' ? d.id : '↗') + '</span>' +
               '<span class="cn">' + esc(d.title) + '</span></button>';
           }).join('') + '</div>' : '') +
-
-        (t.pull.length ? '<h4 class="eyebrow" style="margin:22px 0 0">In their words</h4>' +
-          '<div class="quotes">' + t.pull.map(function (q) {
-            return '<blockquote class="quote">“' + esc(q) + '”</blockquote>';
-          }).join('') + '</div>' : '') +
-
-        (t.more.length ? '<h4 class="eyebrow" style="margin:24px 0 2px">Survey responses coded to this theme · ' + t.moreTotal + '</h4>' +
-          '<div>' + shown.map(function (i) {
+        (t.pull.length ? '<h4 class="eyebrow" style="margin:22px 0 0">In their words</h4><div class="quotes">' +
+          t.pull.map(function (q) { return '<blockquote class="quote">“' + esc(q) + '”</blockquote>'; }).join('') + '</div>' : '') +
+        (t.more.length ? '<h4 class="eyebrow" style="margin:24px 0 2px">Survey responses coded to this theme · ' + t.moreTotal + '</h4><div>' +
+          shown.map(function (i) {
             return '<div class="resp"><div class="rp">' + esc(F.quotes[i][0]) + '</div><div class="rt">' + esc(F.quotes[i][1]) + '</div></div>';
           }).join('') + '</div>' +
           (t.more.length > 6 ? '<button class="morebtn" id="moreQuotes">' +
-            (state.showAllQuotes ? 'Show fewer' : 'Show all ' + t.more.length + ' responses') + '</button>' : '')
-          : '') +
+            (state.showAllQuotes ? 'Show fewer' : 'Show all ' + t.more.length + ' responses') + '</button>' : '') : '') +
       '</div>';
   }
 
   /* ---------------- 04 · workplan ---------------- */
 
   function wpVisible() {
-    var ts = allTasks();
+    var ts = scopedTop();
     if (state.wpFilter === 'late') return ts.filter(function (t) { return t.overdue; });
     if (state.wpFilter === 'open') return ts.filter(function (t) { return t.status !== 'done'; });
     if (state.wpFilter === 'quarter') return ts.filter(function (t) { return t.due >= '2026-09-01' && t.due <= '2026-11-30'; });
     return ts;
   }
 
-  function taskRow(t) {
-    var cls = 'task ' + t.status + (t.overdue ? ' overdue' : '');
+  function taskRow(t, isSub) {
+    var subs = isSub ? [] : subsOf(t.id);
+    var open = !!state.expanded[t.id];
     var dotCls = t.overdue ? 'late' : t.status;
-    return '<div class="' + cls + '" data-task-row="' + t.id + '">' +
-      '<button class="statusbtn" data-cycle="' + t.id + '"' + (state.role === 'board' ? ' disabled' : '') +
-        ' aria-label="' + STATUS_LABEL[t.status] + (state.role === 'staff' ? ' — click to advance' : '') + '" title="' + STATUS_LABEL[t.status] + '">' +
-        '<span class="dot ' + dotCls + '"></span></button>' +
+    var doneSubs = subs.filter(function (s) { return s.status === 'done'; }).length;
+    return '<div class="task ' + t.status + (t.overdue ? ' overdue' : '') + (isSub ? ' sub' : '') + '">' +
+      (subs.length ? '<button class="twist" data-twist="' + t.id + '" aria-expanded="' + open + '" aria-label="' +
+        (open ? 'Collapse' : 'Expand') + ' subtasks of ' + esc(t.title) + '"><span class="tw-ico">▶</span></button>' : '<span></span>') +
+      '<button class="statusbtn" data-cycle="' + t.id + '"' + (canEdit() ? '' : ' disabled') +
+        ' title="' + STATUS_LABEL[t.status] + '" aria-label="' + STATUS_LABEL[t.status] + (canEdit() ? ' — click to advance' : '') + '">' +
+        '<span class="dot ' + (isSub ? 'sm ' : '') + dotCls + '"></span></button>' +
       '<span class="tid">' + t.id + '</span>' +
       '<button class="tt" data-task="' + t.id + '" style="text-align:left">' + esc(t.title) +
-        (t.dep ? ' <span class="tdep">· after ' + t.dep + '</span>' : '') + '</button>' +
+        (t.dep ? ' <span class="tdep">· after ' + t.dep + '</span>' : '') +
+        (subs.length ? '<span class="subcount num">' + doneSubs + '/' + subs.length + '</span>' : '') + '</button>' +
       '<span class="town">' + esc(t.owner) + '</span>' +
-      '<span class="tdue num">' + fmt(t.due) + '</span>' +
-      '</div>';
+      '<span class="tdue num">' + fmt(t.due) + '</span></div>' +
+      (open ? subs.map(function (s) { return taskRow(s, true); }).join('') : '');
   }
 
   function renderWorkplan() {
-    var c = counts();
-    var vis = wpVisible();
-    var groups = '';
+    var scoped = scopedTop(), c = counts(scoped), vis = wpVisible(), groups = '';
+    var subCount = allRows().filter(function (t) { return t.parent && inScope(t); }).length;
 
-    if (state.wpGroup === 'objective') {
-      P.plan.pillars.forEach(function (p) {
-        p.objectives.forEach(function (o) {
+    if (state.wpGroup === 'initiative') {
+      scopedPriorities().forEach(function (p) {
+        var any = p.initiatives.some(function (o) { return vis.some(function (t) { return t.obj === o.id; }); });
+        if (!any) return;
+        if (state.sub.workplan === 'all') {
+          groups += '<div class="prihead"><span class="ph-n">Priority ' + p.n + '</span><h3>' + esc(p.title) + '</h3></div>';
+        }
+        p.initiatives.forEach(function (o) {
           var ts = vis.filter(function (t) { return t.obj === o.id; });
           if (!ts.length) return;
-          var all = allTasks().filter(function (t) { return t.obj === o.id; });
-          var d = all.filter(function (t) { return t.status === 'done'; }).length;
-          var g = all.filter(function (t) { return t.status === 'doing'; }).length;
-          groups += '<div class="objgroup"><div class="objgroup-head">' +
-            '<span class="og-id">' + o.id + '</span><span class="og-t">' + esc(o.title) + '</span>' +
-            '<span class="og-p"><span class="minitrack">' +
-              '<i style="width:' + pct(d, all.length) + '%;background:var(--done)"></i>' +
-              '<i style="width:' + pct(g, all.length) + '%;background:var(--doing)"></i></span>' +
-            '<span class="og-pct num">' + d + '/' + all.length + '</span></span>' +
-            '</div>' + ts.map(taskRow).join('') + '</div>';
+          var all = topTasks().filter(function (t) { return t.obj === o.id; });
+          var ic = counts(all);
+          groups += '<div class="initgroup"><div class="initgroup-head"><span class="ig-id">' + o.id + '</span>' +
+            '<span class="ig-t">' + esc(o.title) + '</span><span class="ig-p"><span class="minitrack">' + segs(ic, all.length) + '</span>' +
+            '<span class="ig-pct num">' + ic.done + '/' + all.length + '</span></span></div>' +
+            ts.map(function (t) { return taskRow(t, false); }).join('') + '</div>';
         });
       });
     } else {
-      var owners = [];
-      vis.forEach(function (t) { if (owners.indexOf(t.owner) < 0) owners.push(t.owner); });
-      owners.sort();
-      owners.forEach(function (own) {
-        var ts = vis.filter(function (t) { return t.owner === own; });
-        var d = ts.filter(function (t) { return t.status === 'done'; }).length;
-        var late = ts.filter(function (t) { return t.overdue; }).length;
-        groups += '<div class="objgroup"><div class="objgroup-head">' +
-          '<span class="og-t">' + esc(own) + '</span>' +
-          (late ? '<span class="og-id" style="color:var(--stop)">' + late + ' past due</span>' : '') +
-          '<span class="og-p"><span class="og-pct num">' + d + '/' + ts.length + '</span></span>' +
-          '</div>' + ts.map(taskRow).join('') + '</div>';
+      ownerLoad(vis).forEach(function (o) {
+        var ts = vis.filter(function (t) { return t.owner === o.name; });
+        groups += '<div class="initgroup"><div class="initgroup-head"><span class="ig-t">' + esc(o.name) + '</span>' +
+          (o.late ? '<span class="ig-id" style="color:var(--stop)">' + o.late + ' past due</span>' : '') +
+          '<span class="ig-p"><span class="minitrack">' + segs(o, o.total) + '</span>' +
+          '<span class="ig-pct num">' + o.done + '/' + o.total + '</span></span></div>' +
+          ts.map(function (t) { return taskRow(t, false); }).join('') + '</div>';
       });
     }
 
-    var filters = [
-      ['all', 'All ' + c.total],
-      ['open', 'Open ' + (c.total - c.done)],
-      ['late', 'Past due ' + c.late],
-      ['quarter', 'This quarter']
-    ].map(function (f) {
-      return '<button class="ghost" data-wpf="' + f[0] + '" aria-pressed="' + (state.wpFilter === f[0]) + '">' + f[1] + '</button>';
+    var filters = [['all', 'All ' + c.total], ['open', 'Open ' + (c.total - c.done)],
+                   ['late', 'Past due ' + c.late], ['quarter', 'This quarter']]
+      .map(function (f) { return '<button class="ghost" data-wpf="' + f[0] + '" aria-pressed="' + (state.wpFilter === f[0]) + '">' + f[1] + '</button>'; }).join('');
+
+    var sub = state.sub.workplan;
+    var pri = sub === 'all' ? null : P.plan.priorities.filter(function (p) { return p.id === sub; })[0];
+
+    return head('04 · Workplan',
+        pri ? 'Priority ' + pri.n + ' · ' + pri.title : 'Year one · ' + fmt('2026-08-24') + ' to ' + fmt('2027-08-20'),
+        c.total + ' tasks and ' + subCount + ' subtasks, each under an initiative in §2. ' +
+        (canEdit() ? 'Click a status dot to advance it, or open a task for owner, date, subtasks and notes.'
+          : 'This view is read-only. ' + (state.mode === 'supabase' ? 'Sign in with a staff account to make changes.' : 'Switch the preview to Staff to make changes.'))) +
+      '<div class="tiles">' +
+        '<div class="tile"><div class="tv num" style="color:var(--st-done)">' + c.done + '</div><div class="tl">Done</div></div>' +
+        '<div class="tile"><div class="tv num" style="color:var(--st-doing)">' + c.doing + '</div><div class="tl">In progress</div></div>' +
+        '<div class="tile' + (c.late ? ' is-late' : '') + '"><div class="tv num">' + c.late + '</div><div class="tl">Past due</div></div>' +
+        '<div class="tile"><div class="tv num" style="color:var(--ink-3)">' + (c.next + c.blocked) + '</div><div class="tl">Not started</div></div></div>' +
+      '<div class="progressbig"><div class="pb-row"><span class="eyebrow">Completion</span>' +
+        '<span class="num" style="font-family:var(--mono);font-size:13px;color:var(--ink-2)">' + pct(c.done, c.total) + '% · ' + c.done + ' of ' + c.total + '</span></div>' +
+        '<div class="pb-track">' + segs(c, c.total) + '</div></div>' +
+      '<div class="wpbar">' + filters + '<span style="flex:1 1 auto"></span><span class="eyebrow">Group by</span>' +
+        '<button class="ghost" data-wpg="initiative" aria-pressed="' + (state.wpGroup === 'initiative') + '">Initiative</button>' +
+        '<button class="ghost" data-wpg="owner" aria-pressed="' + (state.wpGroup === 'owner') + '">Owner</button></div>' +
+      (groups || '<div class="panel"><p style="color:var(--ink-2)">Nothing matches this filter.</p></div>') +
+      '<div class="legend">' + STACK.map(function (k) {
+        return '<span><i class="dot ' + k + '"></i> ' + STATUS_LABEL[k] + '</span>';
+      }).join('') + '<span><i class="dot late"></i> Past due</span></div>';
+  }
+
+  /* ---------------- 05 · dashboard ---------------- */
+
+  function ownerLoad(rows) {
+    var by = {};
+    rows.forEach(function (t) {
+      var o = by[t.owner] = by[t.owner] ||
+        { name: t.owner, total: 0, done: 0, doing: 0, next: 0, blocked: 0, late: 0, open: 0 };
+      o.total++; o[t.status]++;
+      if (t.overdue) o.late++;
+      if (t.status !== 'done') o.open++;
+    });
+    return Object.keys(by).map(function (k) { return by[k]; })
+      .sort(function (a, b) { return b.late - a.late || b.open - a.open || a.name.localeCompare(b.name); });
+  }
+
+  function monthBuckets(rows) {
+    var by = {};
+    rows.forEach(function (t) {
+      if (!t.due) return;
+      var k = t.due.slice(0, 7);
+      var m = by[k] = by[k] || { key: k, total: 0, done: 0, doing: 0, next: 0, blocked: 0 };
+      m.total++; m[t.status]++;
+    });
+    return Object.keys(by).sort().map(function (k) { return by[k]; });
+  }
+
+  function statusLegend() {
+    return '<div class="clegend">' + STACK.map(function (k) {
+      return '<span><i class="swatch" style="background:var(' + STATUS_VAR[k] + ')"></i>' + STATUS_LABEL[k] + '</span>';
+    }).join('') + '</div>';
+  }
+
+  /* Horizontal stacked bars. A direct label ends every row, a legend sits
+     beneath, and 2px gaps separate the segments — the relief the recessive
+     neutral needs to stay readable. */
+  function hbars(rows, max) {
+    return rows.map(function (r) {
+      return '<div class="hrow"><span class="hl" title="' + esc(r.name) + '">' + esc(r.name) +
+        (r.late ? ' <span style="color:var(--stop)" title="' + r.late + ' past due">•</span>' : '') + '</span>' +
+        '<span class="hbar" style="width:' + Math.max(pct(r.total, max), 5) + '%">' +
+        STACK.map(function (k) {
+          return r[k] ? '<i style="width:' + pct(r[k], r.total) + '%;background:var(' + STATUS_VAR[k] + ')" title="' +
+            STATUS_LABEL[k] + ': ' + r[k] + '"></i>' : '';
+        }).join('') + '</span><span class="hv num">' + r.done + '/' + r.total + '</span></div>';
+    }).join('');
+  }
+
+  /* Tasks due per month, stacked by status, with this month marked. Only data
+     the workplan actually holds: a seeded plan has no completion timestamps,
+     so there is no burn-up line that could be drawn honestly. */
+  function dueChart(rows) {
+    var ms = monthBuckets(rows);
+    if (!ms.length) return '<p style="color:var(--ink-2);font-size:13px">No dated tasks in scope.</p>';
+    var W = 660, H = 196, padL = 32, padB = 40, padT = 10;
+    var max = Math.max.apply(null, ms.map(function (m) { return m.total; }));
+    var plotH = H - padB - padT;
+    var step = (W - padL - 10) / ms.length, bw = Math.min(step - 9, 38);
+
+    var ticks = [];
+    [0, Math.round(max / 2), max].forEach(function (v) { if (ticks.indexOf(v) < 0) ticks.push(v); });
+    var grid = ticks.map(function (v) {
+      var y = padT + plotH - (v / max) * plotH;
+      return '<line x1="' + padL + '" y1="' + y + '" x2="' + (W - 6) + '" y2="' + y + '" stroke="var(--rule-2)" stroke-width="1" />' +
+        '<text x="' + (padL - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-family="ui-monospace,monospace" font-size="10" fill="var(--ink-3)">' + v + '</text>';
     }).join('');
 
-    return '' +
-      '<div class="shead"><span class="eyebrow">04 · Workplan</span>' +
-      '<h2>Year one · ' + fmt('2026-08-24') + ' to ' + fmt('2027-08-20') + '</h2>' +
-      '<p>' + c.total + ' tasks, each one under an objective in §2. ' +
-      (state.role === 'staff'
-        ? 'Click a status dot to advance it, or open a task to change owner, date, and notes. Changes save for everyone.'
-        : 'You are in board view — read-only. Switch to staff view to make changes.') + '</p></div>' +
+    var now = TODAY.slice(0, 7), shade = '', bars = '';
+    ms.forEach(function (m, i) {
+      var x = padL + i * step + (step - bw) / 2, y = padT + plotH;
+      if (m.key === now) {
+        shade = '<rect x="' + (x - 5) + '" y="' + padT + '" width="' + (bw + 10) + '" height="' + plotH +
+          '" fill="var(--accent)" opacity="0.08" rx="3" />';
+      }
+      STACK.forEach(function (k) {
+        if (!m[k]) return;
+        var h = (m[k] / max) * plotH - 2;
+        if (h < 1.5) h = 1.5;
+        y -= h;
+        bars += '<rect x="' + x + '" y="' + y + '" width="' + bw + '" height="' + h + '" rx="2" fill="var(' + STATUS_VAR[k] + ')">' +
+          '<title>' + MONL[+m.key.slice(5) - 1] + ' ' + m.key.slice(0, 4) + ' · ' + STATUS_LABEL[k] + ': ' + m[k] + '</title></rect>';
+        y -= 2;
+      });
+      bars += '<text x="' + (x + bw / 2) + '" y="' + (padT + plotH + 15) + '" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9.5" fill="' +
+        (m.key === now ? 'var(--ink)' : 'var(--ink-3)') + '">' + MON[+m.key.slice(5) - 1] + '</text>';
+      if (i === 0 || m.key.slice(5) === '01') {
+        bars += '<text x="' + (x + bw / 2) + '" y="' + (padT + plotH + 28) + '" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" fill="var(--ink-3)">' +
+          m.key.slice(0, 4) + '</text>';
+      }
+    });
 
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" ' +
+      'aria-label="Tasks due per month, stacked by status. This month is shaded.">' +
+      shade + grid + bars +
+      '<line x1="' + padL + '" y1="' + (padT + plotH) + '" x2="' + (W - 6) + '" y2="' + (padT + plotH) + '" stroke="var(--rule)" stroke-width="1" /></svg>';
+  }
+
+  function renderDashboard() {
+    var scoped = scopedTop(), c = counts(scoped), pris = scopedPriorities();
+    var priRows = pris.map(function (p) {
+      var ts = topTasks().filter(function (t) { return priOf(t.obj) === p; });
+      var pc = counts(ts);
+      pc.name = 'P' + p.n + ' · ' + p.title;
+      return pc;
+    });
+    var maxPri = Math.max.apply(null, priRows.map(function (r) { return r.total; }).concat([1]));
+    var owners = ownerLoad(scoped);
+    var maxOwn = Math.max.apply(null, owners.map(function (r) { return r.total; }).concat([1]));
+    var subs = allRows().filter(function (t) { return t.parent && inScope(t); });
+    var subDone = subs.filter(function (t) { return t.status === 'done'; }).length;
+    var kpis = pris.reduce(function (a, p) { return a.concat(p.kpis); }, []);
+    var soon = scoped.filter(function (t) { return t.status !== 'done' && t.due >= TODAY && t.due <= '2026-12-15'; }).length;
+
+    var table = '<div class="tablewrap"><table class="dtable">' +
+      '<caption class="sr">Task counts by strategic priority</caption><thead><tr><th>Strategic priority</th>' +
+      STACK.map(function (k) { return '<th>' + STATUS_LABEL[k] + '</th>'; }).join('') + '<th>Past due</th></tr></thead><tbody>' +
+      priRows.map(function (r) {
+        return '<tr><td>' + esc(r.name) + '</td>' + STACK.map(function (k) { return '<td class="n">' + r[k] + '</td>'; }).join('') +
+          '<td class="n">' + r.late + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+
+    return head('05 · Dashboard',
+        state.sub.dashboard === 'all' ? 'Where the year actually stands' : 'Priority ' + pris[0].n + ' · ' + pris[0].title,
+        'Read this before the quarterly review. Everything here obeys the scope picker above.') +
       '<div class="tiles">' +
-        '<div class="tile"><div class="tv" style="color:var(--done)">' + c.done + '</div><div class="tl">Done</div></div>' +
-        '<div class="tile"><div class="tv" style="color:var(--doing)">' + c.doing + '</div><div class="tl">In progress</div></div>' +
-        '<div class="tile' + (c.late ? ' is-late' : '') + '"><div class="tv">' + c.late + '</div><div class="tl">Past due</div></div>' +
-        '<div class="tile"><div class="tv" style="color:var(--ink-3)">' + (c.next + c.blocked) + '</div><div class="tl">Not started</div></div>' +
-      '</div>' +
+        '<div class="tile"><div class="tv num">' + pct(c.done, c.total) + '%</div><div class="tl">Year one complete</div></div>' +
+        '<div class="tile' + (c.late ? ' is-late' : '') + '"><div class="tv num">' + c.late + '</div><div class="tl">Past due</div></div>' +
+        '<div class="tile"><div class="tv num">' + soon + '</div><div class="tl">Due before 15 Dec</div></div>' +
+        '<div class="tile"><div class="tv num">' + subDone + '/' + subs.length + '</div><div class="tl">Subtasks done</div></div></div>' +
 
-      '<div class="progressbig">' +
-        '<div class="pb-row"><span class="eyebrow">Year-one completion</span>' +
-        '<span class="num" style="font-family:var(--mono);font-size:13px;color:var(--ink-2)">' + pct(c.done, c.total) + '% · ' + c.done + ' of ' + c.total + '</span></div>' +
-        '<div class="pb-track">' +
-          '<i style="width:' + pct(c.done, c.total) + '%;background:var(--done)"></i>' +
-          '<i style="width:' + pct(c.doing, c.total) + '%;background:var(--doing)"></i>' +
-        '</div>' +
-      '</div>' +
+      '<div class="charts" style="margin-top:13px">' +
+        '<div class="chart wide"><h4>Tasks due per month</h4>' +
+          '<p class="csub">Where the year is overloaded. The shaded column is this month.</p>' +
+          '<div class="chartbody">' + dueChart(scoped) + '</div>' + statusLegend() + '</div>' +
 
-      '<div class="wpbar">' + filters +
-        '<span style="flex:1 1 auto"></span>' +
-        '<span class="eyebrow">Group by</span>' +
-        '<button class="ghost" data-wpg="objective" aria-pressed="' + (state.wpGroup === 'objective') + '">Objective</button>' +
-        '<button class="ghost" data-wpg="owner" aria-pressed="' + (state.wpGroup === 'owner') + '">Owner</button>' +
-      '</div>' +
+        '<div class="chart"><h4>Completion by strategic priority</h4>' +
+          '<p class="csub">Bar length is how many tasks the priority carries.</p>' +
+          '<div class="chartbody" style="margin-top:9px">' + hbars(priRows, maxPri) + '</div>' + statusLegend() +
+          '<button class="ghost" id="dashTableBtn" style="margin-top:11px">' + (state.dashTable ? 'Hide table' : 'Show as table') + '</button>' +
+          (state.dashTable ? table : '') + '</div>' +
 
-      (groups || '<div class="panel"><p style="color:var(--ink-2)">Nothing matches this filter.</p></div>') +
+        '<div class="chart"><h4>Load by owner</h4>' +
+          '<p class="csub">Sorted by what is past due, then what is still open.</p>' +
+          '<div class="chartbody" style="margin-top:9px">' + hbars(owners, maxOwn) + '</div>' + statusLegend() +
+          '<p class="savenote">• marks an owner with something past due.</p></div>' +
 
-      '<div class="legend">' +
-        '<span><i class="dot done"></i> Done</span>' +
-        '<span><i class="dot doing"></i> In progress</span>' +
-        '<span><i class="dot next"></i> Not started</span>' +
-        '<span><i class="dot blocked"></i> Blocked</span>' +
-        '<span><i class="dot late"></i> Past due</span>' +
+        '<div class="chart wide"><h4>KPIs · ' + kpis.length + ' in scope</h4>' +
+          '<p class="csub">The plan’s own measures. They move quarterly, not weekly — read here, edited in §2.</p>' +
+          '<div class="tablewrap"><table class="dtable"><thead><tr><th>Measure</th><th>Initiative</th><th>Now</th><th>Target</th></tr></thead><tbody>' +
+          kpis.map(function (k) {
+            return '<tr><td>' + esc(k.text) + '</td><td class="num" style="color:var(--ink-3)">' + k.init +
+              '</td><td class="num">' + esc(k.now) + '</td><td class="num" style="color:var(--ink-3)">' + esc(k.target) + '</td></tr>';
+          }).join('') + '</tbody></table></div></div>' +
       '</div>';
   }
 
-  /* ---------------- task drawer ---------------- */
+  /* ---------------- export ---------------- */
+
+  function exportRows() {
+    var rows = [['id', 'parent', 'priority', 'initiative', 'initiative_title', 'task', 'owner', 'start', 'due', 'status', 'note']];
+    scopedPriorities().forEach(function (p) {
+      p.initiatives.forEach(function (o) {
+        allRows().filter(function (t) { return t.obj === o.id; }).forEach(function (t) {
+          rows.push([t.id, t.parent || '', 'Priority ' + p.n + ' · ' + p.title, o.id, o.title,
+                     t.title, t.owner, t.start, t.due, STATUS_LABEL[t.status], t.note]);
+        });
+      });
+    });
+    return rows;
+  }
+  function toCSV(rows) {
+    return rows.map(function (r) {
+      return r.map(function (c) {
+        c = String(c == null ? '' : c);
+        return /[",\r\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c;
+      }).join(',');
+    }).join('\r\n');
+  }
+  function exportJSON() {
+    var pris = scopedPriorities();
+    return JSON.stringify({
+      client: P.client, exported: TODAY,
+      scope: state.sub[state.section] === 'all' ? 'whole plan' : pris[0].title,
+      priorities: pris.map(function (p) {
+        return {
+          id: p.id, n: p.n, title: p.title, thesis: p.thesis, kpis: p.kpis,
+          evidence: p.evidence.map(function (e) {
+            var th = themeById[e];
+            return th ? { id: th.id, category: th.cat, name: th.name, sources: th.n } : { id: e };
+          }),
+          initiatives: p.initiatives.map(function (o) {
+            return {
+              id: o.id, title: o.title, detail: o.detail, evidence: o.evidence,
+              tasks: allRows().filter(function (t) { return t.obj === o.id && !t.parent; }).map(function (t) {
+                return {
+                  id: t.id, title: t.title, owner: t.owner, start: t.start, due: t.due,
+                  status: t.status, note: t.note,
+                  subtasks: subsOf(t.id).map(function (s) { return { id: s.id, title: s.title, status: s.status }; })
+                };
+              })
+            };
+          })
+        };
+      })
+    }, null, 2);
+  }
+  function blobSave(filename, text, mime) {
+    try {
+      var url = URL.createObjectURL(new Blob([text], { type: mime }));
+      var a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    } catch (e) {}
+  }
+  function deliver(filename, text, mime) {
+    if (window.claude && window.claude.use) {
+      window.claude.use('downloads').then(function (d) {
+        if (d) return d.save({ filename: filename, data: text });
+        blobSave(filename, text, mime);
+      }).catch(function () { blobSave(filename, text, mime); });
+    } else {
+      blobSave(filename, text, mime);
+    }
+  }
+  function scopeSlug() {
+    var s = state.sub[state.section];
+    return (P.client.name + '-' + (s === 'all' ? 'plan' : s)).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  }
+
+  function exportMenu() {
+    var s = state.sub[state.section];
+    var p = P.plan.priorities.filter(function (x) { return x.id === s; })[0];
+    var label = s === 'all' ? 'the whole plan' : 'Priority ' + p.n + ' · ' + p.title;
+    return '<div class="scrim" id="scrim"></div><div class="modal" role="dialog" aria-label="Export">' +
+      '<span class="eyebrow">Export</span><h3 style="margin-top:3px">Take it with you</h3>' +
+      '<p style="font-size:13.5px;color:var(--ink-2);margin-top:8px">Scoped to <strong style="color:var(--ink);font-weight:500">' + esc(label) + '</strong>, from the bar above.</p>' +
+      '<div style="display:flex;flex-direction:column;gap:9px;margin-top:16px">' +
+        '<button class="ghost expopt" data-exp="pdf"><strong>Board packet (PDF)</strong><br>' +
+          '<span>Opens your print dialog. The plan with the chrome stripped — this is the PDF you used to build by hand.</span></button>' +
+        '<button class="ghost expopt" data-exp="csv"><strong>Workplan (CSV)</strong><br>' +
+          '<span>Tasks and subtasks with owners, dates and status. Opens in Excel; imports to Asana or ClickUp.</span></button>' +
+        '<button class="ghost expopt" data-exp="json"><strong>Everything (JSON)</strong><br>' +
+          '<span>Priorities, KPIs, initiatives, tasks, subtasks, and the findings each one cites.</span></button></div>' +
+      '<p class="savenote">Files are named ' + esc(scopeSlug()) + '-*</p>' +
+      '<div style="margin-top:14px;text-align:right"><button class="ghost" id="closeModal">Close</button></div></div>';
+  }
+
+  /* ---------------- overlays ---------------- */
+
+  var authState = { step: 'email', email: '', err: '', busy: false };
+
+  function authModal() {
+    return '<div class="scrim" id="scrim"></div><div class="modal" role="dialog" aria-label="Sign in">' +
+      '<span class="eyebrow">' + esc(P.client.name) + '</span><h3 style="margin-top:3px">Sign in</h3>' +
+      (authState.step === 'email'
+        ? '<p style="font-size:13.5px;color:var(--ink-2);margin-top:8px">We email you a one-time code. No password, and nothing to click in the message.</p>' +
+          '<div class="field"><label class="eyebrow" for="fEmail">Email</label>' +
+          '<input id="fEmail" type="email" autocomplete="email" value="' + esc(authState.email) + '" placeholder="you@organization.org" /></div>' +
+          '<div style="margin-top:15px;display:flex;gap:8px;justify-content:flex-end">' +
+          '<button class="ghost" id="closeModal">Cancel</button>' +
+          '<button class="solid" id="authSend"' + (authState.busy ? ' disabled' : '') + '>' + (authState.busy ? 'Sending…' : 'Send code') + '</button></div>'
+        : '<p style="font-size:13.5px;color:var(--ink-2);margin-top:8px">We sent a code to <strong style="color:var(--ink);font-weight:500">' + esc(authState.email) + '</strong>.</p>' +
+          '<div class="field"><label class="eyebrow" for="fCode">Code</label>' +
+          '<input id="fCode" class="code" inputmode="numeric" autocomplete="one-time-code" placeholder="······" /></div>' +
+          '<div style="margin-top:15px;display:flex;gap:8px;justify-content:flex-end">' +
+          '<button class="ghost" id="authBack">Back</button>' +
+          '<button class="solid" id="authVerify"' + (authState.busy ? ' disabled' : '') + '>' + (authState.busy ? 'Checking…' : 'Sign in') + '</button></div>') +
+      (authState.err ? '<p class="errnote">' + esc(authState.err) + '</p>' : '') + '</div>';
+  }
 
   function renderOverlay() {
     var host = document.getElementById('overlay');
+    if (state.modal === 'export') { host.innerHTML = exportMenu(); return; }
+    if (state.modal === 'auth') { host.innerHTML = authModal(); return; }
     if (!state.openTask) { host.innerHTML = ''; return; }
 
-    var seed = P.tasks.filter(function (x) { return x.id === state.openTask; })[0];
-    var t = taskOf(seed);
-    var o = objById[t.obj];
-    var p = objPillar[t.obj];
-    var ro = state.role === 'board';
+    var t = taskOf(seedById[state.openTask]);
+    var o = initById[t.obj], p = priOf(t.obj), ro = !canEdit(), subs = subsOf(t.id);
 
-    host.innerHTML =
-      '<div class="scrim" id="scrim"></div>' +
+    host.innerHTML = '<div class="scrim" id="scrim"></div>' +
       '<aside class="drawer" role="dialog" aria-label="Task ' + t.id + '">' +
-        '<div class="drawer-head"><div>' +
-          '<span class="eyebrow">' + t.id + ' · Pillar ' + p.id.slice(1) + ' · Objective ' + o.id + '</span>' +
-          '<h3>' + esc(t.title) + '</h3>' +
-        '</div><button class="ghost" id="closeDrawer" aria-label="Close">Close</button></div>' +
-
-        '<div class="callout" style="margin:16px 0 0">' +
-          '<span aria-hidden="true">↳</span>' +
-          '<span>Serves <strong style="font-weight:500;color:var(--ink)">' + esc(o.title) + '</strong>, which came from ' +
-          (o.evidence || []).length + ' findings.</span>' +
-        '</div>' +
-        evidenceRow(o.evidence, 'Traces to') +
-
-        '<div class="field"><label class="eyebrow" for="fStatus">Status</label>' +
-          '<select id="fStatus"' + (ro ? ' disabled' : '') + '>' +
+        '<div class="drawer-head"><div><span class="eyebrow">' + t.id + ' · Priority ' + p.n + ' · Initiative ' + o.id + '</span>' +
+        '<h3>' + esc(t.title) + '</h3></div><button class="ghost" id="closeDrawer">Close</button></div>' +
+        '<div class="callout" style="margin:16px 0 0"><span aria-hidden="true">↳</span>' +
+        '<span>Serves <strong style="font-weight:500;color:var(--ink)">' + esc(o.title) + '</strong>, which came from ' +
+        (o.evidence || []).length + ' findings.</span></div>' + evidenceRow(o.evidence, 'Traces to') +
+        '<div class="field"><label class="eyebrow" for="fStatus">Status</label><select id="fStatus"' + (ro ? ' disabled' : '') + '>' +
           STATUS_ORDER.map(function (s) {
             return '<option value="' + s + '"' + (t.status === s ? ' selected' : '') + '>' + STATUS_LABEL[s] + '</option>';
           }).join('') + '</select></div>' +
-
-        '<div class="field"><label class="eyebrow" for="fOwner">Owner</label>' +
-          '<input id="fOwner" value="' + esc(t.owner) + '"' + (ro ? ' disabled' : '') + ' /></div>' +
-
-        '<div class="field"><label class="eyebrow" for="fDue">Due</label>' +
-          '<input id="fDue" type="date" value="' + t.due + '"' + (ro ? ' disabled' : '') + ' /></div>' +
-
-        '<div class="field"><label class="eyebrow" for="fNote">Notes</label>' +
-          '<textarea id="fNote" placeholder="What happened, what is next, what is in the way…"' + (ro ? ' disabled' : '') + '>' + esc(t.note) + '</textarea></div>' +
-
-        (t.dep ? '<p class="savenote">Waits on ' + t.dep + ' · ' + esc((P.tasks.filter(function (x) { return x.id === t.dep; })[0] || {}).title || '') + '</p>' : '') +
-
-        '<p class="savenote">' + (ro
-          ? 'Board view is read-only.'
-          : (state.dbLive ? 'Saves for everyone with this link.' : 'Saving to this browser only — no shared store on this view.')) + '</p>' +
-      '</aside>';
+        '<div class="field"><label class="eyebrow" for="fOwner">Owner</label><input id="fOwner" value="' + esc(t.owner) + '"' + (ro ? ' disabled' : '') + ' /></div>' +
+        '<div class="field"><label class="eyebrow" for="fDue">Due</label><input id="fDue" type="date" value="' + t.due + '"' + (ro ? ' disabled' : '') + ' /></div>' +
+        '<div class="field"><label class="eyebrow" for="fNote">Notes</label><textarea id="fNote" placeholder="What happened, what is next, what is in the way…"' + (ro ? ' disabled' : '') + '>' + esc(t.note) + '</textarea></div>' +
+        (subs.length ? '<div class="sublist"><h4 class="eyebrow" style="margin-bottom:8px">Subtasks · ' +
+          subs.filter(function (s) { return s.status === 'done'; }).length + ' of ' + subs.length + '</h4>' +
+          subs.map(function (s) {
+            return '<div class="subrow ' + s.status + '"><button class="statusbtn" data-cycle="' + s.id + '"' + (ro ? ' disabled' : '') +
+              ' title="' + STATUS_LABEL[s.status] + '" aria-label="' + esc(s.title) + ' — ' + STATUS_LABEL[s.status] + '">' +
+              '<span class="dot sm ' + s.status + '"></span></button><span>' + esc(s.title) + '</span></div>';
+          }).join('') + '</div>' : '') +
+        (t.dep ? '<p class="savenote">Waits on ' + t.dep + ' · ' + esc((seedById[t.dep] || {}).title || '') + '</p>' : '') +
+        '<p class="savenote">' + (ro ? 'Read-only in this view.'
+          : state.mode === 'supabase' ? 'Saves to Supabase for everyone on this portal.'
+          : state.mode === 'artifact' ? 'Saves for everyone with this link.'
+          : 'Saving to this browser only.') + '</p></aside>';
   }
 
   /* ---------------- render ---------------- */
 
   function render() {
-    renderNav();
-    var view = document.getElementById('view');
-    view.innerHTML =
+    renderMast(); renderNav(); renderSubnav();
+    document.getElementById('view').innerHTML =
       state.section === 'scope' ? renderScope() :
       state.section === 'plan' ? renderPlan() :
       state.section === 'findings' ? renderFindings() :
-      renderWorkplan();
+      state.section === 'workplan' ? renderWorkplan() : renderDashboard();
     renderOverlay();
   }
 
-  function go(section) {
-    state.section = section;
-    state.openTask = null;
-    window.scrollTo(0, 0);
+  function saveTask(id, patch) {
+    var cur = taskOf(seedById[id]);
+    var row = { title: cur.title, owner: cur.owner, start: cur.start, due: cur.due, status: cur.status, note: cur.note };
+    Object.keys(patch).forEach(function (k) { row[k] = patch[k]; });
+    state.overrides[id] = row;
+    state.saveErr = false;
     render();
+    Store.save(id, row).catch(function () { state.saveErr = true; renderMast(); });
   }
 
   /* ---------------- events ---------------- */
 
+  var SEL = '[data-sec],[data-sub],[data-phase],[data-theme],[data-goto-theme],[data-goto-init],' +
+    '[data-goto-tasks],[data-wpf],[data-wpg],[data-task],[data-cycle],[data-twist],[data-exp],' +
+    '#backThemes,#moreQuotes,#scrim,#closeDrawer,#closeModal,#exportBtn,#roleBoard,#roleStaff,' +
+    '#signIn,#signOut,#authSend,#authVerify,#authBack,#dashTableBtn';
+
   document.addEventListener('click', function (ev) {
-    var el = ev.target.closest ? ev.target.closest('[data-sec],[data-phase],[data-c],[data-theme],[data-goto-theme],[data-goto-obj],[data-goto-tasks],[data-wpf],[data-wpg],[data-task],[data-cycle],#backThemes,#moreQuotes,#scrim,#closeDrawer,#printBtn,#roleBoard,#roleStaff') : null;
+    var el = ev.target.closest ? ev.target.closest(SEL) : null;
     if (!el) return;
+    var d = el.dataset;
 
-    if (el.dataset.sec) return go(el.dataset.sec);
-    if (el.id === 'roleBoard' || el.id === 'roleStaff') {
-      state.role = el.id === 'roleStaff' ? 'staff' : 'board';
-      document.getElementById('roleBoard').setAttribute('aria-pressed', String(state.role === 'board'));
-      document.getElementById('roleStaff').setAttribute('aria-pressed', String(state.role === 'staff'));
-      return render();
-    }
-    if (el.id === 'printBtn') return window.print();
-    if (el.dataset.phase) { state.openPhase = el.dataset.phase; return render(); }
-    if (el.dataset.c) { state.cat = el.dataset.c; return render(); }
+    if (d.sec) { state.section = d.sec; state.openTask = null; state.modal = null; window.scrollTo(0, 0); return render(); }
+    if (d.sub !== undefined) { state.sub[state.section] = d.sub; state.openTheme = null; window.scrollTo(0, 0); return render(); }
+    if (el.id === 'roleBoard' || el.id === 'roleStaff') { state.role = el.id === 'roleStaff' ? 'staff' : 'board'; return render(); }
+    if (el.id === 'exportBtn') { state.modal = 'export'; return renderOverlay(); }
+    if (el.id === 'closeModal' || el.id === 'scrim') { state.modal = null; state.openTask = null; return renderOverlay(); }
+    if (el.id === 'closeDrawer') { state.openTask = null; return renderOverlay(); }
+    if (d.phase) { state.openPhase = d.phase; return render(); }
 
-    if (el.dataset.theme || el.dataset.gotoTheme) {
-      state.openTheme = el.dataset.theme || el.dataset.gotoTheme;
-      state.showAllQuotes = false;
-      state.section = 'findings';
-      state.openTask = null;
-      window.scrollTo({ top: 0 });
+    if (d.theme || d.gotoTheme) {
+      state.openTheme = d.theme || d.gotoTheme;
+      state.showAllQuotes = false; state.section = 'findings'; state.sub.findings = 'ALL';
+      state.openTask = null; state.modal = null; window.scrollTo(0, 0);
       return render();
     }
     if (el.id === 'backThemes') { state.openTheme = null; return render(); }
     if (el.id === 'moreQuotes') { state.showAllQuotes = !state.showAllQuotes; return render(); }
+    if (el.id === 'dashTableBtn') { state.dashTable = !state.dashTable; return render(); }
 
-    if (el.dataset.gotoTasks) {
-      state.section = 'workplan';
-      state.wpFilter = 'all';
-      state.wpGroup = 'objective';
-      state.openTask = null;
-      state.openTheme = null;
+    if (d.gotoTasks) {
+      var pa = priOf(d.gotoTasks);
+      state.section = 'workplan'; state.sub.workplan = pa ? pa.id : 'all';
+      state.wpFilter = 'all'; state.wpGroup = 'initiative';
+      state.openTask = null; state.openTheme = null; state.modal = null;
       render();
-      var head = [].slice.call(document.querySelectorAll('.objgroup-head .og-id')).filter(function (n) {
-        return n.textContent === el.dataset.gotoTasks;
-      })[0];
-      if (head) head.closest('.objgroup').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      var hd = [].slice.call(document.querySelectorAll('.initgroup-head .ig-id'))
+        .filter(function (n) { return n.textContent === d.gotoTasks; })[0];
+      if (hd) hd.closest('.initgroup').scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
-    if (el.dataset.gotoObj !== undefined) {
-      var target = el.dataset.gotoObj;
-      state.section = 'plan';
-      state.openTheme = null;
-      state.openTask = null;
+    if (d.gotoInit !== undefined) {
+      var pb = d.gotoInit ? priOf(d.gotoInit) : null;
+      state.section = 'plan'; state.sub.plan = pb ? pb.id : 'all';
+      state.openTheme = null; state.openTask = null; state.modal = null;
       render();
-      var box = target ? document.getElementById('obj-' + target) : null;
-      if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      else window.scrollTo(0, 0);
+      var box = d.gotoInit ? document.getElementById('init-' + d.gotoInit) : null;
+      if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' }); else window.scrollTo(0, 0);
       return;
     }
 
-    if (el.dataset.wpf) { state.wpFilter = el.dataset.wpf; return render(); }
-    if (el.dataset.wpg) { state.wpGroup = el.dataset.wpg; return render(); }
-    if (el.dataset.task) { state.openTask = el.dataset.task; return renderOverlay(); }
-    if (el.id === 'scrim' || el.id === 'closeDrawer') { state.openTask = null; return renderOverlay(); }
+    if (d.wpf) { state.wpFilter = d.wpf; return render(); }
+    if (d.wpg) { state.wpGroup = d.wpg; return render(); }
+    if (d.twist) { state.expanded[d.twist] = !state.expanded[d.twist]; return render(); }
+    if (d.task) { state.openTask = d.task; return renderOverlay(); }
 
-    if (el.dataset.cycle && state.role === 'staff') {
-      var t = taskOf(P.tasks.filter(function (x) { return x.id === el.dataset.cycle; })[0]);
-      var i = STATUS_ORDER.indexOf(t.status);
-      return saveTask(t.id, { status: STATUS_ORDER[(i + 1) % STATUS_ORDER.length] });
+    if (d.cycle && canEdit()) {
+      var t = taskOf(seedById[d.cycle]);
+      return saveTask(t.id, { status: STATUS_ORDER[(STATUS_ORDER.indexOf(t.status) + 1) % STATUS_ORDER.length] });
+    }
+
+    if (d.exp) {
+      var slug = scopeSlug();
+      state.modal = null;
+      if (d.exp === 'pdf') { renderOverlay(); return window.print(); }
+      if (d.exp === 'csv') deliver(slug + '-workplan.csv', toCSV(exportRows()), 'text/csv');
+      if (d.exp === 'json') deliver(slug + '.json', exportJSON(), 'application/json');
+      return renderOverlay();
+    }
+
+    // ---- account
+    if (el.id === 'signIn') { authState = { step: 'email', email: '', err: '', busy: false }; state.modal = 'auth'; return renderOverlay(); }
+    if (el.id === 'authBack') { authState.step = 'email'; authState.err = ''; return renderOverlay(); }
+    if (el.id === 'authSend') {
+      var em = ((document.getElementById('fEmail') || {}).value || '').trim();
+      if (!/.+@.+\..+/.test(em)) { authState.err = 'That does not look like an email address.'; return renderOverlay(); }
+      authState.email = em; authState.busy = true; authState.err = '';
+      renderOverlay();
+      Store.backends.supabase.signIn(em).then(function (r) {
+        authState.busy = false;
+        if (r && r.error) authState.err = r.error.message; else authState.step = 'code';
+        renderOverlay();
+      }).catch(function (e) {
+        authState.busy = false;
+        authState.err = (e && e.message) || 'Could not send the code.';
+        renderOverlay();
+      });
+      return;
+    }
+    if (el.id === 'authVerify') {
+      var code = ((document.getElementById('fCode') || {}).value || '').trim();
+      if (!code) { authState.err = 'Type the code from the email.'; return renderOverlay(); }
+      authState.busy = true; authState.err = '';
+      renderOverlay();
+      Store.backends.supabase.verify(authState.email, code).then(function (r) {
+        authState.busy = false; state.modal = null;
+        state.role = r.role || 'board'; state.user = r.user; state.mode = 'supabase';
+        render();
+      }).catch(function (e) {
+        authState.busy = false;
+        authState.err = (e && e.message) || 'That code did not work. Codes expire after about an hour.';
+        renderOverlay();
+      });
+      return;
+    }
+    if (el.id === 'signOut') {
+      Store.backends.supabase.signOut().then(function () {
+        state.user = null; state.role = 'board'; state.overrides = {};
+        render();
+      });
+      return;
     }
   });
 
   document.addEventListener('input', function (ev) {
-    if (ev.target.id === 'themeSearch') {
-      state.q = ev.target.value;
-      var pos = ev.target.selectionStart;
-      render();
-      var again = document.getElementById('themeSearch');
-      if (again) { again.focus(); again.setSelectionRange(pos, pos); }
-    }
+    if (ev.target.id !== 'themeSearch') return;
+    state.q = ev.target.value;
+    var pos = ev.target.selectionStart;
+    render();
+    var again = document.getElementById('themeSearch');
+    if (again) { again.focus(); again.setSelectionRange(pos, pos); }
   });
 
   document.addEventListener('change', function (ev) {
-    if (!state.openTask || state.role !== 'staff') return;
+    if (!state.openTask || !canEdit()) return;
     var id = state.openTask;
     if (ev.target.id === 'fStatus') saveTask(id, { status: ev.target.value });
     if (ev.target.id === 'fOwner') saveTask(id, { owner: ev.target.value });
@@ -1267,18 +1493,25 @@
   });
 
   document.addEventListener('keydown', function (ev) {
-    if (ev.key === 'Escape') {
-      if (state.openTask) { state.openTask = null; renderOverlay(); }
-      else if (state.openTheme) { state.openTheme = null; render(); }
-    }
+    if (ev.key !== 'Escape') return;
+    if (state.modal) { state.modal = null; renderOverlay(); }
+    else if (state.openTask) { state.openTask = null; renderOverlay(); }
+    else if (state.openTheme) { state.openTheme = null; render(); }
   });
 
   /* ---------------- boot ---------------- */
 
   document.getElementById('brandName').textContent = P.client.name;
   document.getElementById('brandSub').textContent = P.client.engagement + ' · ' + P.client.place;
-  readLocal();
+
+  Store.onChange(render);
   render();
-  connect();
+  Store.init().then(function (r) {
+    if (!r) return;
+    state.mode = r.mode;
+    if (r.role) state.role = r.role;
+    if (r.user) state.user = r.user;
+    render();
+  });
 })();
 </script>
