@@ -1,0 +1,23 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+  # Both values are public by design: the browser needs them to sign in, so they
+  # are compiled into the bundle. Netlify's secret scanner would otherwise see
+  # SUPABASE_URL in the output and block the deploy. The service-role key is NOT
+  # set on this site and is never read by the build.
+  SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY"
+
+# One deploy serves every client; the portal slug is a path segment, so every
+# route has to reach the app rather than 404 on a directory that does not exist.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-store, max-age=0, must-revalidate"

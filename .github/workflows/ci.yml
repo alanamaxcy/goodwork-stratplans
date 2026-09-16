@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  build-and-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Build and drive the app end to end
+        run: node test/smoke.mjs
+
+  rls:
+    # The permission boundary is the product's only real security control.
+    # It runs against a real Postgres on every push, because a boundary is only
+    # as good as the test that guards it.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL 16
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-16
+      - name: Apply the schema and assert who can read and write what
+        run: |
+          chmod +x supabase/test-rls.sh
+          sudo -u postgres env PATH="$PATH" bash supabase/test-rls.sh

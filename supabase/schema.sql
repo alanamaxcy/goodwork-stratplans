@@ -44,20 +44,64 @@ $$;
 
 create table if not exists portals (
   id           uuid primary key default gen_random_uuid(),
+  -- The first path segment: plans.example.org/resonate. An address, not a
+  -- secret; RLS below is what actually decides who reads it.
   slug         text unique not null,
   tenant       text not null,                    -- matches the gw_tenant claim
   client_name  text not null,
   place        text,
-  engagement   text not null,
+  engagement_name text not null,
   adopted      date,
-  -- The plan itself: phases, scope, priorities -> initiatives, KPIs, track.
-  -- Documents, not rows: they are read whole, written whole, and versioned as
-  -- a unit by the consultant. Tasks are rows because many people write them.
+
+  -- ---- everything below is edited IN THE APP by the consultant ----
+
+  -- Logo and one accent colour. Deliberately not full theming: the portal
+  -- should look like one product across every client, not reskin into each.
+  brand        jsonb not null default '{}'::jsonb,
+
+  -- What this client calls things. A church says "pillars", a foundation says
+  -- "goal areas". One column, and the portal stops sounding generic.
+  -- {"priority":"Pillar","priorities":"Pillars","initiative":"Workstream"}
+  labels       jsonb not null default '{}'::jsonb,
+
+  -- Which sections appear, in order. A client with no SWOT drops "findings".
+  -- ["scope","plan","findings","workplan","dashboard"]
+  sections     jsonb not null default '[]'::jsonb,
+
+  -- Phases, in/out of scope, cadence, team.
+  engagement   jsonb not null default '{}'::jsonb,
+
+  -- Vision, framing, priorities -> initiatives, KPIs, the parallel track.
+  -- A DOCUMENT, not rows: read whole, written whole, by one person, a few
+  -- times an engagement. Tasks are rows because many people write them at once.
   plan         jsonb not null default '{}'::jsonb,
+
+  -- Coded themes with source counts and the quote pool.
   findings     jsonb not null default '{}'::jsonb,
+
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );
+
+-- Older deploys created this table with `engagement text`; lift it forward
+-- rather than shipping a migration anyone has to remember to run.
+do $$
+begin
+  if exists (select 1 from information_schema.columns
+              where table_name = 'portals' and column_name = 'engagement'
+                and data_type <> 'jsonb')
+  then
+    alter table portals rename column engagement to engagement_name;
+    alter table portals add column engagement jsonb not null default '{}'::jsonb;
+  end if;
+end $$;
+
+do $$
+begin
+  alter table portals add column if not exists brand    jsonb not null default '{}'::jsonb;
+  alter table portals add column if not exists labels   jsonb not null default '{}'::jsonb;
+  alter table portals add column if not exists sections jsonb not null default '[]'::jsonb;
+end $$;
 
 create table if not exists portal_members (
   portal_id  uuid not null references portals (id) on delete cascade,
@@ -79,6 +123,9 @@ create table if not exists tasks (
   -- A SUBTASK IS A TASK WITH A PARENT. One table, one set of rules, one status
   -- vocabulary — rather than a second table that would need all three again.
   parent_id     text,
+  -- The initiative id from the plan document ("2.1"). A SOFT reference, not
+  -- a foreign key: renumbering a plan in the editor must never orphan or
+  -- cascade-delete somebody's work. The editor keeps the two in step.
   initiative    text not null,
   title         text not null,
   owner_name    text,

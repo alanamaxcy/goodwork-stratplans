@@ -4,12 +4,12 @@
 # then exercises the RLS policies as three different users.
 set -euo pipefail
 
-PGBIN=/usr/lib/postgresql/16/bin
-DATA=/tmp/claude-0/-home-user-goodworkimpact/dadb44c7-6e89-577a-9c8f-5e47ba28b7dc/scratchpad/pgdata
-SOCK=/tmp/claude-0/-home-user-goodworkimpact/dadb44c7-6e89-577a-9c8f-5e47ba28b7dc/scratchpad/pgsock
-SCHEMA=/home/user/goodworkimpact/strategic-plan-portal/supabase/schema.sql
+PGBIN="${PGBIN:-/usr/lib/postgresql/16/bin}"
+DATA="${TMPDIR:-/tmp}/spp-pg/data"
+SOCK="${TMPDIR:-/tmp}/spp-pg/sock"
+SCHEMA="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/schema.sql"
 
-rm -rf "$DATA" "$SOCK"; mkdir -p "$SOCK"
+rm -rf "$DATA" "$SOCK"; mkdir -p "$SOCK" "$(dirname "$DATA")"
 "$PGBIN/initdb" -D "$DATA" -U postgres -A trust >/dev/null 2>&1
 "$PGBIN/pg_ctl" -D "$DATA" -o "-k $SOCK -h '' -c listen_addresses=''" -w start >/dev/null
 trap '"$PGBIN/pg_ctl" -D "$DATA" -w stop >/dev/null 2>&1 || true' EXIT
@@ -45,8 +45,9 @@ echo "    re-run clean"
 
 echo "=== seed one portal ==="
 psql -q <<'SQL'
-insert into portals (slug, tenant, client_name, engagement, adopted)
-values ('resonate','resonate','Resonate Church','Strategic Plan 2026-2028','2026-08-18');
+insert into portals (slug, tenant, client_name, engagement_name, adopted, labels, sections)
+values ('resonate','resonate','Resonate Church','Strategic Plan 2026-2028','2026-08-18',
+        '{"priority":"Pillar"}'::jsonb, '["plan","workplan"]'::jsonb);
 insert into portal_members (portal_id, user_id, email, role)
 select p.id,'22222222-2222-2222-2222-222222222222','staff@resonate.org','staff' from portals p where slug='resonate';
 insert into portal_members (portal_id, user_id, email, role)
@@ -83,6 +84,12 @@ echo "  staff advances status  -> $(as_user 22222222-2222-2222-2222-222222222222
 echo "  board advances status  -> $(as_user 33333333-3333-3333-3333-333333333333 resonate board@resonate.org "update tasks set status='next' where id='T-102'; select 'rows changed='||count(*) from tasks where id='T-102' and status='next'")"
 echo "  board edits plan doc   -> $(as_user 33333333-3333-3333-3333-333333333333 resonate board@resonate.org "update portals set client_name='Hacked' where slug='resonate'; select 'name is now '||client_name from portals where slug='resonate'")"
 echo "  outsider inserts task  -> $(as_user 44444444-4444-4444-4444-444444444444 elsewhere outsider@elsewhere.org "insert into tasks (portal_id,id,initiative,title) values ('$P','T-999','1.1','pwned')")"
+
+echo
+echo "=== per-client customisation is readable by the client, writable only by the owner ==="
+echo "  staff reads labels      -> $(as_user 22222222-2222-2222-2222-222222222222 resonate staff@resonate.org "select labels->>'priority' from portals where slug='resonate'")"
+echo "  staff rewrites labels   -> $(as_user 22222222-2222-2222-2222-222222222222 resonate staff@resonate.org "update portals set labels='{\"priority\":\"Hacked\"}'::jsonb where slug='resonate'; select 'label is now '||(labels->>'priority') from portals where slug='resonate'")"
+echo "  Good Work rewrites it   -> $(as_user 11111111-1111-1111-1111-111111111111 '*' alan@goodworkatlanta.co "update portals set labels='{\"priority\":\"Goal area\"}'::jsonb where slug='resonate'; select 'label is now '||(labels->>'priority') from portals where slug='resonate'")"
 
 echo
 echo "=== audit trail written by the trigger ==="

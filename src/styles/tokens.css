@@ -1,0 +1,62 @@
+/* The design system. Only --accent and the logo are per-client; everything
+   else is the product and is the same for every portal. */
+:root {
+    --paper: #f5f4f1;
+    --surface: #ffffff;
+    --raise: #faf9f7;
+    --ink: #15181e;
+    --ink-2: #565d68;
+    --ink-3: #8b919b;
+    --rule: #ded9d1;
+    --rule-2: #ebe8e2;
+    --accent: #4f3d9e;
+    --accent-soft: #eeeaf8;
+    --accent-line: #c9bfe8;
+    --on-accent: #ffffff;
+    --s: #3d7a55;
+    --w: #a9752a;
+    --o: #2b5f8a;
+    --t: #98423c;
+    --s-soft: #e6efe9;
+    --w-soft: #f5ece0;
+    --o-soft: #e5edf4;
+    --t-soft: #f5e6e4;
+    /* Status palette — validated for CVD and normal-vision separation against
+       both surfaces. "next" is deliberately a recessive neutral: it fails a
+       chroma floor on purpose, and every chart using it carries a legend,
+       direct labels and a table view. */
+    --st-done: #2e7d4f;
+    --st-doing: #2563a8;
+    --st-next: #9aa0aa;
+    --st-blocked: #a63a30;
+    --stop: #a63a30;
+    --shadow: 0 1px 2px rgba(20, 24, 30, .05), 0 6px 18px -10px rgba(20, 24, 30, .16);
+    --display: "Newsreader", Georgia, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --rail: 248px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #13161b; --surface: #1a1e24; --raise: #20242b;
+      --ink: #e9e7e2; --ink-2: #a5abb6; --ink-3: #767d89;
+      --rule: #2f343c; --rule-2: #252a31;
+      --accent: #a89af2; --accent-soft: #272044; --accent-line: #473b7a; --on-accent: #14121f;
+      --s: #6cb68a; --w: #d6a860; --o: #74a6d6; --t: #d6857e;
+      --s-soft: #1c2c23; --w-soft: #2e2519; --o-soft: #1b2733; --t-soft: #2f1f1e;
+      --st-done: #45936a; --st-doing: #5486cc; --st-next: #4b525c; --st-blocked: #c96a60;
+      --stop: #c96a60;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px -10px rgba(0,0,0,.55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #13161b; --surface: #1a1e24; --raise: #20242b;
+    --ink: #e9e7e2; --ink-2: #a5abb6; --ink-3: #767d89;
+    --rule: #2f343c; --rule-2: #252a31;
+    --accent: #a89af2; --accent-soft: #272044; --accent-line: #473b7a; --on-accent: #14121f;
+    --s: #6cb68a; --w: #d6a860; --o: #74a6d6; --t: #d6857e;
+    --s-soft: #1c2c23; --w-soft: #2e2519; --o-soft: #1b2733; --t-soft: #2f1f1e;
+    --st-done: #45936a; --st-doing: #5486cc; --st-next: #4b525c; --st-blocked: #c96a60;
+    --stop: #c96a60;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px -10px rgba(0,0,0,.55);
+  }
