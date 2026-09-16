@@ -96,6 +96,25 @@ Suite's `docs/AUTH-SETUP-SUPABASE.md`.
 `portal_members.role` decides what they can do inside one. Both are enforced in
 RLS, so a stolen anon key reaches nothing.
 
+## Showing a real portal to someone
+
+Not by making it public. Give them an account:
+
+1. Supabase → Authentication → Users → **Add user**, then set App metadata —
+   `{ "gw_role": "staff", "gw_tenant": "resonate" }` for the client's own
+   people, `{ "gw_role": "admin", "gw_tenant": "*" }` for your team.
+2. Edit the three values at the top of `supabase/add-member.sql` and run it.
+   `board` reads everything and writes nothing — the right role for a board
+   member, a funder, or a colleague you want to show it to.
+
+The public `/demo` stays anonymised. A client's real discovery data lives behind
+sign-in, where an agreement to share it with named people can actually be
+honoured; a public URL cannot honour a limit like that.
+
+Nothing here is indexed — `robots.txt` disallows everything and every page
+carries `noindex`. RLS is the real boundary, but a client's portal turning up in
+a search result is its own breach of trust.
+
 ## Setting up a new client
 
 1. Run `supabase/schema.sql` once per project (it is idempotent).

@@ -1,0 +1,5 @@
+# Every path here is either a client's portal or the demo. None of it should
+# turn up in a search result: a portal URL is an address we give to a specific
+# board, not something anyone should be able to find.
+User-agent: *
+Disallow: /
