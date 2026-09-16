@@ -4,3 +4,4 @@ dist/
 .env.local
 *.log
 test/shot-*.png
+test/shot-*.png

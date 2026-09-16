@@ -346,3 +346,35 @@
 @media (max-width: 920px) {
   .whoami-mail { display: none; }
 }
+
+/* ---------- demo banner ---------- */
+.demobar {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 9px 20px;
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--accent-line);
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+.demobar strong {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+/* The banner sits between the masthead and the section nav, so both sticky
+   offsets below it move down by its height. */
+.demobar ~ .subnav { top: calc(env(safe-area-inset-top, 0px) + 88px); }
+.demobar ~ .layout .rail { top: calc(env(safe-area-inset-top, 0px) + 132px); }
+@media (max-width: 920px) {
+  .demobar { padding: 9px 16px; }
+  .demobar ~ .tabstrip { top: calc(env(safe-area-inset-top, 0px) + 87px); }
+  .demobar ~ .subnav { top: calc(env(safe-area-inset-top, 0px) + 130px); }
+}
+@media print { .demobar { display: none !important; } }

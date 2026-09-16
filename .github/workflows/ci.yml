@@ -15,6 +15,10 @@ jobs:
           node-version: '20'
           cache: npm
       - run: npm ci
+      - name: Regenerate the public demo data and assert it identifies nobody
+        run: node scripts/make-demo.mjs
+      - name: Fail if the generated demo data drifted from the scrubber
+        run: git diff --exit-code -- data/demo-plan.js data/demo-findings.js
       - run: npx playwright install --with-deps chromium
       - name: Build and drive the app end to end
         run: node test/smoke.mjs

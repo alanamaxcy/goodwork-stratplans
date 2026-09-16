@@ -20,13 +20,8 @@ const API_PORT = 8777;
 const WEB_PORT = 8778;
 
 /* ---------- the data the stub serves ---------- */
-function readBundle(file, global) {
-  const win = {};
-  new Function('window', fs.readFileSync(path.join(root, 'data', file), 'utf8'))(win);
-  return win[global];
-}
-const P = readBundle('plan.js', 'PORTAL');
-const F = readBundle('findings.js', 'FINDINGS');
+const { PORTAL: P } = await import(path.join(root, 'data', 'plan.js'));
+const { FINDINGS: F } = await import(path.join(root, 'data', 'findings.js'));
 
 const PORTAL_ID = '00000000-0000-0000-0000-0000000000aa';
 const USER = { id: '11111111-1111-1111-1111-111111111111', email: 'alan@goodworkatlanta.co', app_metadata: { gw_tenant: '*', gw_role: 'admin' } };
@@ -202,6 +197,37 @@ results.unknownPortalBlocked = !(await page.isVisible('.masthead'));
 results.unknownPortalMessage = (await page.textContent('.splash-card h1').catch(() => '')) || '';
 await shot('06-no-access');
 
+/* ---- demo mode: no account, no database, nothing saved ---- */
+const demo = await browser.newPage({ viewport: { width: 1320, height: 1050 }, deviceScaleFactor: 2 });
+demo.on('pageerror', (e) => errs.push('DEMO ' + e.message));
+const restCalls = [];
+demo.on('request', (r) => { if (r.url().includes('/rest/v1/')) restCalls.push(r.method() + ' ' + r.url()); });
+
+await demo.goto(`http://127.0.0.1:${WEB_PORT}/demo`, { waitUntil: 'networkidle' });
+await demo.waitForTimeout(900);
+results.demoSkipsSignIn = await demo.isVisible('.masthead');
+results.demoBanner = (await demo.textContent('.demobar strong').catch(() => '')) || '';
+results.demoSections = await demo.$$eval('.railnav .rn-t', (n) => n.length);
+results.demoKpis = await demo.$$eval('.kpi', (n) => n.length);
+results.demoClient = await demo.textContent('.brand-name');
+/* The demo is public and must never carry the real client's identity. */
+const demoText = await demo.evaluate(() => document.body.innerText);
+results.demoLeaksRealClient = /\bresonate\b/i.test(demoText.replace(/\bresonat(es|ed|ing)\b/gi, 'X'))
+  || /\bBelvedere\b/i.test(demoText);
+await demo.screenshot({ path: path.join(root, 'test/shot-07-demo.png') });
+
+// interactive, and pinned to the engagement's clock rather than drifting
+await demo.click('.railnav button:has-text("Workplan")');
+await demo.waitForTimeout(500);
+results.demoTasks = await demo.$$eval('.task:not(.sub)', (n) => n.length);
+const demoBefore = await demo.getAttribute('.task:not(.sub) .dot', 'class');
+await demo.click('.task:not(.sub) .statusbtn');
+await demo.waitForTimeout(400);
+results.demoInteractive = demoBefore !== (await demo.getAttribute('.task:not(.sub) .dot', 'class'));
+results.demoTouchedNoDatabase = restCalls.length === 0;
+results.demoRestCalls = restCalls.slice(0, 3);
+await demo.screenshot({ path: path.join(root, 'test/shot-08-demo-workplan.png') });
+
 const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
 await phone.goto(`http://127.0.0.1:${WEB_PORT}/resonate`, { waitUntil: 'networkidle' });
 await phone.waitForTimeout(500);
@@ -227,6 +253,15 @@ if (!results.scopedOnlyP2) failures.push('scoping leaked other priorities');
 if (results.charts !== 4) failures.push('expected 4 dashboard charts');
 if (!results.unknownPortalBlocked) failures.push('an unreachable portal still rendered');
 if (results.phoneHScroll) failures.push('horizontal scroll at 390px');
+if (!results.demoSkipsSignIn) failures.push('demo asked for a sign-in');
+if (results.demoBanner !== 'Demo') failures.push('demo banner missing');
+if (results.demoSections !== 5) failures.push('demo did not render all five sections');
+if (!results.demoTasks) failures.push('demo rendered no tasks');
+if (!results.demoKpis) failures.push('demo rendered no KPIs');
+if (results.demoLeaksRealClient) failures.push('THE PUBLIC DEMO LEAKS THE REAL CLIENT');
+if (!/Northside/.test(results.demoClient || '')) failures.push('demo is not showing the anonymised client');
+if (!results.demoInteractive) failures.push('demo workplan is not interactive');
+if (!results.demoTouchedNoDatabase) failures.push('demo hit the database: ' + results.demoRestCalls.join(', '));
 if (errs.length) failures.push('page errors: ' + errs.join(' | '));
 
 if (failures.length) {

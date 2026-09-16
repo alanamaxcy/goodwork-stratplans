@@ -9,10 +9,11 @@
     "build": "vite build",
     "preview": "vite preview --port 4173",
     "seed": "node supabase/seed.mjs",
+    "demo:build": "node scripts/make-demo.mjs",
     "test:smoke": "node test/smoke.mjs",
     "test:seed": "node test/seed.mjs",
     "test:rls": "supabase/test-rls.sh",
-    "verify": "npm run test:smoke && npm run test:seed && npm run test:rls"
+    "verify": "npm run demo:build && npm run test:smoke && npm run test:seed && npm run test:rls"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.116.0",

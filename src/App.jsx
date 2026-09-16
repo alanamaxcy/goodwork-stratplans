@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { isConfigured, slugFromLocation, currentSession, signOut } from './lib/supabase.js';
 import { loadPortal, loadTasks, saveTask, watchTasks, listPortals } from './lib/store.js';
 import { makeLabels, visibleSections } from './lib/labels.js';
+import { DEMO_SLUG, DEMO_ROLE, loadDemo } from './lib/demo.js';
 import { counts, indexPlan, findingDrives, today } from './lib/format.js';
 import SignIn from './components/SignIn.jsx';
 import Masthead from './components/Masthead.jsx';
@@ -19,6 +20,9 @@ const CATNAME = { S: 'Strengths', W: 'Weaknesses', O: 'Opportunities', T: 'Threa
 
 export default function App() {
   const slug = useMemo(() => slugFromLocation(), []);
+  /* A deploy with no project configured falls back to the demo rather than an
+     error, so a fresh Netlify site shows the product on its first load. */
+  const isDemo = slug === DEMO_SLUG || !isConfigured;
   const [session, setSession] = useState(undefined); // undefined = still checking
   const [portal, setPortal] = useState(null);
   const [role, setRole] = useState(null);
@@ -32,15 +36,28 @@ export default function App() {
   const [openTheme, setOpenTheme] = useState(null);
   const [modal, setModal] = useState(null);
   const [saveErr, setSaveErr] = useState(false);
+  const [demoNow, setDemoNow] = useState(null);
 
   /* ---- session ---- */
   useEffect(() => {
-    if (!isConfigured) { setSession(null); return; }
+    if (isDemo || !isConfigured) { setSession(null); return; }
     currentSession().then(setSession);
-  }, []);
+  }, [isDemo]);
 
   /* ---- portal + tasks ---- */
   useEffect(() => {
+    if (isDemo) {
+      let live = true;
+      loadDemo().then(({ portal, tasks, now }) => {
+        if (!live) return;
+        setPortal(portal);
+        setTasks(tasks);
+        setDemoNow(now);
+        setRole(DEMO_ROLE);
+        setReason('ok');
+      });
+      return () => { live = false; };
+    }
     if (session === undefined) return;
     let live = true;
     (async () => {
@@ -56,11 +73,11 @@ export default function App() {
       if (session) setPortals(await listPortals());
     })();
     return () => { live = false; };
-  }, [slug, session]);
+  }, [slug, session, isDemo]);
 
   /* Subscribe once per portal, in an effect, never during render. */
   useEffect(() => {
-    if (!portal) return;
+    if (!portal || isDemo) return;
     return watchTasks(portal.id, (ev) => {
       setTasks((prev) => {
         if (ev.type === 'delete') return prev.filter((t) => t.id !== ev.id);
@@ -71,7 +88,7 @@ export default function App() {
         return next;
       });
     });
-  }, [portal?.id]);
+  }, [portal?.id, isDemo]);
 
   const labels = useMemo(() => makeLabels(portal), [portal]);
   const sections = useMemo(() => visibleSections(portal, labels), [portal, labels]);
@@ -86,7 +103,7 @@ export default function App() {
   }, [findings]);
 
   const canEdit = role === 'owner' || role === 'staff';
-  const now = today();
+  const now = demoNow || today();
 
   const topTasks = useMemo(() => tasks.filter((t) => !t.parent), [tasks]);
   const subsOf = useCallback((id) => tasks.filter((t) => t.parent === id), [tasks]);
@@ -109,13 +126,14 @@ export default function App() {
       const next = { ...cur, ...patch };
       setTasks((prev) => prev.map((t) => (t.id === id ? next : t)));
       setSaveErr(false);
+      if (isDemo) return; // nothing to save to, and the banner says so
       try {
         await saveTask(portal.id, next);
       } catch {
         setSaveErr(true);
       }
     },
-    [tasks, portal],
+    [tasks, portal, isDemo],
   );
 
   const goTheme = useCallback((id) => {
@@ -171,7 +189,7 @@ export default function App() {
   /* ---- gates ---- */
   if (session === undefined || reason === 'loading') return <Splash>Loading…</Splash>;
 
-  if (!isConfigured) {
+  if (!isDemo && !isConfigured) {
     return (
       <Splash title="No project configured">
         This deploy has no <code>VITE_SUPABASE_URL</code>. Set it and{' '}
@@ -179,7 +197,8 @@ export default function App() {
       </Splash>
     );
   }
-  if (!session) return <SignIn slug={slug} onSignedIn={setSession} />;
+  if (!isDemo && !session) return <SignIn slug={slug} onSignedIn={setSession} />;
+  if (isDemo && !portal) return <Splash>Loading the demo…</Splash>;
   if (!portal) {
     return (
       <Splash title={slug ? 'Nothing here for this account' : 'Pick a portal'}>
@@ -225,8 +244,19 @@ export default function App() {
         role={role}
         session={session}
         saveErr={saveErr}
+        isDemo={isDemo}
         onSignOut={() => signOut().then(() => setSession(null))}
       />
+      {isDemo ? (
+        <div className="demobar">
+          <strong>Demo</strong>
+          <span>
+            Sample content for a real strategic planning engagement. Everything works —
+            open a task, tick a subtask, change the scope. Nothing is saved, and no
+            client data is here.
+          </span>
+        </div>
+      ) : null}
 
       <nav className="tabstrip" aria-label="Sections">
         {sections.map((s) => (

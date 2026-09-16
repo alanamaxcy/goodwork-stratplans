@@ -16,6 +16,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import readline from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 import { createClient } from '@supabase/supabase-js';
@@ -47,15 +48,14 @@ if (!URL_ || !ANON) {
   process.exit(1);
 }
 
-function readBundle(file, global) {
-  const win = {};
-  new Function('window', fs.readFileSync(path.join(DIR, file), 'utf8'))(win);
-  if (!win[global]) throw new Error(`${file} did not set window.${global}`);
-  return win[global];
+async function readBundle(file, name) {
+  const mod = await import(pathToFileURL(path.join(DIR, file)).href);
+  if (!mod[name]) throw new Error(`${file} does not export ${name}`);
+  return mod[name];
 }
 
-const P = readBundle('plan.js', 'PORTAL');
-const F = readBundle('findings.js', 'FINDINGS');
+const P = await readBundle('plan.js', 'PORTAL');
+const F = await readBundle('findings.js', 'FINDINGS');
 
 /* autoRefreshToken keeps a timer alive, which would stop this CLI from ever
    exiting. A seed run takes seconds; it never needs a refresh. */
