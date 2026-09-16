@@ -171,15 +171,21 @@ create index if not exists task_events_task_idx on task_events (portal_id, task_
 -- that protect portal_members — an invoker-rights function would recurse.
 -- search_path is pinned so the definer right cannot be redirected.
 
+/* An explicit membership row ALWAYS wins, including for Good Work's own staff.
+   Tagging someone `*` is how they reach every client; it is not a promise that
+   they own every client. Without this, a junior consultant tagged `*` could not
+   be scoped to read-only on one engagement — the row would be ignored.
+
+   `*` with no row still resolves to owner, which is what makes the portal
+   picker work for whoever runs the practice. */
 create or replace function spp_role(p uuid) returns text
   language sql stable security definer
   set search_path = public, pg_temp
 as $$
-  select case
-    when spp_is_gw() then 'owner'
-    else (select m.role from portal_members m
-           where m.portal_id = p and m.user_id = auth.uid())
-  end;
+  select coalesce(
+    (select m.role from portal_members m
+      where m.portal_id = p and m.user_id = auth.uid()),
+    case when spp_is_gw() then 'owner' end);
 $$;
 
 create or replace function spp_can_edit(p uuid) returns boolean

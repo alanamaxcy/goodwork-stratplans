@@ -86,6 +86,16 @@ echo "  board edits plan doc   -> $(as_user 33333333-3333-3333-3333-333333333333
 echo "  outsider inserts task  -> $(as_user 44444444-4444-4444-4444-444444444444 elsewhere outsider@elsewhere.org "insert into tasks (portal_id,id,initiative,title) values ('$P','T-999','1.1','pwned')")"
 
 echo
+echo "=== Good Work staff: reaches every portal, but an explicit row scopes them ==="
+echo "  gw with no member row   -> $(as_user 11111111-1111-1111-1111-111111111111 '*' alan@goodworkatlanta.co "select 'role='||coalesce(spp_role((select id from portals where slug='resonate')),'none')")"
+psql -h "$SOCK" -U postgres -d postgres -q -c "insert into auth.users values ('55555555-5555-5555-5555-555555555555','junior@goodworkatlanta.co') on conflict do nothing" >/dev/null 2>&1
+psql -h "$SOCK" -U postgres -d postgres -q -c "insert into portal_members (portal_id,user_id,email,role) select id,'55555555-5555-5555-5555-555555555555','junior@goodworkatlanta.co','board' from portals where slug='resonate' on conflict (portal_id,user_id) do update set role='board'" >/dev/null 2>&1
+echo "  gw scoped to board      -> $(as_user 55555555-5555-5555-5555-555555555555 '*' junior@goodworkatlanta.co "select 'role='||coalesce(spp_role((select id from portals where slug='resonate')),'none')")"
+# Check something nothing else in this script touches, so the result is
+# unambiguous rather than reading an earlier test's write.
+echo "  ...and cannot write     -> $(as_user 55555555-5555-5555-5555-555555555555 '*' junior@goodworkatlanta.co "update tasks set title='SCOPED WRITE LEAKED' where id='T-102'; select 'title is still: '||title from tasks where id='T-102'")"
+
+echo
 echo "=== per-client customisation is readable by the client, writable only by the owner ==="
 echo "  staff reads labels      -> $(as_user 22222222-2222-2222-2222-222222222222 resonate staff@resonate.org "select labels->>'priority' from portals where slug='resonate'")"
 echo "  staff rewrites labels   -> $(as_user 22222222-2222-2222-2222-222222222222 resonate staff@resonate.org "update portals set labels='{\"priority\":\"Hacked\"}'::jsonb where slug='resonate'; select 'label is now '||(labels->>'priority') from portals where slug='resonate'")"

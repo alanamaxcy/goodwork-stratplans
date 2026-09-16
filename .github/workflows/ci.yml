@@ -17,6 +17,8 @@ jobs:
       - run: npm ci
       - name: Plan editor logic (renumbering, task migration)
         run: node test/plan-edit.mjs
+      - name: Access function — every refusal it has to make itself
+        run: node test/team-fn.mjs
       - name: Regenerate the public demo data and assert it identifies nobody
         run: node scripts/make-demo.mjs
       - name: Fail if the generated demo data drifted from the scrubber

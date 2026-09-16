@@ -1,6 +1,7 @@
 [build]
   command = "npm run build"
   publish = "dist"
+  functions = "netlify/functions"
 
 [build.environment]
   NODE_VERSION = "20"
@@ -9,6 +10,9 @@
   # SUPABASE_URL in the output and block the deploy. The service-role key is NOT
   # set on this site and is never read by the build.
   SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY"
+  # SUPABASE_SERVICE_ROLE_KEY is deliberately NOT omitted here: it must never
+  # appear in the bundle, so if the scanner ever finds it, the deploy should
+  # fail. It is read only by netlify/functions/team.mjs, server-side.
 
 # One deploy serves every client; the portal slug is a path segment, so every
 # route has to reach the app rather than 404 on a directory that does not exist.

@@ -13,6 +13,7 @@ import Workplan from './sections/Workplan.jsx';
 import Dashboard from './sections/Dashboard.jsx';
 import PlanEditor from './sections/PlanEditor.jsx';
 import Settings from './components/Settings.jsx';
+import Team from './components/Team.jsx';
 import DeleteDialog from './components/DeleteDialog.jsx';
 import * as E from './lib/planEdit.js';
 import { StatusBar } from './components/ui.jsx';
@@ -55,6 +56,7 @@ export default function App() {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
   const [showSettings, setShowSettings] = useState(false);
+  const [showTeam, setShowTeam] = useState(false);
 
   /* ---- session ---- */
   useEffect(() => {
@@ -307,7 +309,8 @@ export default function App() {
   useEffect(() => {
     const onKey = (e) => {
       if (e.key !== 'Escape') return;
-      if (pendingDelete) setPendingDelete(null);
+      if (showTeam) setShowTeam(false);
+      else if (pendingDelete) setPendingDelete(null);
       else if (showSettings) setShowSettings(false);
       else if (modal) setModal(null);
       else if (openTask) setOpenTask(null);
@@ -316,7 +319,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [modal, openTask, openTheme, pendingDelete, showSettings]);
+  }, [modal, openTask, openTheme, pendingDelete, showSettings, showTeam]);
 
   useEffect(() => {
     if (!editing) return;
@@ -414,7 +417,8 @@ export default function App() {
         section={section} sub={sub} setSub={setSub} plan={plan} labels={labels}
         findings={findings} topTasks={topTasks} priorityOf={priorityOf}
         setOpenTheme={setOpenTheme} onExport={() => setModal('export')} CATNAME={CATNAME}
-        isOwner={isOwner} editing={editing} onEdit={startEdit} onSettings={() => setShowSettings(true)}
+        isOwner={isOwner} editing={editing} onEdit={startEdit}
+        onSettings={() => setShowSettings(true)} onTeam={() => setShowTeam(true)} isDemo={isDemo}
       />
       {editing ? (
         <div className="savebar">
@@ -479,6 +483,7 @@ export default function App() {
           onCancel={() => setPendingDelete(null)} onConfirm={confirmDelete}
         />
       ) : null}
+      {showTeam ? <Team portal={portal} onClose={() => setShowTeam(false)} /> : null}
       {showSettings ? (
         <Settings
           portal={portal} labels={labels}
@@ -493,7 +498,7 @@ export default function App() {
   );
 }
 
-function SubNav({ section, sub, setSub, plan, labels, findings, topTasks, priorityOf, setOpenTheme, onExport, CATNAME, isOwner, editing, onEdit, onSettings }) {
+function SubNav({ section, sub, setSub, plan, labels, findings, topTasks, priorityOf, setOpenTheme, onExport, CATNAME, isOwner, editing, onEdit, onSettings, onTeam, isDemo }) {
   const cur = sub[section];
   const pick = (v) => { setSub((s) => ({ ...s, [section]: v })); setOpenTheme(null); window.scrollTo(0, 0); };
   const B = ({ v, children, count }) => (
@@ -539,6 +544,8 @@ function SubNav({ section, sub, setSub, plan, labels, findings, topTasks, priori
         {isOwner && !editing ? (
           <>
             <button className="ghost" onClick={onEdit}>Edit plan</button>
+            {/* There is no account system in the demo, so there is nobody to manage. */}
+            {!isDemo ? <button className="ghost" onClick={onTeam}>Access</button> : null}
             <button className="ghost" onClick={onSettings}>Settings</button>
           </>
         ) : null}

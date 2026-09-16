@@ -124,16 +124,37 @@ Suite's `docs/AUTH-SETUP-SUPABASE.md`.
 `portal_members.role` decides what they can do inside one. Both are enforced in
 RLS, so a stolen anon key reaches nothing.
 
-## Showing a real portal to someone
+## Who can open a portal
 
-Not by making it public. Give them an account:
+Three layers, all enforced server-side:
 
-1. Supabase → Authentication → Users → **Add user**, then set App metadata —
-   `{ "gw_role": "staff", "gw_tenant": "resonate" }` for the client's own
-   people, `{ "gw_role": "admin", "gw_tenant": "*" }` for your team.
-2. Edit the three values at the top of `supabase/add-member.sql` and run it.
-   `board` reads everything and writes nothing — the right role for a board
-   member, a funder, or a colleague you want to show it to.
+| | What it decides | Where it lives |
+|---|---|---|
+| `gw_tenant` | which clients exist for you at all | the account's `app_metadata` |
+| `portal_members.role` | what you can do inside one portal | a row per person per portal |
+| RLS | the actual boundary | the database |
+
+`gw_tenant: "*"` is your own firm and reaches every client. An **explicit
+membership row always wins**, including for `*` — so a junior consultant can be
+tagged `*` to see the client list and still be `board` on a given engagement.
+
+### Adding someone
+
+**Access** in the sub-nav (owner only). Type an email, pick a role, done: it
+creates the account, tags `gw_role` and `gw_tenant`, and adds the membership
+row. Then send them the portal link — they sign in with an emailed code.
+
+Tick *they work for your firm* to tag them `*` instead of this client's tenant.
+
+The list flags **tag mismatches**, which is the failure worth knowing about: the
+account exists, the membership row exists, and RLS still returns nothing because
+`gw_tenant` does not match the portal. It looks exactly like a broken link.
+
+This needs `SUPABASE_SERVICE_ROLE_KEY` on the Netlify site — creating accounts
+needs the admin API. It is read **only** by `netlify/functions/team.mjs`,
+server-side; it must never be a `VITE_*` variable, because Vite compiles those
+into the page. Without it the screen says so and points at
+`supabase/add-member.sql`, which does the same job in the SQL editor.
 
 The public `/demo` stays anonymised. A client's real discovery data lives behind
 sign-in, where an agreement to share it with named people can actually be
@@ -169,6 +190,7 @@ Once the plan editor lands (milestone 2), steps 3 and 4 become a form.
 ```bash
 npm run verify             # all three
 npm run test:plan          # renumbering and task migration, no browser
+npm run test:team          # every refusal the access function makes itself
 npm run test:smoke         # builds, then drives the real app in Chromium
 npm run test:seed          # seeding works with no service-role key
 npm run test:rls           # the permission boundary, on a throwaway Postgres
@@ -197,8 +219,10 @@ Netlify, one site for every client:
 Build `npm run build`, publish `dist`. The SPA redirect in `netlify.toml` is what
 lets `/resonate` and `/agape` both reach the app.
 
-**Never** set `SUPABASE_SERVICE_ROLE_KEY` on this site — or anywhere else. The
-setup path above does not use one.
+`SUPABASE_SERVICE_ROLE_KEY` is optional and **server-side only** — it turns on
+the Access screen. Set it as a plain Netlify variable, never as `VITE_*`: that
+prefix is what Vite compiles into the browser bundle. Setup and seeding do not
+need it at all.
 
 ## Still to build
 
