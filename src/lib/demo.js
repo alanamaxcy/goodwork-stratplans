@@ -64,6 +64,8 @@ export async function loadDemo() {
   return { portal, tasks, now: PORTAL.today };
 }
 
-/* Staff, so every interaction in the workplan can be demonstrated. Nothing
-   persists, so there is nothing to protect. */
-export const DEMO_ROLE = 'staff';
+/* Owner, so the demo shows the whole product — including the plan editor,
+   which is what makes this a tool rather than a document. Nothing persists, so
+   there is nothing to protect: the store's write calls no-op without a Supabase
+   project, and every change dies with the tab. */
+export const DEMO_ROLE = 'owner';

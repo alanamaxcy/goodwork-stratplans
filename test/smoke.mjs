@@ -41,6 +41,8 @@ let taskRows = P.tasks.map((t, i) => ({
 }));
 
 const writes = [];
+const planPatches = [];
+const deletedIds = [];
 
 /* ---------- stub API ---------- */
 const api = http.createServer((req, res) => {
@@ -78,11 +80,23 @@ const api = http.createServer((req, res) => {
         const rows = !slug || slug === 'resonate' ? [portalRow] : [];
         return send(200, rows);
       }
+      if (req.method === 'PATCH') {
+        Object.assign(portalRow, body);
+        planPatches.push(body);
+        return send(200, [portalRow]);
+      }
       return send(200, []);
     }
     if (url.pathname === '/rest/v1/portal_members') return send(200, [{ role: 'owner' }]);
     if (url.pathname === '/rest/v1/tasks') {
       if (req.method === 'GET') return send(200, taskRows);
+      if (req.method === 'DELETE') {
+        const raw = url.searchParams.get('id') || '';
+        const ids = raw.replace(/^in\.\(|\)$/g, '').split(',').map((x) => x.replace(/^"|"$/g, ''));
+        ids.forEach((id) => deletedIds.push(id));
+        taskRows = taskRows.filter((t) => !ids.includes(t.id));
+        return send(204, null);
+      }
       const incoming = Array.isArray(body) ? body : [body];
       incoming.forEach((r) => {
         writes.push(r);
@@ -218,6 +232,81 @@ results.unknownPortalBlocked = !(await page.isVisible('.masthead'));
 results.unknownPortalMessage = (await page.textContent('.splash-card h1').catch(() => '')) || '';
 await shot('06-no-access');
 
+/* ---- the plan editor ---- */
+/* The no-access check above navigated away; come back (the session persists). */
+await page.goto(`http://127.0.0.1:${WEB_PORT}/resonate`, { waitUntil: 'networkidle' });
+await page.waitForSelector('.railnav', { timeout: 10000 });
+await page.waitForTimeout(600);
+await page.click('.railnav button:has-text("The plan")');
+await page.waitForTimeout(400);
+results.editButtonForOwner = await page.isVisible('button:has-text("Edit plan")');
+await page.click('button:has-text("Edit plan")');
+await page.waitForTimeout(500);
+results.savebarShown = await page.isVisible('.savebar');
+results.editorFields = await page.$$eval('.efield input, .efield textarea', (n) => n.length);
+
+// rename a priority
+const titleInput = page.locator('.priority.editing').first().locator('input').first();
+await titleInput.fill('Life Groups that actually multiply');
+
+// reorder two initiatives — the operation that renumbers and must carry tasks
+const initsBefore = await page.$$eval('.priority.editing >> nth=0 >> .init.editing .init-id', (n) => n.map((x) => x.textContent));
+await page.locator('.priority.editing').first().locator('.init.editing').nth(1)
+  .locator('button[aria-label*="Move"][aria-label*="up"]').click();
+await page.waitForTimeout(300);
+const titlesAfter = await page.$$eval('.priority.editing >> nth=0 >> .init.editing input', (n) => n.map((x) => x.value).slice(0, 4));
+results.initiativesReordered = titlesAfter[0] !== undefined;
+
+// link a finding
+await page.locator('.priority.editing').first().locator('button:has-text("Link a finding")').first().click();
+await page.waitForTimeout(400);
+results.pickerOpened = await page.isVisible('.pickerlist');
+await page.locator('.pickrow').first().click();
+await page.waitForTimeout(200);
+await page.click('.modal button:has-text("Done")');
+await page.waitForTimeout(300);
+
+// add a KPI
+const kpisBefore = await page.$$eval('.priority.editing >> nth=0 >> .ekpi', (n) => n.length);
+await page.locator('.priority.editing').first().locator('button:has-text("Add kpi"), button:has-text("Add KPI")').first().click();
+await page.waitForTimeout(250);
+results.kpiAdded = (await page.$$eval('.priority.editing >> nth=0 >> .ekpi', (n) => n.length)) === kpisBefore + 1;
+
+// Everything written from here on belongs to the editor save.
+const writesBeforeSave = writes.length;
+const initiativeOfBefore = Object.fromEntries(taskRows.map((t) => [t.id, t.initiative]));
+
+// save, and check what reached the server
+await page.click('.savebar button:has-text("Save")');
+await page.waitForTimeout(1200);
+results.editorClosedOnSave = !(await page.isVisible('.savebar'));
+const lastPlan = planPatches[planPatches.length - 1]?.plan;
+results.planWasSaved = !!lastPlan;
+results.savedInitiativeIds = lastPlan
+  ? lastPlan.priorities[0].initiatives.map((o) => o.id)
+  : [];
+results.savedFirstInitiativeTitle = lastPlan ? lastPlan.priorities[0].initiatives[0].title : '';
+results.savedPriorityTitle = lastPlan ? lastPlan.priorities[0].title : '';
+/* The whole point: reordering swapped 1.1 and 1.2, so every task on either one
+   must have been rewritten, or real work now sits under the wrong heading.
+   Counting all writes would pass on an unrelated earlier write — count only
+   the ones this save produced, and check they actually changed. */
+const saveWrites = writes.slice(writesBeforeSave);
+results.tasksWrittenBySave = saveWrites.length;
+results.tasksThatChangedInitiative = saveWrites.filter(
+  (w) => initiativeOfBefore[w.id] && initiativeOfBefore[w.id] !== w.initiative,
+).length;
+const swapped = saveWrites.filter((w) => ['1.1', '1.2'].includes(initiativeOfBefore[w.id]));
+results.swapWasHonoured =
+  swapped.length > 0 &&
+  swapped.every((w) => w.initiative === (initiativeOfBefore[w.id] === '1.1' ? '1.2' : '1.1'));
+/* And the server's own copy must end up consistent with the saved plan. */
+results.serverHasNoOrphans = (() => {
+  const live = new Set((planPatches[planPatches.length - 1]?.plan?.priorities || [])
+    .flatMap((p) => (p.initiatives || []).map((o) => o.id)));
+  return taskRows.every((t) => live.has(t.initiative));
+})();
+
 /* ---- demo mode: no account, no database, nothing saved ---- */
 const demo = await browser.newPage({ viewport: { width: 1320, height: 1050 }, deviceScaleFactor: 2 });
 demo.on('pageerror', (e) => errs.push('DEMO ' + e.message));
@@ -298,6 +387,19 @@ if (results.demoSections !== 5) failures.push('demo did not render all five sect
 if (!results.demoTasks) failures.push('demo rendered no tasks');
 if (!results.demoKpis) failures.push('demo rendered no KPIs');
 if (results.demoLeaksRealClient) failures.push('THE PUBLIC DEMO LEAKS THE REAL CLIENT');
+if (!results.editButtonForOwner) failures.push('an owner cannot reach the editor');
+if (!results.savebarShown) failures.push('the save bar did not appear');
+if (!results.pickerOpened) failures.push('the evidence picker did not open');
+if (!results.kpiAdded) failures.push('adding a KPI did nothing');
+if (!results.planWasSaved) failures.push('save never reached the server');
+if (results.savedPriorityTitle !== 'Life Groups that actually multiply') failures.push('the edited title was not saved');
+if (!results.tasksThatChangedInitiative)
+  failures.push('REORDERING RENUMBERED THE PLAN BUT NO TASK FOLLOWED — work is now under the wrong heading');
+if (!results.swapWasHonoured)
+  failures.push('tasks on the swapped initiatives did not swap with them: ' + results.tasksThatChangedInitiative);
+if (!results.serverHasNoOrphans)
+  failures.push('after saving, the server holds tasks pointing at initiatives that no longer exist');
+if (!results.editorClosedOnSave) failures.push('the editor stayed open after saving');
 if (!/Northside/.test(results.demoClient || '')) failures.push('demo is not showing the anonymised client');
 if (!results.demoInteractive) failures.push('demo workplan is not interactive');
 if (!results.demoTouchedNoDatabase) failures.push('demo hit the database: ' + results.demoRestCalls.join(', '));

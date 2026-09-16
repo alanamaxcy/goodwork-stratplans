@@ -131,3 +131,35 @@ export async function savePlan(portalId, plan) {
   const { error } = await supabase.from('portals').update({ plan }).eq('id', portalId);
   if (error) throw error;
 }
+
+/* Everything the consultant can configure about a portal: who it is for, what
+   this client calls things, which sections appear, and one accent colour.
+   Owner-only — RLS refuses it for anyone else. */
+export async function savePortalSettings(portalId, fields) {
+  if (!supabase) return;
+  const { error } = await supabase.from('portals').update(fields).eq('id', portalId);
+  if (error) throw error;
+}
+
+/* One round trip for a structural edit. Parents before children: the composite
+   foreign key requires a subtask's parent to exist first. */
+export async function saveTasks(portalId, tasks) {
+  if (!supabase || !tasks.length) return;
+  const rows = tasks.map((t) => toRow(portalId, t));
+  const parents = rows.filter((r) => !r.parent_id);
+  const children = rows.filter((r) => r.parent_id);
+  for (const batch of [parents, children]) {
+    if (!batch.length) continue;
+    const { error } = await supabase.from('tasks').upsert(batch, { onConflict: 'portal_id,id' });
+    if (error) throw error;
+  }
+}
+
+/* The database cascades subtasks, but pass them anyway: deleting a parent and
+   its children in one statement keeps the local list and the server in step
+   even if the cascade is ever relaxed. */
+export async function deleteTasks(portalId, ids) {
+  if (!supabase || !ids.length) return;
+  const { error } = await supabase.from('tasks').delete().eq('portal_id', portalId).in('id', ids);
+  if (error) throw error;
+}

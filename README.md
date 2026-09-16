@@ -77,6 +77,34 @@ foundation says *goal areas*. The **shape** is the product.
 A subtask is a task with a parent: one table, one status vocabulary, one set of
 permissions. Nesting stops at one level on purpose.
 
+## Editing the plan
+
+`Edit plan` in the sub-nav, owner only. The editor is the same layout you read,
+with fields in it — a separate editor screen drifts from the thing it edits.
+Vision, framing, priorities, theses, KPIs and initiatives, with evidence picked
+from a search over the real findings rather than typed as free text.
+
+Changes are a **draft** until you press Save: the plan is a document, and a
+half-typed vision statement has no business reaching a client's board.
+
+**The dangerous part is numbering.** `tasks.initiative` is a soft reference to an
+initiative's display id, so reordering or deleting shifts ids underneath real
+work. Two rules keep it honest:
+
+- Every edit that renumbers carries the tasks with it, in the same operation.
+  Dropping that map is how a reorder leaves work under the wrong heading — it
+  happened during development, and `test/smoke.mjs` now asserts the tasks on a
+  swapped pair actually swap.
+- Deleting something that carries tasks always asks where they go. There is no
+  default, because a default is a guess about somebody's work. Deletion resolves
+  the tasks *before* renumbering — otherwise they silently re-home onto whatever
+  slides into the vacated number.
+
+Save refuses outright if the result would leave any task without an initiative.
+
+`Settings` covers who the portal is for, **what this client calls things**, which
+sections appear, and one accent colour.
+
 ## Accounts
 
 Three roles, scoped per portal — a board member of one client is not a board
@@ -140,6 +168,7 @@ Once the plan editor lands (milestone 2), steps 3 and 4 become a form.
 
 ```bash
 npm run verify             # all three
+npm run test:plan          # renumbering and task migration, no browser
 npm run test:smoke         # builds, then drives the real app in Chromium
 npm run test:seed          # seeding works with no service-role key
 npm run test:rls           # the permission boundary, on a throwaway Postgres

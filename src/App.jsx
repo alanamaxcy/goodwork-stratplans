@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { isConfigured, slugFromLocation, currentSession, signOut } from './lib/supabase.js';
-import { loadPortal, loadTasks, saveTask, watchTasks, listPortals } from './lib/store.js';
-import { makeLabels, visibleSections } from './lib/labels.js';
+import { loadPortal, loadTasks, saveTask, saveTasks, deleteTasks, savePlan, savePortalSettings, watchTasks, listPortals } from './lib/store.js';
+import { makeLabels, visibleSections, lower } from './lib/labels.js';
 import { DEMO_SLUG, DEMO_ROLE, loadDemo } from './lib/demo.js';
 import { counts, indexPlan, findingDrives, today } from './lib/format.js';
 import SignIn from './components/SignIn.jsx';
@@ -11,6 +11,10 @@ import Plan from './sections/Plan.jsx';
 import Findings from './sections/Findings.jsx';
 import Workplan from './sections/Workplan.jsx';
 import Dashboard from './sections/Dashboard.jsx';
+import PlanEditor from './sections/PlanEditor.jsx';
+import Settings from './components/Settings.jsx';
+import DeleteDialog from './components/DeleteDialog.jsx';
+import * as E from './lib/planEdit.js';
 import { StatusBar } from './components/ui.jsx';
 import TaskDrawer from './components/TaskDrawer.jsx';
 import ExportMenu from './components/ExportMenu.jsx';
@@ -38,6 +42,19 @@ export default function App() {
   const [saveErr, setSaveErr] = useState(false);
   const [demoNow, setDemoNow] = useState(null);
   const topbarRef = useRef(null);
+  /* Editing is a draft held locally until Save. The plan is a document — a
+     half-typed vision statement has no business reaching the client's board. */
+  const [draft, setDraft] = useState(null);
+  /* Tasks as the DRAFT sees them: every structural edit renumbers initiatives,
+     and these follow immediately. Composing move maps across many edits is
+     error-prone; carrying the tasks along is not. At save we diff against the
+     saved tasks and write only what moved. */
+  const [draftTasks, setDraftTasks] = useState(null);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deletedIds, setDeletedIds] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
+  const [showSettings, setShowSettings] = useState(false);
 
   /* ---- session ---- */
   useEffect(() => {
@@ -176,6 +193,103 @@ export default function App() {
     [priorityOf],
   );
 
+  const isOwner = role === 'owner';
+  const editing = draft !== null;
+
+  const startEdit = useCallback(() => {
+    setDraft(JSON.parse(JSON.stringify(plan)));
+    setDraftTasks(tasks.map((t) => ({ ...t })));
+    setDeletedIds([]);
+    setSaveMsg('');
+    setSection('plan');
+    window.scrollTo(0, 0);
+  }, [plan, tasks]);
+
+  const discardEdit = useCallback(() => {
+    setDraft(null);
+    setDraftTasks(null);
+    setDeletedIds([]);
+    setPendingDelete(null);
+  }, []);
+
+  /* Any edit that renumbers. The move map is applied to the draft tasks in the
+     same breath — dropping it is how a reorder leaves work under the wrong
+     heading, which is the exact failure this whole path exists to prevent. */
+  const applyStructural = useCallback((result) => {
+    setDraft(result.plan);
+    if (result.moves && Object.keys(result.moves).length) {
+      setDraftTasks((prev) =>
+        (prev || []).map((t) => (result.moves[t.init] ? { ...t, init: result.moves[t.init] } : t)));
+    }
+  }, []);
+
+  /* A structural delete resolves its tasks against the ids as they are NOW,
+     before any renumbering — see lib/planEdit.js. The resulting task writes and
+     deletes ride along with the draft until Save. */
+  const confirmDelete = useCallback(
+    (disposition) => {
+      const t = pendingDelete;
+      const current = draftTasks || [];
+      const result = t.kind === 'priority'
+        ? E.removePriority(draft, current, t.id, disposition)
+        : E.removeInitiative(draft, current, t.id, disposition);
+
+      const gone = new Set(result.taskDeletes);
+      // A subtask goes wherever its parent goes; the database cascades too.
+      current.forEach((x) => { if (x.parent && gone.has(x.parent)) gone.add(x.id); });
+
+      const rewritten = new Map(E.pendingTaskWrites(current, result).map((x) => [x.id, x]));
+      setDraft(result.plan);
+      setDraftTasks(current.filter((x) => !gone.has(x.id)).map((x) => rewritten.get(x.id) || x));
+      setDeletedIds((prev) => [...new Set([...prev, ...gone])]);
+      setPendingDelete(null);
+    },
+    [pendingDelete, draft, draftTasks],
+  );
+
+  const savePlanDraft = useCallback(async () => {
+    setSaving(true);
+    setSaveMsg('');
+    try {
+      /* One last renumber in case anything is out of step, carrying the draft
+         tasks with it — then write only the rows that actually differ. */
+      const { plan: finalPlan, moves } = E.renumber(draft);
+      const current = (draftTasks || []).map((t) => (moves[t.init] ? { ...t, init: moves[t.init] } : t));
+
+      const before = new Map(tasks.map((t) => [t.id, t]));
+      const gone = new Set(deletedIds);
+      const writes = current.filter((t) => {
+        const was = before.get(t.id);
+        return !was || JSON.stringify(was) !== JSON.stringify(t);
+      });
+
+      const orphans = E.orphanedTasks(finalPlan, current);
+      if (orphans.length) {
+        throw new Error(
+          `${orphans.length} task${orphans.length === 1 ? '' : 's'} would be left without an ${lower(labels.initiative)}. Nothing was saved.`,
+        );
+      }
+
+      if (gone.size) await deleteTasks(portal.id, [...gone]);
+      if (writes.length) await saveTasks(portal.id, writes);
+      await savePlan(portal.id, finalPlan);
+
+      setPortal((p) => ({ ...p, plan: finalPlan }));
+      setTasks(current);
+      setDraft(null);
+      setDraftTasks(null);
+      setDeletedIds([]);
+      setSaveMsg(
+        `Saved${writes.length ? ` · ${writes.length} task${writes.length === 1 ? '' : 's'} followed` : ''}` +
+        `${gone.size ? ` · ${gone.size} deleted` : ''}`,
+      );
+    } catch (e) {
+      setSaveMsg(e.message || 'Could not save.');
+    } finally {
+      setSaving(false);
+    }
+  }, [draft, draftTasks, tasks, deletedIds, portal, labels]);
+
   /* The sticky header's height is not knowable in CSS: the masthead wraps at
      narrow widths and the demo banner comes and goes. Measure it, publish it as
      --topbar-h, and let the rail position itself from that. */
@@ -193,13 +307,23 @@ export default function App() {
   useEffect(() => {
     const onKey = (e) => {
       if (e.key !== 'Escape') return;
-      if (modal) setModal(null);
+      if (pendingDelete) setPendingDelete(null);
+      else if (showSettings) setShowSettings(false);
+      else if (modal) setModal(null);
       else if (openTask) setOpenTask(null);
       else if (openTheme) setOpenTheme(null);
+      // Escape never discards a draft; that needs the explicit Discard button.
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [modal, openTask, openTheme]);
+  }, [modal, openTask, openTheme, pendingDelete, showSettings]);
+
+  useEffect(() => {
+    if (!editing) return;
+    const warn = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [editing]);
 
   /* ---- gates ---- */
   if (session === undefined || reason === 'loading') return <Splash>Loading…</Splash>;
@@ -249,6 +373,8 @@ export default function App() {
   };
 
   const Body = { scope: Scope, plan: Plan, findings: Findings, workplan: Workplan, dashboard: Dashboard }[section];
+  /* While editing, §2 becomes the same layout with fields in it. */
+  const showEditor = editing && section === 'plan';
   const overall = counts(topTasks, now);
 
   return (
@@ -269,7 +395,7 @@ export default function App() {
           {/* A phone cannot spend four lines of a sticky header on this. */}
           <span className="demobar-long">
             Sample content for a real strategic planning engagement. Everything works —
-            open a task, tick a subtask, change the scope. Nothing is saved, and no
+            open a task, tick a subtask, edit the plan itself. Nothing is saved, and no
             client data is here.
           </span>
           <span className="demobar-short">Sample content. Nothing is saved.</span>
@@ -288,7 +414,24 @@ export default function App() {
         section={section} sub={sub} setSub={setSub} plan={plan} labels={labels}
         findings={findings} topTasks={topTasks} priorityOf={priorityOf}
         setOpenTheme={setOpenTheme} onExport={() => setModal('export')} CATNAME={CATNAME}
+        isOwner={isOwner} editing={editing} onEdit={startEdit} onSettings={() => setShowSettings(true)}
       />
+      {editing ? (
+        <div className="savebar">
+          <span className="eyebrow">Editing the plan</span>
+          <span className="savehint">
+            {deletedIds.length
+              ? `${deletedIds.length} row${deletedIds.length === 1 ? '' : 's'} will be deleted on save`
+              : 'Nothing is saved until you press Save'}
+          </span>
+          <span style={{ flex: '1 1 auto' }} />
+          {saveMsg ? <span className="savemsg">{saveMsg}</span> : null}
+          <button className="ghost" onClick={discardEdit} disabled={saving}>Discard</button>
+          <button className="solid" onClick={savePlanDraft} disabled={saving}>
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      ) : null}
       </div>
 
       <div className="layout">
@@ -305,7 +448,18 @@ export default function App() {
           <RailCards portal={portal} overall={overall} labels={labels} now={now} />
         </aside>
         <main className="main">
-          <div className="wrap"><Body {...shared} /></div>
+          <div className="wrap">
+            {showEditor ? (
+              <PlanEditor
+                draft={draft} setDraft={setDraft} onStructural={applyStructural}
+                tasks={draftTasks || []} labels={labels}
+                findings={findings} themeById={themeById} CATNAME={CATNAME}
+                onStructuralDelete={setPendingDelete}
+              />
+            ) : (
+              <Body {...shared} />
+            )}
+          </div>
         </main>
       </div>
 
@@ -319,11 +473,27 @@ export default function App() {
       {modal === 'export' ? (
         <ExportMenu {...shared} section={section} onClose={() => setModal(null)} />
       ) : null}
+      {pendingDelete ? (
+        <DeleteDialog
+          target={pendingDelete} tasks={draftTasks || []} draft={draft} labels={labels}
+          onCancel={() => setPendingDelete(null)} onConfirm={confirmDelete}
+        />
+      ) : null}
+      {showSettings ? (
+        <Settings
+          portal={portal} labels={labels}
+          onSave={async (fields) => {
+            await savePortalSettings(portal.id, fields);
+            setPortal((p) => ({ ...p, ...fields }));
+          }}
+          onClose={() => setShowSettings(false)}
+        />
+      ) : null}
     </>
   );
 }
 
-function SubNav({ section, sub, setSub, plan, labels, findings, topTasks, priorityOf, setOpenTheme, onExport, CATNAME }) {
+function SubNav({ section, sub, setSub, plan, labels, findings, topTasks, priorityOf, setOpenTheme, onExport, CATNAME, isOwner, editing, onEdit, onSettings }) {
   const cur = sub[section];
   const pick = (v) => { setSub((s) => ({ ...s, [section]: v })); setOpenTheme(null); window.scrollTo(0, 0); };
   const B = ({ v, children, count }) => (
@@ -365,11 +535,15 @@ function SubNav({ section, sub, setSub, plan, labels, findings, topTasks, priori
     <nav className="subnav" aria-label="Within this section">
       <div className="subnav-in" id="subnav">
         {items}
-        {['plan', 'workplan', 'dashboard'].includes(section) ? (
+        <span className="sn-spacer" />
+        {isOwner && !editing ? (
           <>
-            <span className="sn-spacer" />
-            <button className="ghost" onClick={onExport}>Export ▾</button>
+            <button className="ghost" onClick={onEdit}>Edit plan</button>
+            <button className="ghost" onClick={onSettings}>Settings</button>
           </>
+        ) : null}
+        {['plan', 'workplan', 'dashboard'].includes(section) && !editing ? (
+          <button className="ghost" onClick={onExport}>Export ▾</button>
         ) : null}
       </div>
     </nav>
