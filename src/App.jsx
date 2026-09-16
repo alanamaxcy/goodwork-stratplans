@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { isConfigured, slugFromLocation, currentSession, signOut } from './lib/supabase.js';
 import { loadPortal, loadTasks, saveTask, watchTasks, listPortals } from './lib/store.js';
 import { makeLabels, visibleSections } from './lib/labels.js';
@@ -37,6 +37,7 @@ export default function App() {
   const [modal, setModal] = useState(null);
   const [saveErr, setSaveErr] = useState(false);
   const [demoNow, setDemoNow] = useState(null);
+  const topbarRef = useRef(null);
 
   /* ---- session ---- */
   useEffect(() => {
@@ -175,6 +176,20 @@ export default function App() {
     [priorityOf],
   );
 
+  /* The sticky header's height is not knowable in CSS: the masthead wraps at
+     narrow widths and the demo banner comes and goes. Measure it, publish it as
+     --topbar-h, and let the rail position itself from that. */
+  useLayoutEffect(() => {
+    const el = topbarRef.current;
+    if (!el) return;
+    const apply = () =>
+      document.documentElement.style.setProperty('--topbar-h', `${Math.round(el.getBoundingClientRect().height)}px`);
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => ro.disconnect();
+  });
+
   useEffect(() => {
     const onKey = (e) => {
       if (e.key !== 'Escape') return;
@@ -238,6 +253,7 @@ export default function App() {
 
   return (
     <>
+      <div className="topbar" ref={topbarRef}>
       <Masthead
         portal={portal}
         labels={labels}
@@ -250,11 +266,13 @@ export default function App() {
       {isDemo ? (
         <div className="demobar">
           <strong>Demo</strong>
-          <span>
+          {/* A phone cannot spend four lines of a sticky header on this. */}
+          <span className="demobar-long">
             Sample content for a real strategic planning engagement. Everything works —
             open a task, tick a subtask, change the scope. Nothing is saved, and no
             client data is here.
           </span>
+          <span className="demobar-short">Sample content. Nothing is saved.</span>
         </div>
       ) : null}
 
@@ -271,6 +289,7 @@ export default function App() {
         findings={findings} topTasks={topTasks} priorityOf={priorityOf}
         setOpenTheme={setOpenTheme} onExport={() => setModal('export')} CATNAME={CATNAME}
       />
+      </div>
 
       <div className="layout">
         <aside className="rail">

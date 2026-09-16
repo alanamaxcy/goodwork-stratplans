@@ -12,7 +12,20 @@
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
   /* ---------- masthead ---------- */
-  .masthead { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: var(--surface); border-bottom: 1px solid var(--rule); }
+  /* The masthead, demo banner, section tabs and sub-nav are ONE sticky block.
+   They used to stick individually at hard-coded offsets, which drifted the
+   moment the masthead wrapped to two lines or the demo banner appeared — the
+   sub-nav floated below the masthead with a gap showing content through, and
+   the rail collided with it. Stacked in normal flow inside one sticky parent,
+   no offset has to be guessed. */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--surface);
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.masthead { background: var(--surface); border-bottom: 1px solid var(--rule); }
   .masthead-in { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 10px 20px; }
   .brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; flex: 1 1 auto; }
   .brand-name { font-family: var(--display); font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
@@ -28,7 +41,7 @@
   .syncpill.live::before { background: var(--st-done); }
 
   /* ---------- nav layer two ---------- */
-  .subnav { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 52px); z-index: 28; background: var(--paper); border-bottom: 1px solid var(--rule); }
+  .subnav { background: var(--paper); border-bottom: 1px solid var(--rule); }
   .subnav-in { display: flex; gap: 3px; align-items: center; overflow-x: auto; padding: 7px 20px; scrollbar-width: none; }
   .subnav-in::-webkit-scrollbar { display: none; }
   .subnav button { white-space: nowrap; padding: 5px 11px; border-radius: 7px; font-size: 13px; color: var(--ink-2); border: 1px solid transparent; }
@@ -38,7 +51,24 @@
   .sn-spacer { flex: 1 1 auto; min-width: 8px; }
 
   .layout { display: flex; align-items: flex-start; }
-  .rail { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 96px); flex: 0 0 var(--rail); width: var(--rail); padding: 20px 14px 32px 20px; border-right: 1px solid var(--rule); align-self: stretch; min-height: calc(100vh - 96px); }
+  /* --topbar-h is measured at runtime (App.jsx) rather than assumed, so this
+   stays correct when the masthead wraps or the demo banner shows.
+   align-self must NOT be stretch: a rail stretched to the flex container's
+   full height can never engage position:sticky — it just scrolls away. */
+.rail {
+  position: sticky;
+  top: calc(var(--topbar-h, 96px) + 20px);
+  align-self: flex-start;
+  max-height: calc(100vh - var(--topbar-h, 96px) - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex: 0 0 var(--rail);
+  width: var(--rail);
+  padding: 20px 14px 24px 20px;
+}
+/* The divider belongs to the content column so it runs the whole page, now
+   that the rail is only as tall as its own contents. */
+.layout > .main { border-left: 1px solid var(--rule); }
   .railnav { display: flex; flex-direction: column; gap: 2px; margin-bottom: 24px; }
   .railnav button { display: grid; grid-template-columns: 22px 1fr auto; align-items: baseline; gap: 8px; text-align: left; padding: 8px 10px; border-radius: 7px; color: var(--ink-2); border-left: 2px solid transparent; }
   .railnav button:hover { background: var(--rule-2); }
@@ -123,20 +153,22 @@
   .themerow { display: grid; grid-template-columns: 20px 1fr 148px 54px; gap: 12px; align-items: center; text-align: left; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 13px; }
   .themerow:hover { border-color: var(--accent-line); }
   .themerow .tk { font-family: var(--mono); font-size: 10px; font-weight: 600; width: 20px; height: 20px; border-radius: 5px; display: flex; align-items: center; justify-content: center; }
-  .themerow .tn { font-size: 14px; font-weight: 450; }
-  .themerow .tsub { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-top: 1px; }
+  .themerow .tn { display: block; font-size: 14px; font-weight: 450; }
+  /* display:block, or margin-top does nothing and the metadata runs straight
+     into the end of the theme name. */
+  .themerow .tsub { display: block; font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-top: 2px; }
   .bar { height: 7px; border-radius: 4px; background: var(--rule-2); overflow: hidden; display: flex; }
   .bar i { display: block; height: 100%; }
   .bar .b-survey { background: currentColor; }
   .bar .b-qual { background: currentColor; opacity: .42; }
-  .themerow .tc { font-family: var(--mono); font-size: 14px; text-align: right; }
-  .themerow .tcl { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); text-align: right; }
+  .themerow .tc { display: block; font-family: var(--mono); font-size: 14px; text-align: right; }
+  .themerow .tcl { display: block; font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); text-align: right; }
   .backbtn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); margin-bottom: 14px; }
   .backbtn:hover { color: var(--accent); }
   .theme-detail h3 { font-family: var(--display); font-size: 24px; letter-spacing: -.015em; margin-top: 4px; max-width: 34ch; }
   .statline { display: flex; gap: 18px; flex-wrap: wrap; margin: 14px 0 16px; padding: 12px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
   .stat { display: flex; flex-direction: column; }
-  .stat .sv { font-family: var(--mono); font-size: 19px; }
+  .stat .sv { display: block; font-family: var(--mono); font-size: 19px; }
   .stat .sl { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
   .quote { border-left: 2px solid var(--rule); padding: 3px 0 3px 14px; font-family: var(--display); font-size: 16.5px; line-height: 1.5; color: var(--ink); }
   .quotes { display: flex; flex-direction: column; gap: 13px; margin-top: 12px; }
@@ -255,12 +287,12 @@
   /* ---------- responsive ---------- */
   @media (max-width: 920px) {
     .rail { display: none; }
+    .layout > .main { border-left: 0; }
     .main { padding: 16px 16px 90px; }
-    .tabstrip { display: flex; gap: 3px; overflow-x: auto; padding: 7px 16px; background: var(--surface); border-bottom: 1px solid var(--rule); position: sticky; top: calc(env(safe-area-inset-top, 0px) + 51px); z-index: 29; scrollbar-width: none; }
+    .tabstrip { display: flex; gap: 3px; overflow-x: auto; padding: 7px 16px; background: var(--surface); border-bottom: 1px solid var(--rule); scrollbar-width: none; }
     .tabstrip::-webkit-scrollbar { display: none; }
     .tabstrip button { white-space: nowrap; padding: 6px 12px; border-radius: 7px; font-size: 13.5px; color: var(--ink-2); border: 1px solid transparent; }
     .tabstrip button[aria-current="true"] { background: var(--accent-soft); border-color: var(--accent-line); color: var(--ink); }
-    .subnav { top: calc(env(safe-area-inset-top, 0px) + 94px); }
     .subnav-in { padding: 7px 16px; }
     .phasetrack { grid-template-columns: 1fr 1fr; }
     .grid2, .charts { grid-template-columns: 1fr; }
@@ -343,6 +375,17 @@
 .brand-logo { height: 22px; width: auto; flex: 0 0 auto; border-radius: 3px; }
 .whoami-mail { max-width: 22ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* The sticky header must not eat the phone. Everything in it wraps at 390px —
+   the brand, the banner sentence, the tabs — which stacked to 359px of an
+   844px screen. Trim what is redundant there rather than letting it grow. */
+@media (max-width: 720px) {
+  .brand-sub { display: none; }
+  .masthead-in { padding: 7px 16px; gap: 10px; }
+  .tabstrip { padding: 5px 16px !important; }
+  .subnav-in { padding: 5px 16px; }
+  .rail { max-height: none; }
+}
+
 @media (max-width: 920px) {
   .whoami-mail { display: none; }
 }
@@ -359,6 +402,7 @@
   color: var(--ink-2);
   font-size: 12.5px;
 }
+.demobar-short { display: none; }
 .demobar strong {
   font-family: var(--mono);
   font-size: 10px;
@@ -368,13 +412,17 @@
   color: var(--accent);
   flex: 0 0 auto;
 }
-/* The banner sits between the masthead and the section nav, so both sticky
-   offsets below it move down by its height. */
-.demobar ~ .subnav { top: calc(env(safe-area-inset-top, 0px) + 88px); }
-.demobar ~ .layout .rail { top: calc(env(safe-area-inset-top, 0px) + 132px); }
 @media (max-width: 920px) {
   .demobar { padding: 9px 16px; }
-  .demobar ~ .tabstrip { top: calc(env(safe-area-inset-top, 0px) + 87px); }
-  .demobar ~ .subnav { top: calc(env(safe-area-inset-top, 0px) + 130px); }
 }
 @media print { .demobar { display: none !important; } }
+
+
+/* Must come AFTER the base .demobar rules above: when these lived earlier in
+   the file the unconditional `.demobar-short { display: none }` below them
+   won the cascade, and the phone showed a bare "DEMO" chip with no text. */
+@media (max-width: 720px) {
+  .demobar { padding: 6px 16px; font-size: 12px; gap: 8px; }
+  .demobar-long { display: none; }
+  .demobar-short { display: inline; }
+}

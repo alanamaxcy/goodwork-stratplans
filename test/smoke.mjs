@@ -157,6 +157,27 @@ results.scopeH2 = await page.textContent('.shead h2');
 await page.click('.railnav button:has-text("Findings")');
 await page.waitForTimeout(400);
 results.themeRows = await page.$$eval('.themerow', (n) => n.length);
+/* Stacked label/value pairs must actually stack. When they were left inline the
+   page read "37sources" and "…partnerships, space)survey + interviews". */
+results.stackedPairsInline = await page.$$eval(
+  '.themerow .tn, .themerow .tsub, .themerow .tc, .themerow .tcl',
+  (els) => els.filter((e) => getComputedStyle(e).display === 'inline').length,
+);
+/* The sticky header is one block: nothing in it may overlap the rail. */
+await page.evaluate(() => window.scrollTo(0, 700));
+await page.waitForTimeout(250);
+results.headerOverlapsRail = await page.evaluate(() => {
+  const a = document.querySelector('.subnav')?.getBoundingClientRect();
+  const b = document.querySelector('.rail')?.getBoundingClientRect();
+  if (!a || !b) return false;
+  return Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0
+      && Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0;
+});
+results.railIsSticky = await page.evaluate(() => {
+  const r = document.querySelector('.rail');
+  return !!r && getComputedStyle(r).position === 'sticky' && r.getBoundingClientRect().top >= 0;
+});
+await page.evaluate(() => window.scrollTo(0, 0));
 await page.click('.themerow >> nth=0');
 await page.waitForTimeout(300);
 results.themeOpened = await page.textContent('.theme-detail h3');
@@ -229,9 +250,20 @@ results.demoRestCalls = restCalls.slice(0, 3);
 await demo.screenshot({ path: path.join(root, 'test/shot-08-demo-workplan.png') });
 
 const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
-await phone.goto(`http://127.0.0.1:${WEB_PORT}/resonate`, { waitUntil: 'networkidle' });
+await phone.goto(`http://127.0.0.1:${WEB_PORT}/demo`, { waitUntil: 'networkidle' });
 await phone.waitForTimeout(500);
 results.phoneHScroll = await phone.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+/* A sticky header that eats the phone is a bug even when nothing overlaps. */
+/* The banner lost its text once to a cascade collision and showed a bare
+   "DEMO" chip, so assert it actually says something at this width. */
+results.phoneBannerText = await phone.evaluate(
+  () => (document.querySelector('.demobar')?.innerText || '').replace(/\s+/g, ' ').trim(),
+);
+results.phoneHeaderPctOfScreen = await phone.evaluate(() => {
+  const el = document.querySelector('.topbar');
+  if (!el) return -1; // no header on this screen: the assertion below catches it
+  return Math.round((el.getBoundingClientRect().height / window.innerHeight) * 100);
+});
 
 await browser.close();
 api.close();
@@ -245,6 +277,9 @@ if (!results.signInShown) failures.push('sign-in screen did not render');
 if (results.railSections?.length !== 5) failures.push('expected 5 sections');
 if (!results.kpiRows) failures.push('no KPIs rendered from the plan document');
 if (!results.themeRows) failures.push('no findings rendered');
+if (results.stackedPairsInline) failures.push(results.stackedPairsInline + ' label/value spans are inline and will run together');
+if (results.headerOverlapsRail) failures.push('the sticky header overlaps the rail');
+if (!results.railIsSticky) failures.push('the rail scrolled off instead of sticking');
 if (!results.taskRows) failures.push('no tasks rendered');
 if (!results.subRows) failures.push('subtasks did not expand');
 if (!results.statusChanged) failures.push('status did not advance');
@@ -253,6 +288,10 @@ if (!results.scopedOnlyP2) failures.push('scoping leaked other priorities');
 if (results.charts !== 4) failures.push('expected 4 dashboard charts');
 if (!results.unknownPortalBlocked) failures.push('an unreachable portal still rendered');
 if (results.phoneHScroll) failures.push('horizontal scroll at 390px');
+if ((results.phoneBannerText || '').replace(/^Demo\s*/i, '').length < 10)
+  failures.push('the demo banner has no text at phone width: ' + JSON.stringify(results.phoneBannerText));
+if (results.phoneHeaderPctOfScreen < 0) failures.push('phone check never found the header — it measured nothing');
+if (results.phoneHeaderPctOfScreen > 28) failures.push(`sticky header takes ${results.phoneHeaderPctOfScreen}% of a phone screen`);
 if (!results.demoSkipsSignIn) failures.push('demo asked for a sign-in');
 if (results.demoBanner !== 'Demo') failures.push('demo banner missing');
 if (results.demoSections !== 5) failures.push('demo did not render all five sections');
