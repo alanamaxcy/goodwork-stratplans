@@ -18,6 +18,8 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Build and drive the app end to end
         run: node test/smoke.mjs
+      - name: Seed loads a portal with no service-role key
+        run: node test/seed.mjs
 
   rls:
     # The permission boundary is the product's only real security control.

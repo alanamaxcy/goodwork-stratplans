@@ -81,21 +81,28 @@ RLS, so a stolen anon key reaches nothing.
 2. Create the person's account in Supabase → Authentication → Users, and tag
    `app_metadata`: `{ "gw_role": "staff", "gw_tenant": "<slug>" }`
    (Good Work's own accounts get `"gw_tenant": "*"`.)
-3. Seed the portal:
+3. Edit the four values at the top of `supabase/bootstrap.sql` and run it in
+   the SQL editor. It creates the portal and makes you its owner.
+4. Load the content as yourself — you will be emailed a code:
    ```bash
-   SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… \
-     node supabase/seed.mjs --slug agape --tenant agape --owner you@firm.com
+   npm run seed -- --slug agape
    ```
-4. Send them `https://plans.example.org/agape`.
+5. Send them `https://plans.example.org/agape`.
 
-Once the plan editor lands (milestone 2) step 3 becomes a form, and this file
-loses its only mention of the service-role key.
+**No service-role key anywhere.** Creating the first portal is the one write RLS
+is built to refuse — there is no owner yet — so it happens in the SQL editor,
+where you are already superuser and no key is created or stored. Everything
+after that goes through RLS as you.
+
+Once the plan editor lands (milestone 2), steps 3 and 4 become a form.
 
 ## Tests
 
 ```bash
-node test/smoke.mjs        # builds, then drives the real app in Chromium
-supabase/test-rls.sh       # applies the schema to a throwaway Postgres
+npm run verify             # all three
+npm run test:smoke         # builds, then drives the real app in Chromium
+npm run test:seed          # seeding works with no service-role key
+npm run test:rls           # the permission boundary, on a throwaway Postgres
 ```
 
 `smoke.mjs` stands up a stub that speaks Supabase's REST and auth surface, then
@@ -121,8 +128,8 @@ Netlify, one site for every client:
 Build `npm run build`, publish `dist`. The SPA redirect in `netlify.toml` is what
 lets `/resonate` and `/agape` both reach the app.
 
-**Never** set `SUPABASE_SERVICE_ROLE_KEY` on this site. The build does not read
-it and the browser must never see it; it belongs in your shell, for seeding.
+**Never** set `SUPABASE_SERVICE_ROLE_KEY` on this site — or anywhere else. The
+setup path above does not use one.
 
 ## Still to build
 
