@@ -224,22 +224,53 @@ the Access screen. Set it as a plain Netlify variable, never as `VITE_*`: that
 prefix is what Vite compiles into the browser bundle. Setup and seeding do not
 need it at all.
 
+## Which Supabase project
+
+This portal shares a project with another Good Work app rather than having one
+of its own. That was a deliberate trade, and it has two consequences worth
+writing down.
+
+**One user list, and one tag that crosses the boundary.** `gw_tenant = "*"`
+means "Good Work's own staff" in both apps, and here it resolves to `owner` on
+*every* portal — full edit rights on every client's plan, plus the Access
+screen. Someone tagged `*` for the other app gets that here too, without a
+`portal_members` row and so without appearing on the Access screen. Keep that
+tag to people you would trust to rewrite a board-adopted plan; if that stops
+being true, make ownership require an explicit member row and let `*` control
+visibility only.
+
+**One service-role key.** It opens both apps' data. It lives on the Netlify
+site and nowhere else — see `netlify/functions/team.mjs`.
+
+### Separating later
+
+Cheap, if nothing new couples the two. The migration is:
+
+1. New project, run `schema.sql`.
+2. Copy four tables: `portals`, `portal_members`, `tasks`, `task_events`. The
+   plan and the findings are jsonb columns on `portals`, so they ride along.
+3. Recreate accounts by email. **There are no passwords to migrate** — sign-in
+   is an emailed code, so a new account with the same address is the same
+   experience. Users notice one extra sign-in and nothing else.
+4. Remap `portal_members.user_id` by email. That column is stored beside the
+   id for exactly this reason.
+5. Three values on the Netlify site.
+
+**What would make it expensive:** a foreign key, a view or a join between this
+schema and the other app's. Nothing does that today. Don't be the one who adds
+it — read across the boundary through an API, never through the database.
+
 ## Still to build
 
-1. **The plan editor** — priorities, initiatives, KPIs, tasks, subtasks, reorder.
-   The point at which a new client no longer needs an engineer.
-2. **Onboarding** — create a portal, set labels and branding, invite people.
-3. **Task assignment to real accounts.** `tasks.owner_user_id` exists and nothing
-   populates it; owners are free text today.
+1. **Creating a portal in the app.** Still `supabase/bootstrap.sql` then
+   `npm run seed`. Labels, visible sections and branding are editable in
+   Settings once a portal exists — bringing a new client aboard is the last
+   step that needs a terminal.
+2. **Adding and deleting tasks in the workplan.** `newTask` and `nextTaskId`
+   are in `src/lib/planEdit.js` and covered by tests; no UI calls them yet, so
+   the task list can be re-ordered and re-homed but not grown.
+3. **Task assignment to real accounts.** `tasks.owner_user_id` exists and
+   nothing populates it; owners are free text today.
 4. **Due-date reminders.** Port the Impact Suite's `grant-tasks.mjs`.
 5. **The audit trail has no UI.** `task_events` records every field change with
    who and when; nothing shows it yet.
-
-## Moving to its own repo
-
-```bash
-git subtree split -P strategic-plan-portal -b spp-standalone
-git push git@github.com:alanamaxcy/goodwork-stratplans.git spp-standalone:main
-```
-
-Nothing here imports from the Impact Suite, so the split is clean.
