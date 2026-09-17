@@ -14,6 +14,37 @@
 -- Run: psql "$DATABASE_URL" -f schema.sql   (or paste into the SQL editor)
 -- Idempotent — safe to re-run.
 
+-- ------------------------------------------------------------------ guard ---
+-- This project may be SHARED with another app, and `tasks` / `task_events` are
+-- generic names. Without this block, a name collision would be silent and
+-- destructive in that order: `create table if not exists` skips, then
+-- `enable row level security` fires on the OTHER app's table and it starts
+-- returning nothing, then a policy fails on a column that isn't there. An
+-- outage, discovered from the wrong end.
+--
+-- So: refuse before touching anything, and say what to do about it.
+
+do $$
+declare
+  t      text;
+  marker text;
+begin
+  foreach t in array array['portals', 'portal_members', 'tasks', 'task_events'] loop
+    marker := case when t = 'portals' then 'slug' else 'portal_id' end;
+    if to_regclass('public.' || t) is not null
+       and not exists (
+         select 1 from information_schema.columns
+          where table_schema = 'public' and table_name = t and column_name = marker)
+    then
+      raise exception
+        'A different table called "public.%" already exists here — it has no "%" column, so it is not this portal''s. '
+        'This Supabase project is probably shared with another app and that table belongs to it. '
+        'NOTHING HAS BEEN CHANGED. Give the portal its own Postgres schema (or its own project) and re-run.',
+        t, marker;
+    end if;
+  end loop;
+end $$;
+
 create extension if not exists pgcrypto;
 
 -- ---------------------------------------------------------------- claims ---
