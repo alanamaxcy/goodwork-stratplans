@@ -374,6 +374,15 @@ results.paactTopbarText = (await paact.evaluate(
 results.paactOpensOn = (await paact.textContent('.railnav [aria-current="true"] .rn-t').catch(() => '')) || '';
 
 const paactScope = await paact.evaluate(() => document.querySelector('.main')?.innerText || '');
+/* All five phases get a LANE, and the axis still stops at the engagement.
+   Two failures live here and they pull in opposite directions: lifting the
+   twelve-month phase off the axis made it read as a footnote rather than as
+   step five, and running the axis out to its end turned the four phases where
+   the work happens into nubs. The fifth bar runs off the right edge instead. */
+results.axisTicks = await paact.$$eval('.pt-axisrow .pt-tick, .pt-axisrow [class*=tick]',
+  (els) => els.map((e) => e.textContent.trim()).filter(Boolean));
+results.laneCount = await paact.$$eval('.pt-lane', (n) => n.length);
+results.overrunBars = await paact.$$eval('.pt-bar.is-over', (n) => n.length);
 results.paactPhasesShown = ['Foundation', 'Discovery', 'Synthesis', 'Plan design', 'Adoption']
   .filter((n) => paactScope.includes(n)).length;
 /* Phase 1 is the only phase with work behind it: 2 of its 7 deliverables. */
@@ -656,6 +665,12 @@ if (/\bdemo\b/i.test(results.paactTopbarText || ''))
   failures.push("the client's own portal calls itself a Demo: " + JSON.stringify(results.paactTopbarText.slice(0, 120)));
 if (!/scope|timeline/i.test(results.paactOpensOn || ''))
   failures.push('/paact opens on ' + JSON.stringify(results.paactOpensOn) + ' — it must open on the one section carrying PAACT’s own content');
+if (results.laneCount !== 5)
+  failures.push(`the strip draws ${results.laneCount} lanes, not 5 — a phase was taken off the axis and reads as a footnote rather than a step`);
+if (results.axisTicks?.some((t) => /2028/.test(t)))
+  failures.push('the axis runs out to 2028, which squashes the four phases where the work happens: ' + results.axisTicks.join(' '));
+if (results.overrunBars !== 1)
+  failures.push(`${results.overrunBars} bars are drawn open-ended; phase 5 runs past the axis and exactly one should be`);
 if (results.paactPhasesShown !== 5)
   failures.push(`only ${results.paactPhasesShown} of 5 PAACT phases are on screen`);
 if (!results.paactShowsRealProgress)

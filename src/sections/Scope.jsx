@@ -460,6 +460,28 @@ function monthTicks(a, b) {
    phases, five lanes, numbered 1 to 5. The squashing is the truth about an
    engagement whose last phase is longer than the other four combined, and the
    card underneath each bar carries every number anyway. */
+/* WHERE THE AXIS STOPS, which is not the same question as which phases get a
+   lane. A phase far longer than the rest and finishing last — PAACT's twelve
+   month implementation year — sets the scale for everybody if the axis runs to
+   its end: eighteen months of axis turns a four-week Foundation into a nub and
+   crowds the four phases where all the work actually happens. So the scale is
+   set by the phases that share a scale, and the long one runs off the right
+   edge, which is exactly what it does in real life. It keeps its lane and its
+   number; only the drawing is cut, and the bar says so. */
+function axisEndOf(dated) {
+  let pool = dated.slice();
+  while (pool.length > 2) {
+    let li = 0;
+    for (let i = 1; i < pool.length; i += 1) if (pool[i].days > pool[li].days) li = i;
+    const longest = pool[li];
+    const rest = pool.filter((_, i) => i !== li);
+    if (longest.days > Math.max(...rest.map((p) => p.days)) * 3
+        && longest.b >= Math.max(...rest.map((p) => p.b))) pool = rest;
+    else break;
+  }
+  return Math.max(...pool.map((p) => p.b));
+}
+
 function buildStrip(phases, nowMs) {
   const dated = phases.filter((p) => p.dated);
   if (dated.length < 2) return null;
@@ -467,7 +489,7 @@ function buildStrip(phases, nowMs) {
   if (!inc.length) return null;
 
   let t0 = monthStartOf(Math.min(...inc.map((p) => p.a)));
-  let t1 = nextMonthOf(Math.max(...inc.map((p) => p.b)));
+  let t1 = nextMonthOf(axisEndOf(inc));
   const own = Math.max(DAY, t1 - t0);
   /* The axis stretches to include today, because a portal whose only live phase
      is the tail would otherwise put its own "today" marker off the picture.
@@ -495,6 +517,10 @@ function buildStrip(phases, nowMs) {
          otherwise a one-day phase has zero width and a 30-day phase measures
          29. */
       w: Math.max(1.2, ((Math.min(p.b + DAY, t1) - p.a) / span) * 100),
+      /* Runs past the right edge. The bar is drawn open-ended rather than
+         squared off, so it cannot be misread as finishing where the chart
+         does. */
+      over: p.b + DAY > t1,
     })),
     nowIn: Number.isFinite(nowMs) && nowMs >= t0 && nowMs <= t1,
     nowPct: Number.isFinite(nowMs) ? pctOf(nowMs) : 0,
@@ -1131,7 +1157,7 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
             </div>
 
             <ol className="pt-lanes" role="list">
-              {strip.lanes.map(({ phase: p, x, w }) => {
+              {strip.lanes.map(({ phase: p, x, w, over }) => {
                 const m = meterFor(p, nowMs, byDels);
                 const isCurrent = current?.id === p.id;
                 return (
@@ -1156,7 +1182,7 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
                         {strip.ticks.map((t) => (
                           <span className="pt-grid" key={t.key} aria-hidden="true" style={{ '--x': `${strip.pctOf(t.t)}%` }} />
                         ))}
-                        <span className={`pt-bar s-${p.state}`} style={{ '--x': `${x}%`, '--w': `${w}%` }}>
+                        <span className={`pt-bar s-${p.state}${over ? ' is-over' : ''}`} style={{ '--x': `${x}%`, '--w': `${w}%` }}>
                           {m.pct > 0 ? <span className={`pt-fill k-${m.kind}`} style={{ '--f': `${m.pct}%` }} /> : null}
                         </span>
                         {strip.nowIn ? (
@@ -1166,7 +1192,7 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
                       {/* The bar's position is the only carrier of the dates in
                           the strip, so they are read out here. */}
                       <span className="sr">
-                        {`Phase ${p.number}, ${p.name}, ${range(p.start, p.end)}, ${p.length}, ${STATE_LABEL[p.state]}, ${m.text}.`}
+                        {`Phase ${p.number}, ${p.name}, ${range(p.start, p.end)}, ${p.length}, ${STATE_LABEL[p.state]}, ${m.text}.${over ? ' Continues past the end of this chart.' : ''}`}
                       </span>
                     </button>
                   </li>
