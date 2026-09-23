@@ -45,8 +45,7 @@ function DueChart({ rows, now }) {
         return (
           <g key={v}>
             <line x1={padL} y1={y} x2={W - 6} y2={y} stroke="var(--rule-2)" strokeWidth="1" />
-            <text x={padL - 8} y={y + 4} textAnchor="end" fontFamily="ui-monospace,monospace"
-                  fontSize="10" fill="var(--ink-3)">{v}</text>
+            <text x={padL - 8} y={y + 4} textAnchor="end" fill="var(--ink-3)">{v}</text>
           </g>
         );
       })}
@@ -69,14 +68,15 @@ function DueChart({ rows, now }) {
         return (
           <g key={m.key}>
             {seg}
+            {/* No font attributes here: `.chartbody svg text` in app.css owns the
+                family and the size for every label in this chart, so the axis
+                cannot drift out of the type scale one <text> at a time. */}
             <text x={x + bw / 2} y={padT + plotH + 15} textAnchor="middle"
-                  fontFamily="ui-monospace,monospace" fontSize="9.5"
                   fill={m.key === nowKey ? 'var(--ink)' : 'var(--ink-3)'}>
               {MON[+m.key.slice(5) - 1]}
             </text>
             {i === 0 || m.key.slice(5) === '01' ? (
-              <text x={x + bw / 2} y={padT + plotH + 28} textAnchor="middle"
-                    fontFamily="ui-monospace,monospace" fontSize="9" fill="var(--ink-3)">
+              <text x={x + bw / 2} y={padT + plotH + 28} textAnchor="middle" fill="var(--ink-3)">
                 {m.key.slice(0, 4)}
               </text>
             ) : null}

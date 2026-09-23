@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { DEFAULT_LABELS, ALL_SECTIONS } from '../lib/labels.js';
 
 const SECTION_NAMES = {
@@ -22,6 +22,23 @@ export default function Settings({ portal, labels, onSave, onClose }) {
     Array.isArray(portal.sections) && portal.sections.length ? portal.sections : ALL_SECTIONS,
   );
   const [accent, setAccent] = useState(portal.brand?.accent || '');
+  /* The swatch has to open on the colour this portal is ACTUALLY using. Its
+     fallback was a literal hex, and when the product's accent changed that hex
+     became the RETIRED one: opening Settings on a portal with no accent of its
+     own showed the old colour, and saving without touching the picker pinned the
+     portal to it — reverting every pill, link, active nav item and solid button
+     to the look that change was undoing. Read the live token instead, so there
+     is exactly one place the default accent is written down (tokens.css).
+     Read ONCE, on mount: re-reading per render would fight the picker while a
+     drag is in flight. A non-hex token yields '' rather than a second literal;
+     a native colour input could not have represented it anyway. */
+  const liveAccent = useMemo(() => {
+    if (typeof window === 'undefined') return '';
+    const raw = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+    const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(raw);
+    if (!m) return '';
+    return m[1].length === 3 ? `#${m[1].replace(/./g, (c) => c + c)}` : raw.toLowerCase();
+  }, []);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
@@ -141,7 +158,7 @@ export default function Settings({ portal, labels, onSave, onClose }) {
           across every client, not reskin into each one.
         </p>
         <div className="accentrow">
-          <input type="color" value={accent || '#4f3d9e'} onChange={(e) => setAccent(e.target.value)} aria-label="Accent colour" />
+          <input type="color" value={accent || liveAccent} onChange={(e) => setAccent(e.target.value)} aria-label="Accent colour" />
           <input className="mono" value={accent} placeholder="default" onChange={(e) => setAccent(e.target.value)} />
           {accent ? <button className="ghost" onClick={() => setAccent('')}>Reset</button> : null}
         </div>

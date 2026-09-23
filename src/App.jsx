@@ -2,11 +2,11 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import { isConfigured, slugFromLocation, currentSession, signOut } from './lib/supabase.js';
 import { loadPortal, loadTasks, saveTask, saveTasks, deleteTasks, savePlan, savePortalSettings, watchTasks, listPortals } from './lib/store.js';
 import { makeLabels, visibleSections, lower } from './lib/labels.js';
-import { DEMO_SLUG, DEMO_ROLE, loadDemo } from './lib/demo.js';
-import { counts, indexPlan, findingDrives, today } from './lib/format.js';
+import { DEMO_SLUG, loadFilePortal, fileBackedSlug } from './lib/demo.js';
+import { counts, indexPlan, findingDrives, fmt, pct, today } from './lib/format.js';
 import SignIn from './components/SignIn.jsx';
 import Masthead from './components/Masthead.jsx';
-import Scope from './sections/Scope.jsx';
+import Scope, { currentPhaseOf } from './sections/Scope.jsx';
 import Plan from './sections/Plan.jsx';
 import Findings from './sections/Findings.jsx';
 import Workplan from './sections/Workplan.jsx';
@@ -23,11 +23,23 @@ import './styles/app.css';
 
 const CATNAME = { S: 'Strengths', W: 'Weaknesses', O: 'Opportunities', T: 'Threats' };
 
+/* "PAACT (Promise All Atlanta Children Thrive)'s" twice in one sentence reads
+   like a mail merge. The parenthetical is for the masthead, once. */
+export function shortName(name) {
+  return String(name || '').replace(/\s*\([^)]*\)\s*$/, '').trim() || String(name || '');
+}
+
 export default function App() {
   const slug = useMemo(() => slugFromLocation(), []);
-  /* A deploy with no project configured falls back to the demo rather than an
-     error, so a fresh Netlify site shows the product on its first load. */
-  const isDemo = slug === DEMO_SLUG || !isConfigured;
+  /* Which file-backed portal, if any, serves this slug. /demo and /paact both
+     do; a deploy with no project configured falls back to /demo for every slug,
+     so a fresh Netlify site shows the product instead of an error.
+     `isFile` is "this portal comes from a file, so there is nothing to save to"
+     — every store bypass keys off it. `isDemo` is the narrower "this is the
+     all-sample /demo portal", which only the banner wording needs. */
+  const fileSlug = useMemo(() => fileBackedSlug(slug, { unconfigured: !isConfigured }), [slug]);
+  const isFile = Boolean(fileSlug);
+  const isDemo = fileSlug === DEMO_SLUG;
   const [session, setSession] = useState(undefined); // undefined = still checking
   const [portal, setPortal] = useState(null);
   const [role, setRole] = useState(null);
@@ -60,21 +72,28 @@ export default function App() {
 
   /* ---- session ---- */
   useEffect(() => {
-    if (isDemo || !isConfigured) { setSession(null); return; }
+    if (isFile || !isConfigured) { setSession(null); return; }
     currentSession().then(setSession);
-  }, [isDemo]);
+  }, [isFile]);
 
   /* ---- portal + tasks ---- */
   useEffect(() => {
-    if (isDemo) {
+    if (isFile) {
       let live = true;
-      loadDemo().then(({ portal, tasks, now }) => {
+      loadFilePortal(slug, { unconfigured: !isConfigured }).then(({ portal, tasks, now, role }) => {
         if (!live) return;
         setPortal(portal);
         setTasks(tasks);
         setDemoNow(now);
-        setRole(DEMO_ROLE);
+        setRole(role);
         setReason('ok');
+        /* Land on the first section that is this client's OWN content. On
+           /paact that is Scope & timeline: the other four are another
+           engagement's sample, and opening a kickoff on someone else's plan
+           is the one thing this portal must not do. */
+        const sample = portal.sampleSections || [];
+        const own = (portal.sections || []).find((id) => !sample.includes(id));
+        if (own) setSection(own);
       });
       return () => { live = false; };
     }
@@ -93,11 +112,11 @@ export default function App() {
       if (session) setPortals(await listPortals());
     })();
     return () => { live = false; };
-  }, [slug, session, isDemo]);
+  }, [slug, session, isFile]);
 
   /* Subscribe once per portal, in an effect, never during render. */
   useEffect(() => {
-    if (!portal || isDemo) return;
+    if (!portal || isFile) return;
     return watchTasks(portal.id, (ev) => {
       setTasks((prev) => {
         if (ev.type === 'delete') return prev.filter((t) => t.id !== ev.id);
@@ -108,7 +127,7 @@ export default function App() {
         return next;
       });
     });
-  }, [portal?.id, isDemo]);
+  }, [portal?.id, isFile]);
 
   const labels = useMemo(() => makeLabels(portal), [portal]);
   const sections = useMemo(() => visibleSections(portal, labels), [portal, labels]);
@@ -146,14 +165,14 @@ export default function App() {
       const next = { ...cur, ...patch };
       setTasks((prev) => prev.map((t) => (t.id === id ? next : t)));
       setSaveErr(false);
-      if (isDemo) return; // nothing to save to, and the banner says so
+      if (isFile) return; // nothing to save to, and the banner says so
       try {
         await saveTask(portal.id, next);
       } catch {
         setSaveErr(true);
       }
     },
-    [tasks, portal, isDemo],
+    [tasks, portal, isFile],
   );
 
   const goTheme = useCallback((id) => {
@@ -331,7 +350,7 @@ export default function App() {
   /* ---- gates ---- */
   if (session === undefined || reason === 'loading') return <Splash>Loading…</Splash>;
 
-  if (!isDemo && !isConfigured) {
+  if (!isFile && !isConfigured) {
     return (
       <Splash title="No project configured">
         This deploy has no <code>VITE_SUPABASE_URL</code>. Set it and{' '}
@@ -339,8 +358,8 @@ export default function App() {
       </Splash>
     );
   }
-  if (!isDemo && !session) return <SignIn slug={slug} onSignedIn={setSession} />;
-  if (isDemo && !portal) return <Splash>Loading the demo…</Splash>;
+  if (!isFile && !session) return <SignIn slug={slug} onSignedIn={setSession} />;
+  if (isFile && !portal) return <Splash>Loading…</Splash>;
   if (!portal) {
     return (
       <Splash title={slug ? 'Nothing here for this account' : 'Pick a portal'}>
@@ -375,6 +394,28 @@ export default function App() {
     openTheme, setOpenTheme, openTask, setOpenTask, CATNAME,
   };
 
+  /* Sample marking, for the bar below the masthead. `sampleSections` is data on
+     the portal, so a portal with nothing borrowed shows none of this. */
+  const sampleSections = Array.isArray(portal.sampleSections) ? portal.sampleSections : [];
+  const sampleHere = sampleSections.includes(section);
+  const sampleTabs = sections.filter((s) => sampleSections.includes(s.id)).map((s) => s.title);
+  /* Read aloud, "PAACT (Promise All Atlanta Children Thrive)'s" twice in one
+     sentence is a mail merge. The parenthetical earns its place in the masthead,
+     once, and nowhere else. */
+  const shortClient = shortName(portal.client_name);
+  /* "The plan, Findings, Workplan, Dashboard" is a list that trails off; a
+     reader hears a missing item. */
+  const sampleList = sampleTabs.length > 1
+    ? `${sampleTabs.slice(0, -1).join(', ')} and ${sampleTabs[sampleTabs.length - 1]}`
+    : sampleTabs[0] || '';
+  /* The rail is on screen on EVERY tab, including the one section that is this
+     client's own. A figure in it drawn from the borrowed workplan is therefore
+     attributed to this client with nothing beside it to say otherwise: the
+     banner and the Scope sentence both enumerate SECTIONS, and the rail is not
+     one of them. On the all-sample /demo the banner covers the whole page, so
+     this only applies to a MIXED portal. */
+  const sampleWorkplan = sampleSections.includes('workplan') && !isDemo;
+
   const Body = { scope: Scope, plan: Plan, findings: Findings, workplan: Workplan, dashboard: Dashboard }[section];
   /* While editing, §2 becomes the same layout with fields in it. */
   const showEditor = editing && section === 'plan';
@@ -389,6 +430,7 @@ export default function App() {
         role={role}
         session={session}
         saveErr={saveErr}
+        isFile={isFile}
         isDemo={isDemo}
         onSignOut={() => signOut().then(() => setSession(null))}
       />
@@ -402,6 +444,25 @@ export default function App() {
             client data is here.
           </span>
           <span className="demobar-short">Sample content. Nothing is saved.</span>
+        </div>
+      ) : null}
+      {isFile && !isDemo ? (
+        /* A file-backed portal that carries REAL client content in some
+           sections and another engagement's sample in the others. Which is
+           which has to be visible on every section, not only on the one that
+           happens to explain it — a strategic plan showing priorities this
+           client never agreed to is worse than no plan at all. */
+        <div className={`demobar${sampleHere ? ' is-sample' : ''}`}>
+          <strong>{sampleHere ? 'Sample' : 'Working draft'}</strong>
+          <span className="demobar-long">
+            {sampleHere
+              ? `${labels[section] || section} is illustrative content from another engagement, shown so you can see the shape of what this one produces. It is not ${shortClient}'s.`
+              : `${shortClient}'s own content. ${sampleTabs.length ? `${sampleList} still show a sample from another engagement.` : ''}`}
+            {' '}Everything works — nothing is saved.
+          </span>
+          <span className="demobar-short">
+            {sampleHere ? 'Another engagement’s sample.' : 'Nothing is saved.'}
+          </span>
         </div>
       ) : null}
 
@@ -418,7 +479,7 @@ export default function App() {
         findings={findings} topTasks={topTasks} priorityOf={priorityOf}
         setOpenTheme={setOpenTheme} onExport={() => setModal('export')} CATNAME={CATNAME}
         isOwner={isOwner} editing={editing} onEdit={startEdit}
-        onSettings={() => setShowSettings(true)} onTeam={() => setShowTeam(true)} isDemo={isDemo}
+        onSettings={() => setShowSettings(true)} onTeam={() => setShowTeam(true)} isFile={isFile}
       />
       {editing ? (
         <div className="savebar">
@@ -445,11 +506,11 @@ export default function App() {
               <button key={s.id} aria-current={section === s.id} onClick={() => { setSection(s.id); setOpenTask(null); window.scrollTo(0, 0); }}>
                 <span className="rn-n">{s.n}</span>
                 <span className="rn-t">{s.title}</span>
-                <span className="rn-c">{s.id === 'workplan' ? `${overall.done}/${overall.total}` : ''}</span>
+                <span className="rn-c">{s.id === 'workplan' && !sampleWorkplan ? `${overall.done}/${overall.total}` : ''}</span>
               </button>
             ))}
           </nav>
-          <RailCards portal={portal} overall={overall} labels={labels} now={now} />
+          <RailCards portal={portal} overall={overall} labels={labels} now={now} sampleWorkplan={sampleWorkplan} />
         </aside>
         <main className="main">
           <div className="wrap">
@@ -498,7 +559,7 @@ export default function App() {
   );
 }
 
-function SubNav({ section, sub, setSub, plan, labels, findings, topTasks, priorityOf, setOpenTheme, onExport, CATNAME, isOwner, editing, onEdit, onSettings, onTeam, isDemo }) {
+function SubNav({ section, sub, setSub, plan, labels, findings, topTasks, priorityOf, setOpenTheme, onExport, CATNAME, isOwner, editing, onEdit, onSettings, onTeam, isFile }) {
   const cur = sub[section];
   const pick = (v) => { setSub((s) => ({ ...s, [section]: v })); setOpenTheme(null); window.scrollTo(0, 0); };
   const B = ({ v, children, count }) => (
@@ -544,8 +605,9 @@ function SubNav({ section, sub, setSub, plan, labels, findings, topTasks, priori
         {isOwner && !editing ? (
           <>
             <button className="ghost" onClick={onEdit}>Edit plan</button>
-            {/* There is no account system in the demo, so there is nobody to manage. */}
-            {!isDemo ? <button className="ghost" onClick={onTeam}>Access</button> : null}
+            {/* A file-backed portal has no accounts behind it, so there is
+                nobody to manage. */}
+            {!isFile ? <button className="ghost" onClick={onTeam}>Access</button> : null}
             <button className="ghost" onClick={onSettings}>Settings</button>
           </>
         ) : null}
@@ -557,9 +619,21 @@ function SubNav({ section, sub, setSub, plan, labels, findings, topTasks, priori
   );
 }
 
-function RailCards({ portal, overall, labels, now }) {
+function RailCards({ portal, overall, labels, now, sampleWorkplan }) {
   const eng = portal.engagement || {};
-  const active = (eng.phases || []).find((p) => p.status === 'active') || (eng.phases || []).slice(-1)[0];
+  /* Where we are, resolved from the DATES by the same exported rule the Timeline
+     uses — Scope.jsx's currentPhaseOf(). This used to read the static status
+     string, which stops being true the day a phase's window closes: on 1 October
+     the Timeline said "Phase 2 · Discovery" while the rail beside it still said
+     Phase 1. Two answers to "where are we" in one viewport. */
+  const phase = currentPhaseOf(eng, now);
+  /* A figure that is THIS client's: how much of the phase we are actually in has
+     been delivered. Only when every deliverable in that phase carries a flag —
+     a list of untracked strings reported as "0 of 7 done" would be a number the
+     client never produced. */
+  const del = phase && phase.items && phase.items.length && phase.tracked === phase.items.length
+    ? { done: phase.doneN, total: phase.items.length }
+    : null;
   return (
     <>
       <div className="railcard">
@@ -567,25 +641,40 @@ function RailCards({ portal, overall, labels, now }) {
         <dl className="deflist">
           {eng.firm?.name ? (<><dt>Firm</dt><dd>{eng.firm.name}</dd></>) : null}
           {eng.firm?.lead ? (<><dt>Lead</dt><dd>{eng.firm.lead}</dd></>) : null}
-          {active ? (<><dt>Phase</dt><dd>{active.n} · {active.name}</dd></>) : null}
-          <dt>Today</dt><dd className="num">{now}</dd>
+          {phase ? (<><dt>Phase</dt><dd>{phase.n} · {phase.name}</dd></>) : null}
+          {/* fmt, not the raw string: this is the only ISO-8601 date a client
+              would ever have seen, two inches from a flag reading "23 Sep 26". */}
+          <dt>Today</dt><dd className="num">{fmt(now)}</dd>
         </dl>
       </div>
-      <div className="railcard">
-        <h4 className="eyebrow">Year one</h4>
-        <div className="pb-row">
-          <span className="num" style={{ fontFamily: 'var(--mono)', fontSize: 19 }}>
-            {overall.total ? Math.round((overall.done / overall.total) * 100) : 0}%
-          </span>
-          <span className="eyebrow">{overall.done} of {overall.total} done</span>
-        </div>
-        <StatusBar c={overall} total={overall.total} />
-        {overall.late ? (
-          <div style={{ marginTop: 9, fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--stop)' }}>
-            {overall.late} past due
+      {sampleWorkplan && del ? (
+        /* The workplan on this portal is another engagement's sample, so its
+           completion is not this client's to report. The phase we are in is,
+           and it is counted from their own dated deliverables. */
+        <div className="railcard">
+          <h4 className="eyebrow">Phase {phase.n} · {phase.name}</h4>
+          <div className="pb-row">
+            <span className="num railpct">{pct(del.done, del.total)}%</span>
+            <span className="eyebrow">{del.done} of {del.total} delivered</span>
           </div>
-        ) : null}
-      </div>
+          <StatusBar c={{ done: del.done, next: del.total - del.done }} total={del.total} />
+        </div>
+      ) : (
+        <div className="railcard">
+          {/* Nothing here is this client's if the workplan is borrowed, and there
+              is no phase count to put in its place — so the card says whose
+              numbers these are, in the heading, where the numbers are. */}
+          <h4 className="eyebrow">{sampleWorkplan ? 'Year one · sample workplan' : 'Year one'}</h4>
+          <div className="pb-row">
+            <span className="num railpct">{pct(overall.done, overall.total)}%</span>
+            <span className="eyebrow">{overall.done} of {overall.total} done</span>
+          </div>
+          <StatusBar c={overall} total={overall.total} />
+          {overall.late ? (
+            <div className="num raillate">{overall.late} past due</div>
+          ) : null}
+        </div>
+      )}
     </>
   );
 }

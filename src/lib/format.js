@@ -23,8 +23,18 @@ export function pct(a, b) {
   return b ? Math.round((a / b) * 100) : 0;
 }
 
-export function today() {
-  return new Date().toISOString().slice(0, 10);
+/* Today as YYYY-MM-DD, in the viewer's OWN timezone.
+
+   toISOString() would give the UTC date, and every date in this product is a
+   CALENDAR date parsed to LOCAL midnight (see Scope.jsx's ms()). Mixing the two
+   makes the app's "today" jump a day ahead for the last four hours of every
+   evening in Atlanta: at 20:00 EDT it is already tomorrow in UTC, so a phase
+   boundary and a due-date comparison would come from two different days. One
+   Date instance, read three times, so the three parts cannot straddle midnight
+   either. */
+export function today(d = new Date()) {
+  const p2 = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
 }
 
 export function isOverdue(task, now = today()) {

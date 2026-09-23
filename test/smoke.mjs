@@ -338,6 +338,106 @@ results.demoTouchedNoDatabase = restCalls.length === 0;
 results.demoRestCalls = restCalls.slice(0, 3);
 await demo.screenshot({ path: path.join(root, 'test/shot-08-demo-workplan.png') });
 
+
+/* ---- /paact: the real engagement, with sample content in the other four ----
+   This route had none of this coverage, which is exactly why a completely
+   UNREACHABLE /paact once passed the build and every unit test: nothing here
+   mentioned it, so nothing noticed that App.jsx never loaded it. The
+   assertions below are deliberately written against visible TEXT rather than
+   the timeline's own class names, so a redesign of the section does not
+   silently stop testing whether the client's own facts are on screen. */
+const paact = await browser.newPage({ viewport: { width: 1320, height: 1050 }, deviceScaleFactor: 2 });
+paact.on('pageerror', (e) => errs.push('PAACT ' + e.message));
+const paactRest = [];
+paact.on('request', (r) => { if (r.url().includes('/rest/v1/')) paactRest.push(r.method() + ' ' + r.url()); });
+
+await paact.goto(`http://127.0.0.1:${WEB_PORT}/paact`, { waitUntil: 'networkidle' });
+await paact.waitForTimeout(900);
+
+results.paactSkipsSignIn = await paact.isVisible('.masthead');
+results.paactClient = (await paact.textContent('.brand-name').catch(() => '')) || '';
+/* A client's own portal must never call itself a Demo. */
+results.paactTopbarText = (await paact.evaluate(
+  () => (document.querySelector('.topbar')?.innerText || '').replace(/\s+/g, ' ').trim(),
+)) || '';
+/* The one section carrying PAACT's own content is the one it must open on. */
+results.paactOpensOn = (await paact.textContent('.railnav [aria-current="true"] .rn-t').catch(() => '')) || '';
+
+const paactScope = await paact.evaluate(() => document.querySelector('.main')?.innerText || '');
+results.paactPhasesShown = ['Foundation', 'Discovery', 'Synthesis', 'Plan design', 'Adoption']
+  .filter((n) => paactScope.includes(n)).length;
+/* Phase 1 is the only phase with work behind it: 2 of its 7 deliverables. */
+results.paactShowsRealProgress = /\b2\b[^.]{0,12}\b7\b/.test(paactScope);
+/* HTI's engagement ends 15 Feb 2027. 15 Feb 2028 is the end of plan year one;
+   presenting the latter as the engagement span overstates the contract by a year. */
+results.paactClaims2028AsEngagementEnd = /engagement[^.]{0,60}Feb 28\b/i.test(paactScope);
+
+await paact.click('.subnav button:has-text("Who is on it")');
+await paact.waitForTimeout(400);
+const paactTeam = await paact.evaluate(() => document.querySelector('.main')?.innerText || '');
+results.paactTeamNames = ['Folami', 'Shawnell', 'Kristin Bernhard', 'Danielle Wallace']
+  .filter((n) => paactTeam.includes(n)).length;
+
+await paact.click('.subnav button:has-text("Scope")');
+await paact.waitForTimeout(400);
+const paactAgreement = await paact.evaluate(() => document.querySelector('.main')?.innerText || '');
+results.paactKeyDatesShown = ['Fall Luncheon', 'Impact Report', 'RFP project end date']
+  .filter((n) => paactAgreement.includes(n)).length;
+results.paactCadenceShown = /Shawnell/.test(paactAgreement) && /Weekly/i.test(paactAgreement);
+await paact.screenshot({ path: path.join(root, 'test/shot-09-paact-timeline.png'), fullPage: true });
+
+/* Sections 2-5 are another engagement's anonymised content. Unmarked, a client
+   would read priorities they never agreed to as their own plan. */
+await paact.click('.railnav button:has-text("The plan")');
+await paact.waitForTimeout(500);
+results.paactPlanMarkedSample = await paact.evaluate(() => {
+  const t = (document.querySelector('.topbar')?.innerText || '') + ' ' + (document.querySelector('.main')?.innerText || '');
+  return /sample|illustrative/i.test(t);
+});
+/* The banner alone is not enough, and checking only the banner is how a real
+   blocker got through this test once: the section HEADLINE still read
+   "PAACT (Promise All Atlanta Children Thrive) · Strategic Plan 2027-2031" over
+   another engagement's vision and priorities — attributing that plan to PAACT in
+   the largest type on the page, two inches under a banner saying it was not
+   theirs. A reader takes in the headline first. */
+results.paactPlanH2 = (await paact.textContent('.shead h2').catch(() => '')) || '';
+await paact.screenshot({ path: path.join(root, 'test/shot-10-paact-sample.png') });
+
+/* PAACT's portal serves the anonymised sample, so it must not leak the real
+   client of that sample either. */
+const paactText = await paact.evaluate(() => document.body.innerText);
+results.paactLeaksRealClient = /\bresonate\b/i.test(paactText.replace(/\bresonat(es|ed|ing)\b/gi, 'X'))
+  || /\bBelvedere\b/i.test(paactText);
+results.paactTouchedNoDatabase = paactRest.length === 0;
+results.paactRestCalls = paactRest.slice(0, 3);
+
+/* ---- the theme toggle ---- */
+const themeBtn = await paact.$('[aria-label*="theme" i], [aria-label*="dark" i], [aria-label*="light" i], .themetoggle');
+results.themeToggleFound = !!themeBtn;
+if (themeBtn) {
+  const before = await paact.evaluate(() => document.documentElement.getAttribute('data-theme'));
+  await themeBtn.click();
+  await paact.waitForTimeout(800);
+  const after = await paact.evaluate(() => document.documentElement.getAttribute('data-theme'));
+  results.themeFlipped = before !== after;
+  results.themeAfter = after;
+  /* The wipe adds a suppression class that kills every transition on the page.
+     If it is not removed on BOTH the resolved and rejected paths, the app is
+     left permanently un-animated. */
+  results.themeWipeClassCleared = await paact.evaluate(
+    () => !document.documentElement.classList.contains('theme-wipe'),
+  );
+  /* Whatever key the toggle chose — assert a choice was stored, not the name. */
+  results.themePersisted = await paact.evaluate(() => {
+    try {
+      return Object.keys(localStorage)
+        .filter((k) => /theme/i.test(k) || /^(light|dark)$/i.test(localStorage.getItem(k) || ''))
+        .map((k) => k + '=' + localStorage.getItem(k)).join(',') || '';
+    } catch { return 'threw'; }
+  });
+  await paact.screenshot({ path: path.join(root, 'test/shot-11-paact-dark.png') });
+}
+
 const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
 await phone.goto(`http://127.0.0.1:${WEB_PORT}/demo`, { waitUntil: 'networkidle' });
 await phone.waitForTimeout(500);
@@ -403,6 +503,40 @@ if (!results.editorClosedOnSave) failures.push('the editor stayed open after sav
 if (!/Northside/.test(results.demoClient || '')) failures.push('demo is not showing the anonymised client');
 if (!results.demoInteractive) failures.push('demo workplan is not interactive');
 if (!results.demoTouchedNoDatabase) failures.push('demo hit the database: ' + results.demoRestCalls.join(', '));
+/* ---- /paact: the route the kickoff depends on ---- */
+if (!results.paactSkipsSignIn) failures.push('/paact asked for a sign-in — the client cannot open it');
+if (!/PAACT/.test(results.paactClient || ''))
+  failures.push('/paact is not showing PAACT: ' + JSON.stringify(results.paactClient));
+if (/\bdemo\b/i.test(results.paactTopbarText || ''))
+  failures.push("the client's own portal calls itself a Demo: " + JSON.stringify(results.paactTopbarText.slice(0, 120)));
+if (!/scope|timeline/i.test(results.paactOpensOn || ''))
+  failures.push('/paact opens on ' + JSON.stringify(results.paactOpensOn) + ' — it must open on the one section carrying PAACT’s own content');
+if (results.paactPhasesShown !== 5)
+  failures.push(`only ${results.paactPhasesShown} of 5 PAACT phases are on screen`);
+if (!results.paactShowsRealProgress)
+  failures.push("phase 1's real progress (2 of its 7 deliverables) is not shown");
+if (results.paactClaims2028AsEngagementEnd)
+  failures.push("the page presents Feb 2028 as the end of HTI's engagement — it ends Feb 2027; 2028 is the end of plan year one");
+if (results.paactTeamNames !== 4)
+  failures.push(`only ${results.paactTeamNames} of 4 named people appear on "Who is on it"`);
+if (results.paactKeyDatesShown !== 3)
+  failures.push(`only ${results.paactKeyDatesShown} of 3 checked key dates appear on "Scope & cadence"`);
+if (!results.paactCadenceShown) failures.push('the working cadence (owner and rhythm) is missing');
+if (!results.paactPlanMarkedSample)
+  failures.push("THE SAMPLE PLAN IS UNMARKED ON /paact — the client would read another engagement's priorities as their own");
+if (/PAACT/i.test(results.paactPlanH2 || ''))
+  failures.push('the sample plan is HEADED with the client name, which attributes it to them: ' + JSON.stringify(results.paactPlanH2));
+if (!/sample/i.test(results.paactPlanH2 || ''))
+  failures.push('the sample plan headline does not say it is a sample: ' + JSON.stringify(results.paactPlanH2));
+if (results.paactLeaksRealClient) failures.push('/paact LEAKS THE REAL CLIENT OF THE SAMPLE CONTENT');
+if (!results.paactTouchedNoDatabase) failures.push('/paact hit the database: ' + results.paactRestCalls.join(', '));
+if (!results.themeToggleFound) failures.push('no theme toggle was found');
+if (results.themeToggleFound && !results.themeFlipped) failures.push('the theme toggle did not change the theme');
+if (results.themeToggleFound && !results.themeWipeClassCleared)
+  failures.push('the wipe left .theme-wipe on <html> — every transition on the page is now dead');
+if (results.themeToggleFound && !results.themePersisted)
+  failures.push('the theme choice was not persisted: ' + JSON.stringify(results.themePersisted));
+
 if (errs.length) failures.push('page errors: ' + errs.join(' | '));
 
 if (failures.length) {

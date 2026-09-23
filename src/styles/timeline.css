@@ -1,0 +1,855 @@
+/* ---------------------------------------------------------------------------
+   SCOPE & TIMELINE — the lane strip and the phase cards.
+
+   REGISTER. Mainstream PM tool, not engineering console: one sans, sentence
+   case, a 12px label floor, 8-12-16px radii, soft shadows, cool neutrals, pill
+   status chips, and a checkbox glyph that looks like a checkbox. What keeps it
+   a consultant's deliverable rather than generic SaaS is restraint — one
+   accent, one status vocabulary, body copy held to a readable measure, and no
+   decoration that is not carrying a fact.
+
+   TOKENS ONLY. Every colour is a var() or a color-mix() of one, because
+   --accent is overridden per portal by an inline style on .masthead and a
+   literal hex here would apply the product's purple to one client's card and
+   their own brand to the next. Both themes come free from tokens.css; there is
+   no colour in this file that does not resolve through it.
+
+   SPECIFICITY, DELIBERATELY. .phasetrack and .phasebtn are load-bearing class
+   names — the smoke test and the print stylesheet both read them — so the
+   cards keep them and restyle them rather than renaming them. app.css styles
+   both as a five-column strip, and app.css @imports THIS FILE ON ITS SECOND
+   LINE, so everything here is emitted BEFORE those rules and loses every tie.
+   Every override below is therefore written as a TWO-class selector
+   (.phasetrack.pc-stack, .pc-card > .pc-head) so it wins on specificity rather
+   than on source order.
+   --------------------------------------------------------------------------- */
+
+/* ===========================================================================
+   1. THE SAMPLE-CONTENT LINE
+   One sentence, not a warning banner: the four sections one tab away are
+   another client's, and the reader meets them without this page saying so.
+   =========================================================================== */
+.pt-sample {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 var(--sp-3);
+  padding: 11px 15px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  box-shadow: inset 0 0 0 1px var(--rule-2);
+  font-size: var(--fs-label);
+  line-height: 1.5;
+  color: var(--ink-2);
+  max-width: 88ch;
+}
+.pt-samplemk {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  margin-top: 1px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  font-style: italic;
+  /* 11.5px/600 — small text, 4.5:1 floor. Accent on a 13% accent tint computes
+     to exactly 4.50:1 in light, i.e. it passes only until a client's brand
+     accent replaces --accent. Hue in the fill, glyph in --ink: 12.5:1 light,
+     9.9:1 dark, whatever --accent becomes. */
+  background: color-mix(in srgb, var(--accent) 20%, var(--surface));
+  color: var(--ink);
+}
+
+/* ===========================================================================
+   2. THE LANE STRIP
+
+   Four to five bars on ONE linear month axis. No scale break, no legend and no
+   honesty caption, because the one phase that would need them — a twelve-month
+   implementation tail beside a four-week foundation — is taken off the axis by
+   Scope.jsx and stated as a labelled rule instead. Every bar drawn here is
+   drawn whole, at one scale, so two bar lengths can be compared by eye.
+   =========================================================================== */
+.pt-panel { margin-bottom: var(--sp-3); }
+
+.pt-strip {
+  /* The label gutter. One value drives the flag row, the axis, every lane, the
+     key-date row and the tail, so nothing can drift out of alignment with the
+     bars it annotates. */
+  --gut: 136px;
+  --overhang: 3px;
+}
+
+.pt-flagrow,
+.pt-axisrow,
+.pt-markrow,
+.pt-lane,
+.pt-tail {
+  display: grid;
+  grid-template-columns: var(--gut) minmax(0, 1fr);
+  align-items: center;
+  width: 100%;
+}
+
+.pt-gutter { min-width: 0; padding-right: var(--sp-3); }
+
+/* ---------- today's flag, on a row of its own so it cannot collide with a
+     month label ---------- */
+.pt-flagrow { height: 20px; }
+.pt-flagslot { position: relative; height: 20px; min-width: 0; }
+.pt-nowflag {
+  position: absolute;
+  bottom: 0;
+  left: var(--x);
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  padding: 1px 8px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 11%, var(--surface));
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+.pt-nowflag.at-start { transform: translateX(0); }
+.pt-nowflag.at-end { transform: translateX(-100%); }
+
+/* ---------- the month axis ---------- */
+.pt-axis { position: relative; height: 19px; border-bottom: 1px solid var(--rule); min-width: 0; }
+.pt-tick {
+  position: absolute;
+  top: 8px;
+  bottom: 0;
+  left: var(--x);
+  width: 0;
+  border-left: 1px solid var(--rule);
+}
+.pt-ticklab {
+  position: absolute;
+  top: 0;
+  left: var(--x);
+  margin-left: 5px;
+  font-size: var(--fs-micro);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.pt-ticklab.at-end { margin-left: -5px; transform: translateX(-100%); }
+
+/* ---------- the lanes ---------- */
+.pt-lanes { list-style: none; margin: 2px 0 0; padding: 0; }
+
+.pt-lane {
+  padding: 2px 0;
+  border-radius: var(--r-sm);
+  text-align: left;
+  transition: background .15s ease;
+}
+.pt-lane:hover { background: var(--rule-2); }
+/* A 3px edge in the label gutter, not a tint across the track: a tinted row
+   behind a bar that covers a sixth of the axis reads as a bar covering all of
+   it, and that is the one thing this picture must never say. */
+.pt-lane.is-current { box-shadow: inset 3px 0 0 0 var(--accent); }
+.pt-lane.is-open { background: var(--raise); }
+.pt-lane.is-current.is-open { box-shadow: inset 3px 0 0 0 var(--accent); }
+
+.pt-lanelab { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; padding-left: 8px; }
+.pt-lane.is-current .pt-lanename { color: var(--accent); }
+.pt-lanen {
+  flex: 0 0 auto;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: var(--raise);
+  color: var(--ink-2);
+  box-shadow: inset 0 0 0 1.5px var(--rule);
+}
+/* The lane number is 11.5px/600 visible text, so it carries the 4.5:1 floor —
+   and white on a mid-tone status fill does not clear it in dark mode: #ffffff
+   on --st-done #45936a is 3.73:1, and on the lightened dark --stop #d98b82 it
+   is 2.64:1. Both switch to the tint-the-fill-keep-the-ink pattern .pc-pill
+   uses, with a 55% ring so the hue still reads at 19px across a room:
+   --ink on #d9e8df / #203231 is 13.0:1 light / 11.3:1 dark (done) and on
+   #efdcda / #3b3136 is 12.5:1 / 10.6:1 (overran). The CURRENT phase keeps the
+   solid accent fill — it is the one lane that should shout, and --on-accent on
+   --accent is 5.38:1 light / 7.49:1 dark. */
+.pt-lane.s-doing .pt-lanen { background: var(--accent); color: var(--on-accent); box-shadow: none; }
+.pt-lane.s-done .pt-lanen { background: color-mix(in srgb, var(--st-done) 18%, var(--surface)); color: var(--ink); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--st-done) 55%, transparent); }
+.pt-lane.s-overran .pt-lanen { background: color-mix(in srgb, var(--stop) 18%, var(--surface)); color: var(--ink); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--stop) 55%, transparent); }
+.pt-lanename {
+  font-size: var(--fs-label);
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.pt-lane.is-current .pt-lanename { font-weight: 600; }
+
+/* Gridlines and the today line are drawn INSIDE each track, one set per lane,
+   rather than as a single overlay across the stack: at phone width the label
+   stacks above its track and a lane-wide overlay drew the month lines straight
+   through the phase names. overflow:hidden is load-bearing — it is what
+   guarantees a bar cannot push the page wider than the viewport. */
+.pt-track { position: relative; height: 18px; min-width: 0; overflow: hidden; }
+.pt-grid {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--x);
+  width: 0;
+  border-left: 1px solid var(--rule-2);
+}
+.pt-nowline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--x);
+  width: 0;
+  border-left: 2px dashed var(--accent);
+  z-index: 2;
+}
+.pt-bar {
+  position: absolute;
+  z-index: 1;
+  top: 3px;
+  bottom: 3px;
+  left: var(--x);
+  width: var(--w);
+  min-width: 10px;
+  border-radius: var(--r-pill);
+  overflow: hidden;
+  /* A not-started phase still has to read as a present, dated thing rather
+     than an empty slot, so its whole bar carries the (deliberately
+     low-chroma) status tint. */
+  background: color-mix(in srgb, var(--st-next) 34%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--st-next) 55%, transparent);
+}
+.pt-bar.s-done { background: color-mix(in srgb, var(--st-done) 16%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--st-done) 42%, transparent); }
+.pt-bar.s-doing { background: color-mix(in srgb, var(--st-doing) 16%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--st-doing) 42%, transparent); }
+.pt-bar.s-overran { background: color-mix(in srgb, var(--stop) 16%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--stop) 44%, transparent); }
+.pt-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--f);
+  border-radius: var(--r-pill);
+  background: var(--st-done);
+}
+/* Two fills, two meanings, two colours — and the caption under the strip says
+   which one this portal is showing. */
+.pt-fill.k-time { background: var(--accent); }
+
+/* ---------- key dates on the same axis ---------- */
+.pt-markrow { margin-top: 3px; }
+.pt-marklab { font-size: var(--fs-micro); color: var(--ink-3); }
+.pt-marks { position: relative; height: 14px; min-width: 0; }
+.pt-mark {
+  position: absolute;
+  left: var(--x);
+  top: 3px;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--ink-3);
+}
+.pt-mark.is-past { background: var(--st-done); box-shadow: inset 0 0 0 2px var(--st-done); }
+.pt-mark.is-next {
+  background: var(--accent);
+  box-shadow: inset 0 0 0 2px var(--accent), 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+/* ---------- the tail: the phase that is too long to share the axis ---------- */
+.pt-tail {
+  margin-top: 6px;
+  padding: 3px 0;
+  border-radius: var(--r-sm);
+  text-align: left;
+  transition: background .15s ease;
+}
+.pt-tail:hover { background: var(--rule-2); }
+.pt-tail.is-current { box-shadow: inset 3px 0 0 0 var(--accent); }
+.pt-taillab { font-size: var(--fs-micro); font-weight: 600; color: var(--ink-2); padding-left: 8px; }
+.pt-tailbody { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+.pt-tailrule {
+  flex: 0 0 34px;
+  height: 0;
+  border-top: 2px dashed var(--rule);
+  position: relative;
+}
+.pt-tailrule::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: -3px;
+  width: 5px;
+  height: 5px;
+  border-top: 2px solid var(--rule);
+  border-right: 2px solid var(--rule);
+  transform: rotate(45deg);
+}
+.pt-tailtext {
+  font-size: var(--fs-cap);
+  color: var(--ink-2);
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 6px;
+}
+.pt-tailtext strong { font-weight: 600; color: var(--ink); }
+
+.pt-cap {
+  margin-top: var(--sp-3);
+  padding-top: 10px;
+  border-top: 1px solid var(--rule-2);
+  font-size: var(--fs-cap);
+  line-height: 1.55;
+  color: var(--ink-2);
+  max-width: 92ch;
+}
+
+/* ===========================================================================
+   3. THE PHASE CARDS
+   =========================================================================== */
+
+/* Beats .phasetrack { display: grid; grid-template-columns: repeat(5, 1fr) }
+   and both of its responsive redefinitions. */
+.phasetrack.pc-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  grid-template-columns: none;
+  margin: 0 0 var(--sp-3);
+  padding: 0;
+  list-style: none;
+}
+
+.pc-card {
+  background: var(--surface);
+  border: 1px solid var(--rule-2);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+.pc-card:hover { box-shadow: var(--shadow-md); }
+.pc-card.is-open { box-shadow: var(--shadow-md); }
+
+/* The current phase carries a 3px accent edge as well as the "You are here"
+   pill, so the orientation survives greyscale, a projector and a screen
+   reader — three channels for the one fact that matters most on this tab. */
+.pc-card.is-current { border-color: var(--accent-line); box-shadow: inset 3px 0 0 0 var(--accent), var(--shadow-sm); }
+.pc-card.is-current:hover,
+.pc-card.is-current.is-open { box-shadow: inset 3px 0 0 0 var(--accent), var(--shadow-md); }
+
+/* ---------- the card header (a disclosure button) ---------- */
+
+.pc-card > .pc-head {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 20px;
+  gap: var(--sp-3);
+  align-items: start;
+  width: 100%;
+  padding: 14px 16px;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: var(--r-md);
+  box-shadow: none;
+  transform: none;
+  flex-direction: unset;
+}
+/* Both hover rules in one place and LAST, so an open card's header still
+   responds to the pointer: the two selectors used to tie on specificity and
+   the open-state reset won. */
+.pc-card > .pc-head:hover,
+.pc-card.is-open > .pc-head:hover { background: var(--raise); box-shadow: none; transform: none; }
+.pc-card.is-open > .pc-head { background: none; }
+
+/* Phase number, or a check once the phase is complete. */
+.pc-num {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  font-size: var(--fs-label);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: var(--raise);
+  color: var(--ink-2);
+  box-shadow: inset 0 0 0 1.5px var(--rule);
+  margin-top: 1px;
+}
+/* Same three states, same reasoning, on the 28px card badge. The overran badge
+   was #ffffff on --stop: 3.68:1 in dark before the token lightened and 2.64:1
+   after, for a 13px/600 phase NUMBER a reader uses to find the phase. The done
+   badge was #ffffff on --st-done, 3.73:1 in dark, for a 15px check. Both are
+   aria-hidden (Scope.jsx writes the number and the check into one aria-hidden
+   span), but aria-hidden is not an exemption from 1.4.3 — the glyph is still
+   visually rendered text carrying a fact — so BOTH are fixed rather than only
+   the number: --ink on the 18% tint is 12.5:1 light / 10.6:1 dark (overran)
+   and 13.0:1 / 11.3:1 (done). The doing badge keeps the solid accent fill,
+   5.38:1 light / 7.49:1 dark, and stays the one loud one. */
+.pc-card.s-doing .pc-num { background: var(--accent); color: var(--on-accent); box-shadow: none; }
+.pc-card.s-done .pc-num { background: color-mix(in srgb, var(--st-done) 18%, var(--surface)); color: var(--ink); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--st-done) 55%, transparent); font-size: 15px; }
+.pc-card.s-overran .pc-num { background: color-mix(in srgb, var(--stop) 18%, var(--surface)); color: var(--ink); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--stop) 55%, transparent); }
+
+.pc-mid { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+
+.pc-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+.pc-name {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -.008em;
+  color: var(--ink);
+  overflow-wrap: break-word;
+}
+
+/* Status chip. The word carries the state; the dot carries it again in colour.
+   Text stays --ink so the chip reads at 12.5px in both themes rather than
+   relying on a mid-tone status hue for contrast. */
+.pc-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 8px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-cap);
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--raise);
+  box-shadow: inset 0 0 0 1px var(--rule-2);
+  white-space: nowrap;
+}
+.pc-card.s-done .pc-pill { background: color-mix(in srgb, var(--st-done) 11%, var(--surface)); }
+.pc-card.s-doing .pc-pill { background: color-mix(in srgb, var(--st-doing) 11%, var(--surface)); }
+.pc-card.s-overran .pc-pill { background: color-mix(in srgb, var(--stop) 12%, var(--surface)); }
+
+/* "You are here" — the one orientation fact on this tab, so it is the last
+   place to depend on a 4.69:1 accent-on-accent-tint that a client's own brand
+   accent could pull under the floor. Hue in the fill and in the ring, word in
+   --ink: 13.2:1 light on #e6e4fa, 10.7:1 dark on #2f3146. Matches the
+   .phasebtn .pb-now treatment in app.css so the two cannot drift. */
+.pc-now {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-cap);
+  font-weight: 600;
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 42%, transparent);
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/* Dates, length, and where today sits. The length is printed as words
+   ("4 weeks", "12 months") because a card stack throws away what a bar gives
+   for free, and a reader should not have to subtract two dates to learn that
+   implementation is twelve times longer than foundation. */
+.pc-when {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+  font-size: var(--fs-label);
+  color: var(--ink-2);
+}
+.pc-when .num { font-variant-numeric: tabular-nums; }
+.pc-sep { color: var(--ink-3); }
+.pc-timing { color: var(--ink-2); }
+.pc-ovmini { color: var(--ink-2); }
+
+/* One bar per card, always next to words that say what it counts. */
+.pc-prog { display: flex; align-items: center; gap: var(--sp-3); margin-top: 2px; }
+.pc-meter {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 260px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--rule-2);
+  overflow: hidden;
+}
+.pc-meter i { display: block; height: 100%; border-radius: var(--r-pill); background: var(--st-next); }
+.pc-meter.k-items i { background: var(--st-done); }
+.pc-meter.k-time i { background: var(--accent); }
+.pc-progt { font-size: var(--fs-cap); color: var(--ink-2); }
+
+.pc-chev { color: var(--ink-2); display: inline-grid; place-items: center; margin-top: 4px; }
+.pc-chev svg { transition: transform .18s ease; }
+.pc-card.is-open .pc-chev svg { transform: rotate(180deg); }
+.pc-card.is-open .pc-chev { color: var(--accent); }
+
+/* ---------- the opened body ---------- */
+
+/* Order is deliberate: purpose, then what it runs beside, then the caveat,
+   then the checklist, then the nav. Discovery carries ten deliverables, and
+   putting the long list low means nobody on a phone scrolls past it to reach
+   something shorter. */
+.pc-body {
+  padding: 2px 16px 16px 72px;
+  border-top: 1px solid var(--rule-2);
+  margin-top: 2px;
+}
+.pc-body > * + * { margin-top: var(--sp-3); }
+
+.pc-purpose {
+  font-family: var(--display);
+  font-size: 16.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  max-width: 58ch;
+  padding-top: var(--sp-3);
+}
+
+/* Overlap, in words. The icon is two offset bars — 15px wide, one meaning. */
+.pc-rel { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.pc-rel li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  padding: 7px 13px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+  font-size: var(--fs-label);
+  color: var(--ink-2);
+}
+.pc-rel strong { font-weight: 600; color: var(--ink); }
+.pc-relico { color: var(--accent); flex: 0 0 auto; transform: translateY(2px); }
+.pc-relwhen { color: var(--ink-2); margin-left: 7px; font-variant-numeric: tabular-nums; }
+
+.pc-note {
+  background: var(--raise);
+  border-left: 3px solid var(--accent-line);
+  border-radius: var(--r-sm);
+  padding: 11px 14px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  max-width: 78ch;
+}
+.pc-notel { font-weight: 600; color: var(--ink); margin-right: 7px; }
+
+.pc-sub { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); margin-bottom: 10px; }
+.pc-count { font-size: var(--fs-cap); font-weight: 500; color: var(--ink-2); }
+
+.pc-list { list-style: none; margin: 0; padding: 0; }
+.pc-list li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 5px 0;
+  font-size: var(--fs-body);
+  line-height: 1.45;
+  color: var(--ink);
+  overflow-wrap: break-word;
+  break-inside: avoid;
+}
+/* A done deliverable settles rather than gets struck through: these are
+   milestones that happened, not chores that were dispatched. */
+.pc-list li.is-done { color: var(--ink-2); }
+
+/* Reads as a checkbox, because that is the vocabulary a PM tool has taught
+   everyone in the room. */
+.pc-mk {
+  width: 18px; height: 18px;
+  border-radius: 5px;
+  display: inline-grid;
+  place-items: center;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 600;
+  background: var(--surface);
+  color: var(--on-status);
+  box-shadow: inset 0 0 0 1.5px var(--rule);
+  margin-top: 2px;
+}
+.pc-list li.is-done .pc-mk { background: var(--st-done); box-shadow: none; }
+
+/* Ten deliverables in one column is a wall; in two it is five rows. Column
+   flow, not row flow, so 1-2-3 still reads down the left. Only lists that need
+   it are split, so a three-item phase is not a lopsided pair of columns. */
+@media (min-width: 900px) {
+  .pc-list.is-long { columns: 2; column-gap: var(--sp-6); }
+}
+
+/* Move to the phase either side without hunting for its card. */
+.pc-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--rule-2);
+}
+.pc-nav button {
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-cap);
+  font-weight: 500;
+  color: var(--ink-2);
+  background: var(--raise);
+  box-shadow: inset 0 0 0 1px var(--rule-2);
+  transition: background .15s ease, color .15s ease;
+  text-align: left;
+}
+.pc-nav button:hover { background: var(--accent-soft); color: var(--accent); }
+
+/* ===========================================================================
+   4. SCOPE & CADENCE
+   =========================================================================== */
+
+.pc-phead { margin-bottom: var(--sp-3); }
+.pc-psub { font-size: var(--fs-cap); color: var(--ink-2); margin-top: 3px; }
+
+.pc-cad { list-style: none; margin: 0; padding: 0; }
+/* Three cells, always: rhythm, what, and one meta cell holding whichever of
+   owner / next occurrence the portal has. */
+.pc-cad li {
+  display: grid;
+  /* --rhy is set per portal from the longest rhythm in the data (Scope.jsx).
+     minmax() keeps it a FLOOR: if the font metric under-measures, the track
+     grows to content rather than clipping a pill. */
+  grid-template-columns: minmax(calc(var(--rhy, 9ch) + 30px), max-content) minmax(0, 1fr) auto;
+  gap: var(--sp-3) var(--sp-4);
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid var(--rule-2);
+  font-size: var(--fs-body);
+}
+.pc-cad li:first-child { border-top: 0; padding-top: 2px; }
+.pc-rhy {
+  justify-self: start;
+  padding: 3px 11px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  color: var(--accent);
+  font-size: var(--fs-cap);
+  font-weight: 600;
+  line-height: 1.4;
+}
+.pc-what { color: var(--ink); overflow-wrap: break-word; }
+.pc-cmeta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); justify-self: start; }
+.pc-cowner { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-label); color: var(--ink-2); }
+.pc-cnext { font-size: var(--fs-cap); color: var(--ink-2); white-space: nowrap; }
+
+/* Key dates, with today wedged into the stream at its real position rather
+   than described in a caption. The spine is a 1px line, not a chart. */
+.pc-dates { list-style: none; margin: 0; padding: 0; position: relative; }
+.pc-dates::before {
+  content: "";
+  position: absolute;
+  left: 5px; top: 14px; bottom: 14px;
+  width: 1px;
+  background: var(--rule);
+}
+.pc-dates li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 11px 84px minmax(0, 1fr);
+  gap: var(--sp-3);
+  align-items: baseline;
+  padding: 9px 0;
+  font-size: var(--fs-body);
+}
+.pc-dmark {
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--accent-line);
+  transform: translateY(4px);
+}
+.pc-dates li.is-past .pc-dmark { background: var(--rule); box-shadow: none; }
+.pc-dates li.is-past { color: var(--ink-2); }
+.pc-ddate { color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pc-dwhat { color: var(--ink); overflow-wrap: break-word; }
+.pc-dates li.is-past .pc-ddate, .pc-dates li.is-past .pc-dwhat { color: var(--ink-2); }
+
+/* Which phases are live on this date — the overlap fact, restated where the
+   timeline strip is not. */
+.pc-dlive { display: block; font-size: var(--fs-cap); color: var(--ink-3); margin-top: 2px; }
+.pc-nextchip {
+  display: inline-block;
+  margin-left: var(--sp-2);
+  padding: 2px 9px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.pc-dtoday {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border-radius: var(--r-sm);
+  padding-left: var(--sp-2) !important;
+  padding-right: var(--sp-2);
+  margin-left: calc(var(--sp-2) * -1);
+  margin-right: calc(var(--sp-2) * -1);
+}
+.pc-dtoday .pc-dmark { background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+.pc-dtoday .pc-ddate, .pc-dtoday .pc-dwhat { color: var(--accent); font-weight: 600; }
+
+/* ===========================================================================
+   5. WHO IS ON IT
+   =========================================================================== */
+
+.pc-people, .pc-bodies { list-style: none; margin: 0; padding: 0; }
+.pc-person {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: var(--sp-3);
+  align-items: start;
+  padding: 12px 0;
+  border-top: 1px solid var(--rule-2);
+}
+.pc-person:first-child { border-top: 0; padding-top: 2px; }
+
+.pc-av {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  color: var(--accent);
+  font-size: var(--fs-cap);
+  font-weight: 600;
+  letter-spacing: .01em;
+  flex: 0 0 auto;
+}
+.pc-av.sm { width: 22px; height: 22px; font-size: var(--fs-micro); }
+
+.pc-pbody { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pc-pline { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+.pc-pname { font-size: 15px; font-weight: 600; color: var(--ink); }
+.pc-porg {
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  color: var(--ink-2);
+  background: var(--raise);
+  box-shadow: inset 0 0 0 1px var(--rule-2);
+  border-radius: var(--r-pill);
+  padding: 2px 9px;
+}
+.pc-prole { font-size: var(--fs-label); color: var(--ink-2); }
+.pc-powns { font-size: var(--fs-label); color: var(--ink-2); line-height: 1.5; overflow-wrap: break-word; }
+.pc-ownsl { font-size: var(--fs-micro); font-weight: 600; color: var(--ink-2); margin-right: 7px; }
+
+.pc-bodies li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: var(--sp-2) var(--sp-4);
+  align-items: baseline;
+  padding: 12px 0;
+  border-top: 1px solid var(--rule-2);
+  font-size: var(--fs-label);
+}
+.pc-bodies li:first-child { border-top: 0; padding-top: 2px; }
+.pc-bname { font-size: 14.5px; font-weight: 600; color: var(--ink); }
+.pc-bmembers, .pc-bmeets { color: var(--ink-2); }
+
+/* ===========================================================================
+   6. NARROW WIDTHS
+   =========================================================================== */
+
+/* 920px and down: the rail is gone and the main column is the page. */
+@media (max-width: 920px) {
+  .pt-strip { --gut: 112px; }
+  .pc-cad li { grid-template-columns: minmax(0, 1fr); gap: var(--sp-2); }
+  .pc-cad li:first-child { padding-top: 0; }
+  .pc-bodies li { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* 560px and down: the label gutter is a luxury the axis cannot afford. Each
+   lane becomes two rows — its name, then its bar at full width — and the axis,
+   today flag and key-date row drop their gutters so every track still starts
+   at the same x. */
+@media (max-width: 560px) {
+  .pt-strip { --gut: 0px; }
+  .pt-flagrow, .pt-axisrow, .pt-lane, .pt-markrow, .pt-tail { grid-template-columns: minmax(0, 1fr); }
+  .pt-flagrow > .pt-gutter, .pt-axisrow > .pt-gutter { display: none; }
+  .pt-gutter { padding-right: 0; }
+  .pt-lane { padding: 5px 6px; }
+  .pt-lanelab { margin-bottom: 3px; padding-left: 0; }
+  .pt-lanename { white-space: normal; }
+  .pt-markrow { margin-top: 6px; }
+  .pt-tail { padding: 5px 6px; }
+  .pt-taillab { padding-left: 0; }
+  /* Seven month labels do not fit across 318px: every second one goes, so
+     "Feb" and "Mar" stop printing as "FebMar". */
+  .pt-ticklab.alt { display: none; }
+  /* The flag is up to 130px wide on a 318px track, so no centred position can
+     be guaranteed to stay inside it. It becomes a left/middle/right label —
+     the dashed line inside every track still carries today's exact position. */
+  .pt-flagslot { display: flex; }
+  .pt-flagslot.x-mid { justify-content: center; }
+  .pt-flagslot.x-right { justify-content: flex-end; }
+  .pt-nowflag, .pt-nowflag.at-start, .pt-nowflag.at-end { position: static; transform: none; }
+}
+
+/* 460px and down: a 390px phone. */
+@media (max-width: 460px) {
+  .pc-card > .pc-head { grid-template-columns: 26px minmax(0, 1fr); gap: var(--sp-2) 10px; padding: 13px 14px; }
+  /* The chevron goes rather than squeezing the text: the whole header is the
+     hit target, and aria-expanded still tells a screen reader the state. */
+  .pc-chev { display: none; }
+  .pc-num { width: 26px; height: 26px; }
+  .pc-name { font-size: 15.5px; }
+  /* Full width for the deliverable text — a 72px indent is a luxury at 390px. */
+  .pc-body { padding: 0 14px 14px; }
+  .pc-purpose { font-size: 15.5px; max-width: none; }
+  .pc-prog { gap: var(--sp-2); }
+  .pc-meter { max-width: none; }
+  .pc-rel li { width: 100%; }
+  .pc-relwhen { display: block; margin-left: 0; }
+  .pc-dates li { grid-template-columns: 11px minmax(0, 1fr); row-gap: 2px; }
+  .pc-dates li .pc-dwhat { grid-column: 2; }
+  .pc-sub { flex-wrap: wrap; }
+  .pc-nav { flex-direction: column; }
+}
+
+/* ===========================================================================
+   7. PRINT — the board packet
+   =========================================================================== */
+
+/* Every phase opens: a printed packet with four collapsed cards would be a
+   worse document than the one this app replaced, and [hidden] has to be beaten
+   explicitly to do it. */
+@media print {
+  .pc-body[hidden] { display: block !important; }
+  .pc-chev, .pc-nav { display: none !important; }
+  /* "You are here" STAYS. app.css's print block nulls every box-shadow, which
+     kills the inset accent edge on the current card, so without this pill —
+     and without the real border below, which a box-shadow reset cannot touch —
+     nothing in the PDF marks the phase the engagement is in. */
+  .pc-now { display: inline-flex !important; }
+  .pc-card { box-shadow: none; border-color: #c8c8c8; break-inside: avoid; }
+  .pc-card.is-current { box-shadow: none; border-left: 3px solid var(--accent); }
+  .pc-list.is-long { columns: 2; }
+  .pc-body { padding-left: var(--sp-4); }
+  /* The strip is a picture of the schedule and belongs in the packet, so its
+     tints have to survive a printer's default of dropping backgrounds. */
+  .pt-strip, .pt-panel { break-inside: avoid; }
+  .pt-bar, .pt-fill, .pt-mark, .pt-nowflag, .pt-lanen {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .pt-lane:hover, .pt-tail:hover { background: none; }
+}

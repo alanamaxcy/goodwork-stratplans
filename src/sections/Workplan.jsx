@@ -32,6 +32,14 @@ function TaskRow({ t, isSub, subs, expanded, toggle, onOpen, onCycle, canEdit, n
                 onClick={() => onCycle(t)}>
           <Dot status={t.status} small={isSub} late={late} />
         </button>
+        {/* The status in WORDS, not only as a swatch to decode against a legend
+            at the bottom of the page. It sits immediately after .statusbtn
+            because app.css gives that exact adjacency its own grid track
+            (.task:has(> .statusbtn + .spill)); moved elsewhere in the row it
+            would be auto-placed into an implicit column past .tdue and steal
+            width from the title. The swatch stays — it is the control you
+            click, and the browser test reads its class. */}
+        <span className={`spill ${t.status}`}>{STATUS_LABEL[t.status]}</span>
         <span className="tid">{t.id}</span>
         <button className="tt" onClick={() => onOpen(t.id)}>
           {t.title}
@@ -163,7 +171,7 @@ export default function Workplan({
       <div className="progressbig">
         <div className="pb-row">
           <span className="eyebrow">Completion</span>
-          <span className="num" style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--ink-2)' }}>
+          <span className="num wp-complete">
             {pct(c.done, c.total)}% · {c.done} of {c.total}
           </span>
         </div>
@@ -186,9 +194,15 @@ export default function Workplan({
         <div className="panel"><p style={{ color: 'var(--ink-2)' }}>Nothing matches this filter.</p></div>
       )}
 
+      {/* The legend is now the same pill the rows carry, so it reads as a key to
+          them rather than as a second vocabulary. The .dot goes INSIDE the pill:
+          app.css suppresses the pill's own ::before swatch when it contains a
+          real one, which is what keeps one dot per pill instead of two. */}
       <div className="legend">
-        {STACK.map((k) => <span key={k}><Dot status={k} /> {STATUS_LABEL[k]}</span>)}
-        <span><Dot status="next" late /> Past due</span>
+        {STACK.map((k) => (
+          <span key={k} className={`spill ${k}`}><Dot status={k} />{STATUS_LABEL[k]}</span>
+        ))}
+        <span className="spill late"><Dot status="next" late />Past due</span>
       </div>
     </>
   );

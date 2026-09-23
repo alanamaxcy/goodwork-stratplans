@@ -9,11 +9,62 @@
     <meta name="robots" content="noindex, nofollow" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <title>Strategic Plan Portal</title>
+    <!-- Restore an explicit theme choice BEFORE first paint, so a returning
+         visitor never sees a flash of the wrong theme while the bundle loads.
+
+         Position matters twice over. It has to be inside <head>, and it has to
+         sit ABOVE the font stylesheet below: a synchronous script placed after
+         a <link rel="stylesheet"> waits for that sheet to load before it runs,
+         which is exactly the delay this is meant to avoid.
+
+         No attribute is written when nothing is stored. That is deliberate —
+         a bare <html> is what lets the @media (prefers-color-scheme: dark)
+         block in tokens.css govern, so the OS preference is the default and
+         only a deliberate choice overrides it. The key must stay in step with
+         STORE_KEY in src/components/ThemeToggle.jsx. -->
+    <script>
+      try {
+        var t = localStorage.getItem('gw.theme');
+        if (t === 'dark' || t === 'light') {
+          document.documentElement.setAttribute('data-theme', t);
+        }
+      } catch (e) {
+        /* localStorage throws outright in some privacy modes; the OS
+           preference is a perfectly good fallback. */
+      }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- ONE webfont family, and it is the whole type system.
+
+         This used to fetch three families — Newsreader, IBM Plex Mono and IBM
+         Plex Sans. IBM Plex is a fine face but it is literally IBM's corporate
+         typeface, and between the mono labels and the serif headings the
+         product read as institutional/technical rather than as a strategic
+         plan. Figtree is a geometric-humanist sans: warm without being
+         childish, and it holds up in a deliverable a board reads.
+
+         Only 400, 500 and 600 are requested because those are the only weights
+         the stylesheets ask for (body copy inherits 400; .seg/.subnav/.flabel
+         and the five inline JSX styles use 500; every heading, pill and
+         emphasised run uses 600). Nothing in src/styles may reach for a weight
+         this line does not fetch.
+
+         Figtree is a variable font, so Google returns the SAME woff2 for all
+         three weights — one ~20 KB latin file, plus latin-ext only if a page
+         needs it. Adding a weight here costs no extra bytes, but declaring one
+         nothing uses is still noise, so don't.
+
+         Two token stacks intentionally have NO webfont behind them any more and
+         resolve to system faces (see --serif and --code in tokens.css):
+         .quote/.vision fall to Georgia, and the OTP / accent-hex / <code>
+         fields fall to the platform monospace. If you ever restore a webfont
+         for either, add the family BACK to its token stack in the same commit —
+         a name in a stack that this line does not fetch is a lie that renders
+         differently for the few people who happen to have the font installed. -->
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;450;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&display=swap"
     />
   </head>
   <body>

@@ -1,62 +1,280 @@
 /* The design system. Only --accent and the logo are per-client; everything
    else is the product and is the same for every portal. */
+
+/* ---------------------------------------------------------------------------
+   HOW THIS FILE IS SHAPED, AND WHY.
+
+   Dark mode is declared TWICE on purpose:
+     1. @media (prefers-color-scheme: dark) scoped to :root:not([data-theme="light"])
+     2. :root[data-theme="dark"]
+   That exact shape is what lets an explicit data-theme attribute on <html>
+   beat the OS preference — which is how the theme toggle / view-transition
+   wipe works. Neither guard may be simplified away.
+
+   Because keeping two palettes in step by hand is how a token silently falls
+   back to its light value in dark mode, the blocks below are split by KIND:
+
+     * STRUCTURAL tokens (type stack, radii, spacing, font-size ladder, the
+       shadow recipes, --rail) are declared ONCE on :root. They are identical
+       in both themes, so there is nothing to mirror and nothing to drift.
+     * COLOUR tokens — and the two shadow TINT colours the shadow recipes
+       reference — are declared in all three blocks.
+
+   So: a new radius/size/spacing token goes on :root only. A new colour goes
+   in all three blocks. If you add a shadow, express its colour through
+   --sh-1/--sh-2/--sh-3 rather than a literal rgba(), or dark mode will wear
+   a light shadow.
+   --------------------------------------------------------------------------- */
+
 :root {
-    --paper: #f5f4f1;
-    --surface: #ffffff;
-    --raise: #faf9f7;
-    --ink: #15181e;
-    --ink-2: #565d68;
-    --ink-3: #8b919b;
-    --rule: #ded9d1;
-    --rule-2: #ebe8e2;
-    --accent: #4f3d9e;
-    --accent-soft: #eeeaf8;
-    --accent-line: #c9bfe8;
-    --on-accent: #ffffff;
-    --s: #3d7a55;
-    --w: #a9752a;
-    --o: #2b5f8a;
-    --t: #98423c;
-    --s-soft: #e6efe9;
-    --w-soft: #f5ece0;
-    --o-soft: #e5edf4;
-    --t-soft: #f5e6e4;
-    /* Status palette — validated for CVD and normal-vision separation against
-       both surfaces. "next" is deliberately a recessive neutral: it fails a
-       chroma floor on purpose, and every chart using it carries a legend,
-       direct labels and a table view. */
-    --st-done: #2e7d4f;
-    --st-doing: #2563a8;
-    --st-next: #9aa0aa;
-    --st-blocked: #a63a30;
-    --stop: #a63a30;
-    --shadow: 0 1px 2px rgba(20, 24, 30, .05), 0 6px 18px -10px rgba(20, 24, 30, .16);
-    --display: "Newsreader", Georgia, "Times New Roman", serif;
-    --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-    --rail: 248px;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --paper: #13161b; --surface: #1a1e24; --raise: #20242b;
-      --ink: #e9e7e2; --ink-2: #a5abb6; --ink-3: #767d89;
-      --rule: #2f343c; --rule-2: #252a31;
-      --accent: #a89af2; --accent-soft: #272044; --accent-line: #473b7a; --on-accent: #14121f;
-      --s: #6cb68a; --w: #d6a860; --o: #74a6d6; --t: #d6857e;
-      --s-soft: #1c2c23; --w-soft: #2e2519; --o-soft: #1b2733; --t-soft: #2f1f1e;
-      --st-done: #45936a; --st-doing: #5486cc; --st-next: #4b525c; --st-blocked: #c96a60;
-      --stop: #c96a60;
-      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px -10px rgba(0,0,0,.55);
-    }
-  }
-  :root[data-theme="dark"] {
-    --paper: #13161b; --surface: #1a1e24; --raise: #20242b;
-    --ink: #e9e7e2; --ink-2: #a5abb6; --ink-3: #767d89;
-    --rule: #2f343c; --rule-2: #252a31;
-    --accent: #a89af2; --accent-soft: #272044; --accent-line: #473b7a; --on-accent: #14121f;
-    --s: #6cb68a; --w: #d6a860; --o: #74a6d6; --t: #d6857e;
-    --s-soft: #1c2c23; --w-soft: #2e2519; --o-soft: #1b2733; --t-soft: #2f1f1e;
+  /* ---- neutrals -------------------------------------------------------
+     Cool near-whites. The previous ramp was warm ("paper": #f5f4f1, rule
+     #ded9d1) which read as a printed journal and made the accent look like
+     fountain-pen ink on newsprint. The lightness STEPS are unchanged, so
+     every contrast pairing that held before still holds. */
+  --paper: #f6f7f9;
+  --surface: #ffffff;
+  --raise: #f9fafb;
+  --ink: #1a1f2b;        /* body copy — 16.5:1 on --surface */
+  --ink-2: #58616f;      /* secondary copy — 6.3:1 on --surface, 5.8:1 on --paper */
+  /* --ink-3 is NOT a decorative grey. It colours small TEXT in ~40 rules
+     between 11px and 13px (.task .tid, .init-id, .tdep, .subcount,
+     .themerow .tcl, .pt-marklab, .pc-dlive, .deflist dt, .chips-label,
+     .pb-date, .rn-c, .rn-n, .savenote, .etasks, .pickn, .chip .cc, .csub …),
+     so it has to clear 4.5:1 on EVERY ground it lands on — and it lands on all
+     three: .pb-date and .deflist dt sit on cards over --paper, .init-id and
+     .ig-id sit on --raise chips, most of the rest sit on --surface. It was
+     #7c8595, which was 3.47:1 on --paper / 3.72:1 on --surface / 3.56:1 on
+     --raise — failing everywhere. #666e7d is the first step dark enough to
+     clear the floor on the WORST of the three (--paper). Do not lighten it
+     back toward #6b7383: that lands at 4.45:1 on --paper and fails. */
+  --ink-3: #666e7d;      /* small text/meta — 4.79:1 paper, 5.13:1 surface, 4.91:1 raise */
+  --rule: #e3e7ec;
+  --rule-2: #eef1f4;
+
+  /* ---- accent ---------------------------------------------------------
+     #6355e0 is chosen for contrast, not just for mood: 5.38:1 on --surface
+     and 4.71:1 on --accent-soft, so it is safe as link text and as .pri-n text.
+
+     IT IS NOT SAFE ON ANY TINTED PILL YOU CARE TO MIX. An earlier version of
+     this comment said it was, and four call sites believed it. On the common
+     `color-mix(in srgb, var(--accent) 14%, var(--surface))` ground — which
+     computes to #e9e7fb — accent text lands at 4.43:1 and FAILS the 4.5:1
+     floor; over --paper the same 14% mix is #e1e0f6 and it is worse, 4.15:1.
+     --accent-soft (#f1eefe) is the token for a tinted ground that has to hold
+     accent TEXT: 4.71:1, it passes, and it is a flat token rather than a mix
+     that shifts with whatever is behind it. Reach for a color-mix() of the
+     accent only for a FILL or a BORDER, where 3:1 is the bar.
+
+     Dark mode has more headroom — #a79bf5 is 6.97:1 on --surface, 6.08:1 on
+     --accent-soft and 5.43:1 on the 14% mix — so a light-mode failure here
+     will NOT show up if you only check dark.
+
+     --accent is OVERRIDDEN PER PORTAL by an inline style on .masthead
+     (Masthead.jsx), so every accent-derived value in app.css must be
+     var(--accent) or a color-mix() of it — never a second hardcoded purple, or
+     a client's brand colour applies in some places and not others. A per-portal
+     accent also means none of the ratios above are guaranteed for a custom
+     hex: they hold for #6355e0, and a new client colour must be re-checked. */
+  --accent: #6355e0;
+  --accent-soft: #f1eefe;
+  --accent-line: #d7cefb;
+  --on-accent: #ffffff;
+
+  /* ---- SWOT categories ----------------------------------------------
+     Used as the text colour of whole .themerow / .theme-detail subtrees, so
+     these set the temperature of the entire Findings section. Lifted one
+     step in saturation from the old ink tones while holding AA on
+     --surface. The *-soft tints are the badge backgrounds. */
+  --s: #2f7d4f;
+  --w: #9c6a1c;
+  --o: #2b6fb0;
+  --t: #b0453d;
+  --s-soft: #e8f4ec;
+  --w-soft: #f8efdf;
+  --o-soft: #e7f0fa;
+  --t-soft: #fbeae8;
+
+  /* Status palette — validated for CVD and normal-vision separation against
+     both surfaces. "next" is deliberately a recessive neutral: it fails a
+     chroma floor on purpose, and every chart using it carries a legend,
+     direct labels and a table view.
+     DO NOT RE-PICK THESE FOUR. They were validated as adjacent segments of a
+     stacked bar; an earlier green/teal pair failed at deltaE 9.4. */
+  --st-done: #2e7d4f;
+  --st-doing: #2563a8;
+  --st-next: #9aa0aa;
+  --st-blocked: #a63a30;
+  /* --stop and --st-blocked share a value in LIGHT mode but not in dark, and
+     they are not interchangeable. --stop is read as small TEXT (.raillate and
+     .task.overdue .tdue at 12.5px, an 11px "past due" note, .errnote,
+     .tile.is-late .tv) so it carries the 4.5:1 text floor. --st-blocked is a
+     FILL behind --on-status, so it carries the 3:1 graphical floor and is
+     free to be lighter. A fill that holds white/inverted text should use
+     --st-blocked, NOT --stop — in dark mode --stop is now too light to sit
+     under white (2.64:1). Light --stop #a63a30: 5.99:1 on --paper, 6.42:1 on
+     --surface, 6.15:1 on --raise, and 6.42:1 under white. */
+  --stop: #a63a30;
+  /* The glyph drawn INSIDE a filled status swatch (the check on .dot.done,
+     the bar on .dot.blocked). White in both themes, because the four --st-*
+     hues are mid-tone in both themes. It is only ever valid over an --st-*
+     fill — it is NOT valid over --stop, which in dark mode is a text colour
+     light enough that white on it is 2.64:1. */
+  --on-status: #ffffff;
+
+  /* ---- shadow tints ---------------------------------------------------
+     Colour only. The recipes that use them are structural and live below.
+     Tinted with the cool neutral rather than near-black so cards read as
+     lifted paper, not as drop-shadowed boxes. */
+  --sh-1: rgba(23, 28, 38, .05);
+  --sh-2: rgba(23, 28, 38, .09);
+  --sh-3: rgba(23, 28, 38, .15);
+
+  /* ================= STRUCTURAL — declared once, never mirrored ======== */
+
+  /* ---- type -----------------------------------------------------------
+     ONE sans throughout, and it is the only webfont the product loads.
+
+     The face was IBM Plex Sans. It is well made, but it is IBM's corporate
+     typeface and it reads institutional/technical — the exact register this
+     product is moving away from. FIGTREE is a geometric-humanist sans: warm
+     without being childish, and credible in a document a nonprofit board and
+     its funder read in the same room.
+
+     index.html fetches Figtree at 400/500/600 ONLY — the three weights the
+     stylesheets actually ask for. Nothing here may require a weight or family
+     that link does not fetch, and this file must never add a network request
+     of its own. 600 is the heaviest weight available; do not reach for
+     650/700. An unstyled <strong> asks for 700, matches the 600 face and is
+     not synthesised — the same behaviour Plex had, since that stopped at 600
+     too. Figtree carries a real `tnum` OpenType feature, so
+     font-variant-numeric: tabular-nums (.num, and ~25 rules in app.css /
+     timeline.css) genuinely aligns columns of figures rather than silently
+     doing nothing.
+
+     --display used to be a Newsreader SERIF face applied to every heading in
+     the product. Combined with the warm paper it read as a printed magazine
+     essay rather than software a team works in. It now points at the sans. */
+  --sans: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --display: var(--sans);
+
+  /* --serif and --code ARE SYSTEM STACKS ON PURPOSE — no webfont backs either.
+     Dropping Newsreader and IBM Plex Mono from index.html removed two font
+     downloads, and the two names came out of these stacks with them: a family
+     listed here that index.html does not fetch renders for the handful of
+     people who happen to have it installed locally and for nobody else, which
+     is worse than an honest fallback.
+
+     --serif still has two jobs, because there a serif is the real convention
+     and it is what stops this looking like generic SaaS: the pull-quote
+     (.quote) and the vision statement (.vision). Georgia is a genuine text
+     serif, present on macOS/iOS/Windows/Android, and degrades to the platform
+     serif elsewhere.
+
+     --code is for GENUINE code only — the sign-in OTP, the accent hex field,
+     <code>. It is NOT the voice for numbers: monospaced digits are the visual
+     grammar of a terminal, and every id, date, count and percentage in the
+     product used to wear them. Column alignment is handled by
+     .num { font-variant-numeric: tabular-nums }, which is the correct
+     mechanism. There is deliberately no --mono token any more — anything that
+     reaches for one is reaching for the terminal register.
+
+     If a webfont is ever restored for either, put the family name back in the
+     stack in the SAME commit as the index.html <link>. */
+  --serif: Georgia, "Times New Roman", serif;
+  --code: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* ---- font-size ladder ----------------------------------------------
+     The old floor was 9.5px/10px/10.5px, which reads as an instrument panel
+     and is genuinely hard for an older board member. UI labels now bottom out
+     at 12px; --fs-micro (11.5px) is only for a glyph or count sitting inside
+     a pill. Use these rather than hand-typing a size twenty times. */
+  --fs-micro: 11.5px;
+  --fs-cap: 12.5px;
+  --fs-label: 13px;
+  --fs-body: 14px;
+
+  /* ---- radii ----------------------------------------------------------
+     There used to be ten different radii in one stylesheet, most of them
+     tight (2px, 3px, 4px, 5px, 6px, 7px…). Tight inconsistent corners read as
+     engineering precision. Four steps plus a pill; map every rule onto one. */
+  --r-xs: 6px;    /* inline badges */
+  --r-sm: 8px;    /* buttons, inputs, rows, the focus ring */
+  --r-md: 12px;   /* cards, panels, charts */
+  --r-lg: 16px;   /* modals, drawer */
+  --r-pill: 999px;
+
+  /* ---- spacing --------------------------------------------------------
+     Every gap used to be hand-typed (10/11/12/13/14/15/16/17/19/20/22/24/26/28px),
+     which is why the app read as precisely tuned rather than comfortable. */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+
+  /* ---- elevation ------------------------------------------------------
+     Surfaces used to be a 1px hairline with no shadow at all, which made the
+     whole app read as a wireframe. Cards now rest on --shadow-sm with a
+     near-invisible border; hover lifts to --shadow-md; overlays use
+     --shadow-lg. --shadow is kept as an alias because .drawer, .modal and
+     .splash-card reference it by that name. */
+  --shadow-sm: 0 1px 2px var(--sh-1), 0 2px 8px -4px var(--sh-2);
+  --shadow-md: 0 2px 4px var(--sh-1), 0 10px 22px -10px var(--sh-3);
+  --shadow-lg: 0 2px 6px var(--sh-2), 0 24px 48px -20px var(--sh-3);
+  --shadow: var(--shadow-lg);
+
+  --rail: 248px;
+}
+
+@media (prefers-color-scheme: dark) {
+  /* Guarded with :not([data-theme="light"]) so an explicit light choice on
+     <html> still wins over the OS. Colour tokens only — see the note at the
+     top of this file. */
+  :root:not([data-theme="light"]) {
+    --paper: #11151b; --surface: #181d25; --raise: #1f242d;
+    /* --ink-3 was #78818f: 3.96:1 on --raise, 4.30:1 on --surface — failing the
+       4.5:1 text floor, and it colours ~40 rules of 11-13px text. #8a939f is
+       5.01:1 on --raise / 5.44:1 on --surface / 5.89:1 on --paper. Mirrored in
+       :root[data-theme="dark"] below — change both or the toggle disagrees
+       with the OS. */
+    --ink: #e8ecf2; --ink-2: #a3acb9; --ink-3: #8a939f;
+    --rule: #2c333d; --rule-2: #232932;
+    /* A genuine pair for #6355e0, not a lightened guess: same hue family,
+       6.9:1 on --surface and 6.0:1 on --accent-soft. */
+    --accent: #a79bf5; --accent-soft: #282150; --accent-line: #4a3e88; --on-accent: #151130;
+    --s: #6fbb8d; --w: #dcae63; --o: #78aede; --t: #dd8b83;
+    --s-soft: #16281e; --w-soft: #2a2317; --o-soft: #172433; --t-soft: #2c1d1c;
     --st-done: #45936a; --st-doing: #5486cc; --st-next: #4b525c; --st-blocked: #c96a60;
-    --stop: #c96a60;
-    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px -10px rgba(0,0,0,.55);
+    /* --stop was #c96a60 (still --st-blocked's value): 4.24:1 on --raise and
+       4.60:1 on --surface, i.e. failing under the 12.5px overdue text it
+       colours on a hovered .task row (.task:hover background is --raise).
+       #d98b82 is 5.91:1 on --raise / 6.42:1 on --surface / 6.95:1 on --paper.
+       The cost: white on #d98b82 is 2.64:1, so --stop can no longer be a FILL
+       behind --on-status. --st-blocked stays at #c96a60 for exactly that job.
+       Mirrored in :root[data-theme="dark"] below. */
+    --stop: #d98b82;
+    --on-status: #ffffff;
+    --sh-1: rgba(0, 0, 0, .36); --sh-2: rgba(0, 0, 0, .48); --sh-3: rgba(0, 0, 0, .62);
   }
+}
+
+:root[data-theme="dark"] {
+  /* Same palette as the media block above. Keep the two in step. */
+  --paper: #11151b; --surface: #181d25; --raise: #1f242d;
+  /* --ink-3 #8a939f: 5.01:1 on --raise, 5.44:1 on --surface, 5.89:1 on --paper.
+     Mirrors the media block above — see the reasoning there. */
+  --ink: #e8ecf2; --ink-2: #a3acb9; --ink-3: #8a939f;
+  --rule: #2c333d; --rule-2: #232932;
+  --accent: #a79bf5; --accent-soft: #282150; --accent-line: #4a3e88; --on-accent: #151130;
+  --s: #6fbb8d; --w: #dcae63; --o: #78aede; --t: #dd8b83;
+  --s-soft: #16281e; --w-soft: #2a2317; --o-soft: #172433; --t-soft: #2c1d1c;
+  --st-done: #45936a; --st-doing: #5486cc; --st-next: #4b525c; --st-blocked: #c96a60;
+  /* --stop #d98b82: 5.91:1 on --raise, 6.42:1 on --surface, 6.95:1 on --paper.
+     Mirrors the media block above — see the reasoning there. NOT a fill token:
+     white on it is 2.64:1. Use --st-blocked (#c96a60) for fills. */
+  --stop: #d98b82;
+  --on-status: #ffffff;
+  --sh-1: rgba(0, 0, 0, .36); --sh-2: rgba(0, 0, 0, .48); --sh-3: rgba(0, 0, 0, .62);
+}

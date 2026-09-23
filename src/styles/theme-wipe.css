@@ -1,0 +1,180 @@
+/* ===========================================================================
+   THEME WIPE — the circular view-transition used by the light/dark toggle,
+   plus the toggle button's own styling.
+
+   This file is pulled in TWICE, deliberately and harmlessly: once by
+   src/components/ThemeToggle.jsx, so the stylesheet travels with the component
+   that needs it, and once by the @import block at the top of app.css, so the
+   sheet is present even if the toggle is ever code-split away. The bundler
+   dedupes the text, and both routes land these rules BEFORE app.css's own —
+   ThemeToggle arrives via Masthead.jsx, which App.jsx imports above
+   './styles/app.css', and an @import is emitted ahead of the importing sheet's
+   own rules either way. So app.css wins any tie on equal specificity.
+   Two rules below are deliberately written as `button.themetoggle` (0,1,1)
+   rather than `.themetoggle` (0,1,0) for exactly that reason: app.css has a
+   global `:focus-visible { border-radius: 3px }` that would otherwise square
+   off this button's corners while it is focused.
+
+   The PALETTE is not here. Every colour resolves through a token declared in
+   tokens.css, which declares its dark values twice on purpose — once under
+   @media (prefers-color-scheme: dark) guarded by :root:not([data-theme="light"])
+   so the OS preference wins by default, and once under :root[data-theme="dark"]
+   so an explicit choice wins. Any rule here that has to branch on theme
+   repeats that same two-block shape. Do not collapse it to one block, or the
+   toggle and the OS preference will disagree.
+   =========================================================================== */
+
+
+/* ---------------------------------------------------------------------------
+   1. THE ROOT ELEMENT MUST PAINT THE BACKGROUND.
+
+   app.css puts the page ground on `body`. A background on body alone
+   PROPAGATES to the canvas, and the canvas paints OUTSIDE the view
+   transition: the result is a page ground that snaps instantly while every
+   element above it wipes, which reads as a broken animation and is very hard
+   to diagnose after the fact. Painting the same token on `html` as well keeps
+   the ground inside the snapshot. The doubled paint costs nothing.
+   --------------------------------------------------------------------------- */
+html { background: var(--paper); }
+
+/* ...but a dark page ground must never reach a printer — a board packet
+   printed on a laptop in dark mode would come out as a solid black page.
+   This is a literal rather than a token on purpose: print has no theme, and
+   every ground token is themed. app.css's print block does the same for body. */
+@media print {
+  html { background: #fff; }
+}
+
+
+/* ---------------------------------------------------------------------------
+   2. NATIVE CONTROLS AND SCROLLBARS.
+
+   Without this, dark mode ships a dark page wearing light scrollbars, a light
+   focus ring on native inputs, and light checkboxes in Settings and Sign in.
+   It mirrors the two-block guard above rather than inventing a third shape.
+   Declared here because the toggle is what makes an explicit choice possible;
+   if tokens.css ever takes it over, delete these three rules.
+   --------------------------------------------------------------------------- */
+:root { color-scheme: light; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { color-scheme: dark; }
+}
+:root[data-theme="dark"] { color-scheme: dark; }
+
+
+/* ---------------------------------------------------------------------------
+   3. THE REVEAL ITSELF — a circle grown from the point that was clicked.
+
+   The three custom properties are set on <html> by ThemeToggle.jsx before the
+   transition starts. The fallbacks here are what you get if something sets the
+   class without them: a wipe from the bottom-left corner.
+   --------------------------------------------------------------------------- */
+@keyframes theme-reveal {
+  from { clip-path: circle(0px at var(--wipe-x, 0px) var(--wipe-y, 100%)); }
+  to   { clip-path: circle(var(--wipe-r, 160%) at var(--wipe-x, 0px) var(--wipe-y, 100%)); }
+}
+
+
+/* ---------------------------------------------------------------------------
+   4. KILL CHROME'S CROSS-FADE COMPOSITING.
+
+   Chrome's UA sheet sets mix-blend-mode:plus-lighter on the old and new
+   snapshots so that its DEFAULT cross-fade stays energy-preserving. We are not
+   cross-fading — we hold the old frame still and reveal the new one over it —
+   so plus-lighter ADDS the two themes together inside the circle and you get a
+   blown-out halo travelling with the arc. Force normal compositing and unstack
+   the pair.
+   --------------------------------------------------------------------------- */
+::view-transition-image-pair(root) { isolation: auto; }
+::view-transition-old(root),
+::view-transition-new(root) { mix-blend-mode: normal; }
+::view-transition-old(root) { animation: none; z-index: 0; }
+::view-transition-new(root) { animation: theme-reveal 640ms cubic-bezier(.16, 1, .3, 1); z-index: 1; }
+
+
+/* ---------------------------------------------------------------------------
+   5. SUPPRESS ELEMENT TRANSITIONS FOR THE DURATION.
+
+   Any per-element `transition` on colour or background fights the wipe and
+   muddies its edge — instead of a clean arc you get a soft grey band. The
+   class is added to <html> before the transition starts and removed on BOTH
+   the resolved and the rejected path in ThemeToggle.jsx; if it is ever left
+   behind, every transition on the page stays permanently dead.
+   --------------------------------------------------------------------------- */
+html.theme-wipe *,
+html.theme-wipe *::before,
+html.theme-wipe *::after { transition: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* app.css already kills `*` animations under reduced motion, but `*` does
+     not match the ::view-transition pseudo-elements — they live in their own
+     tree. This is the rule that actually stops the arc. ThemeToggle.jsx also
+     skips startViewTransition entirely in this case; both belts are cheap. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation: none; }
+}
+
+
+/* ===========================================================================
+   THE TOGGLE BUTTON
+
+   Sits in .mast-right beside the sync pill and the role label. Icon-only and
+   30px square — the same height as the .ghost buttons and the avatar next to
+   it — because the sticky header has a hard budget on a 390px phone and a
+   labelled button would wrap .mast-right onto another line.
+   =========================================================================== */
+
+button.themetoggle {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm, 8px);
+  background: var(--surface);
+  color: var(--ink-2);
+  cursor: pointer;
+  line-height: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color .14s ease, border-color .14s ease, color .14s ease;
+}
+
+button.themetoggle:hover {
+  background: var(--raise);
+  border-color: var(--accent-line);
+  color: var(--ink);
+}
+
+/* Pressed here means "an explicit dark theme is on", not "the mouse is down". */
+button.themetoggle[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent);
+}
+
+.themetoggle svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+/* The icon shows the ACTION, not the state: a moon while the page is light
+   (click for dark), a sun while it is dark (click for light). The swap is done
+   in CSS rather than in React state so that it happens in the same frame as
+   the data-theme attribute change — i.e. inside the view transition's update
+   callback, so the new snapshot already carries the new icon and the button at
+   the dead centre of the wipe does not sit stale for 640ms. It also means the
+   right icon is painted before React has mounted anything.
+
+   Same two-block dark guard as tokens.css. Keep the pair in step. */
+.themetoggle .tt-moon { display: block; }
+.themetoggle .tt-sun  { display: none; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .themetoggle .tt-moon { display: none; }
+  :root:not([data-theme="light"]) .themetoggle .tt-sun  { display: block; }
+}
+:root[data-theme="dark"] .themetoggle .tt-moon { display: none; }
+:root[data-theme="dark"] .themetoggle .tt-sun  { display: block; }

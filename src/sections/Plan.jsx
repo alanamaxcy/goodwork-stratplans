@@ -9,12 +9,19 @@ export default function Plan({
 }) {
   const scoped = scopeId !== 'all';
   const one = scopedPriorities[0];
+  /* On a portal that has DECLARED this section borrowed, the client's name must
+     not head it. A sample church's vision sitting under "PAACT · Strategic Plan
+     2027-2031" attributes that plan to PAACT in the largest type on the page,
+     and flatly contradicts the banner two inches above it. The banner is not
+     enough on its own: the headline is what a reader takes in first. */
+  const isSample = (portal.sampleSections || []).includes('plan');
 
   return (
     <>
       <SectionHead
         eyebrow={labels.plan}
         title={scoped ? `${labels.priorityShort} ${one.n} · ${one.title}`
+                      : isSample ? `${labels.plan} · a sample from another engagement`
                       : `${portal.client_name} · ${portal.engagement_name}`}
       >
         {scoped
@@ -103,9 +110,7 @@ export default function Plan({
               <div className="track-mile" key={i}>
                 <span className={`dot ${m.status}`} />
                 <span>{m.label}</span>
-                <span className="num" style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--ink-3)' }}>
-                  {m.date}
-                </span>
+                <span className="num mile-date">{m.date}</span>
               </div>
             ))}
           </div>

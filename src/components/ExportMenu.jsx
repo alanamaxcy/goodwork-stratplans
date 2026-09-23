@@ -28,7 +28,15 @@ export default function ExportMenu({
 }) {
   const one = scopeId === 'all' ? null : scopedPriorities[0];
   const label = one ? `${labels.priorityShort} ${one.n} · ${one.title}` : 'the whole plan';
-  const slug = slugify(`${portal.client_name}-${one ? one.id : 'plan'}`);
+  /* A file outlives the banner. These artifacts leave the room, get forwarded,
+     and get opened next month with no screen around them — so on a section the
+     portal has declared borrowed, the client's name must not be stamped on the
+     filename or inside the payload, and the artifact has to say what it is by
+     itself. */
+  const isSample = (portal.sampleSections || []).includes('plan');
+  const slug = slugify(
+    isSample ? `sample-${one ? one.id : 'plan'}` : `${portal.client_name}-${one ? one.id : 'plan'}`,
+  );
 
   const rows = [
     ['id', 'parent', labels.priority.toLowerCase(), labels.initiative.toLowerCase(),
@@ -44,7 +52,10 @@ export default function ExportMenu({
   });
 
   const json = () => JSON.stringify({
-    client: { name: portal.client_name, engagement: portal.engagement_name },
+    ...(isSample
+      ? { sample: true,
+          note: `Illustrative content from another engagement, shown as an example. Not ${portal.client_name}'s plan.` }
+      : { client: { name: portal.client_name, engagement: portal.engagement_name } }),
     exported: now,
     scope: one ? one.title : 'whole plan',
     labels,
@@ -72,6 +83,13 @@ export default function ExportMenu({
       <p style={{ fontSize: 13.5, color: 'var(--ink-2)', marginTop: 8 }}>
         Scoped to <strong style={{ color: 'var(--ink)', fontWeight: 500 }}>{label}</strong>, from the bar above.
       </p>
+      {isSample ? (
+        <p className="expsample">
+          <strong>This {lower(labels.plan)} is a sample</strong> from another engagement, not{' '}
+          {portal.client_name}'s. Exports are named and labelled as samples so they cannot be
+          mistaken for it later.
+        </p>
+      ) : null}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 16 }}>
         <button className="ghost expopt" onClick={() => { onClose(); setTimeout(() => window.print(), 50); }}>
           <strong>Board packet (PDF)</strong><br />

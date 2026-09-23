@@ -1,14 +1,57 @@
 @import "./tokens.css";
+@import "./timeline.css";
+@import "./theme-wipe.css";
+
+/* ---------------------------------------------------------------------------
+   THE REGISTER OF THIS STYLESHEET.
+
+   This used to be an editorial / engineering design: IBM Plex Mono for every
+   label, number and pill, uppercase with wide tracking, a Newsreader serif
+   display face, warm-grey paper, hairline-everything with no shadow, and a
+   9.5-10.5px label floor. In front of a nonprofit board it read as machine
+   output — a requirements-traceability matrix, not a strategic plan.
+
+   It now sits much closer to a mainstream PM tool: one sans throughout,
+   sentence case end to end, cool neutrals, soft shadows, rounded corners,
+   a 12px label floor. Two things are held back on purpose so this still
+   reads as a consultant's deliverable rather than generic SaaS: the serif
+   survives for exactly two voices (the pull-quote and the vision statement),
+   and the layout keeps its editorial measure (max 64-66ch on body copy).
+
+   Everything comes from a token. Never hardcode a hex here: --accent is
+   overridden per portal by an inline style on .masthead, so an accent-derived
+   value must be var(--accent) or a color-mix() of it.
+   --------------------------------------------------------------------------- */
 
 * { box-sizing: border-box; }
-  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
-  h1, h2, h3, h4 { margin: 0; font-weight: 500; text-wrap: balance; }
+  /* The root element must paint the page ground, not just <body>: a background
+     that lives only on body propagates to the canvas, and the canvas paints
+     OUTSIDE a view transition — so the theme wipe reveals every element but
+     snaps the background instantly. Maps the wipe's --bg concept onto --paper. */
+  html { background: var(--paper); }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  h1, h2, h3, h4 { margin: 0; font-weight: 600; text-wrap: balance; }
+  /* Keep the blockquote reset. UA margins on blockquote once tripled the
+     spacing around every pull-quote in Findings. */
   p, blockquote, figure { margin: 0; }
   button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
   a { color: var(--accent); text-underline-offset: 2px; }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-sm); }
   .num { font-variant-numeric: tabular-nums; }
-  .eyebrow { font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+
+  /* .eyebrow is the single most-reused class in the product — 50-odd uses
+     across every section — and it does THREE different jobs: a small caption
+     above a section title, an <h4> panel heading, and a <label> on every form
+     field. It used to be 10.5px uppercase mono with .1em tracking, which a
+     board member reads as a log key rather than a heading.
+     The class name cannot move (the smoke test reads '.mast-right .eyebrow'),
+     and the three jobs cannot be told apart from the markup by class — but
+     they CAN be told apart by element, which is why the two variants below are
+     element-scoped. .panelhead / .flabel are the same two treatments under
+     their own names, for markup that wants to say which job it is doing. */
+  .eyebrow { font-family: var(--sans); font-size: var(--fs-cap); font-weight: 600; letter-spacing: .005em; text-transform: none; color: var(--ink-2); }
+  h4.eyebrow, .panelhead { font-size: 14.5px; font-weight: 600; letter-spacing: 0; color: var(--ink); }
+  label.eyebrow, .flabel { font-size: var(--fs-label); font-weight: 500; letter-spacing: 0; color: var(--ink-2); }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
   /* ---------- masthead ---------- */
@@ -17,7 +60,8 @@
    moment the masthead wrapped to two lines or the demo banner appeared — the
    sub-nav floated below the masthead with a gap showing content through, and
    the rail collided with it. Stacked in normal flow inside one sticky parent,
-   no offset has to be guessed. */
+   no offset has to be guessed. NO CHILD OF .topbar MAY BE GIVEN position:
+   sticky/fixed OR ITS OWN TOP OFFSET. */
 .topbar {
   position: sticky;
   top: 0;
@@ -26,33 +70,48 @@
   padding-top: env(safe-area-inset-top, 0px);
 }
 .masthead { background: var(--surface); border-bottom: 1px solid var(--rule); }
-  .masthead-in { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 10px 20px; }
+  .masthead-in { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; padding: 11px 20px; }
   .brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; flex: 1 1 auto; }
   .brand-name { font-family: var(--display); font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
-  .brand-sub { font-size: 12.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .mast-right { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
-  .seg { display: flex; border: 1px solid var(--rule); border-radius: 7px; overflow: hidden; background: var(--raise); }
-  .seg button { font-family: var(--mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; padding: 5px 11px; color: var(--ink-2); }
-  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
-  .whoami { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink-2); }
-  .avatar { width: 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-family: var(--mono); font-size: 10px; font-weight: 600; flex: 0 0 auto; }
-  .syncpill { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); display: inline-flex; align-items: center; gap: 5px; }
-  .syncpill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); }
+  .brand-sub { font-size: var(--fs-cap); color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mast-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  /* The segmented control. Its pressed state used to be background: var(--ink)
+     — an inverted black chip, the most developer-tool object in the file. It is
+     now the standard soft segmented switch: a pill track with the pressed
+     segment lifted on --surface. This is where the light/dark switch lives. */
+  .seg { display: flex; gap: 2px; padding: 2px; border: 1px solid var(--rule-2); border-radius: var(--r-pill); background: var(--raise); }
+  .seg button { font-family: var(--sans); font-size: var(--fs-cap); font-weight: 500; letter-spacing: 0; text-transform: none; padding: 5px 12px; border-radius: var(--r-pill); color: var(--ink-2); transition: background .15s ease, color .15s ease; }
+  .seg button:hover { color: var(--ink); }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: var(--shadow-sm); }
+  .whoami { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-label); color: var(--ink-2); }
+  /* The initials are 11px/600 — small text, so they carry the 4.5:1 floor.
+     Accent on a 14% accent tint was 4.43:1 in light. The fix is the pattern the
+     status pills already use: the hue lives in the BACKGROUND and the glyph
+     stays --ink (12.8:1 light / 10.3:1 dark). That also survives the
+     per-portal --accent override, which accent-on-accent-tint does not. */
+  .avatar { width: 26px; height: 26px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 18%, var(--surface)); color: var(--ink); display: grid; place-items: center; font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 0; flex: 0 0 auto; }
+  /* Was 'LIVE' / 'NOT SAVED' in 10px uppercase mono beside a bare 6px LED —
+     a deploy indicator from a CI dashboard, top-right of every screen. Now a
+     quiet status chip. The words themselves come from Masthead.jsx. */
+  .syncpill { font-family: var(--sans); font-size: var(--fs-cap); font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border-radius: var(--r-pill); background: var(--raise); }
+  .syncpill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); flex: 0 0 auto; }
+  .syncpill.live { background: color-mix(in srgb, var(--st-done) 11%, var(--surface)); color: var(--ink-2); }
   .syncpill.live::before { background: var(--st-done); }
 
   /* ---------- nav layer two ---------- */
   .subnav { background: var(--paper); border-bottom: 1px solid var(--rule); }
-  .subnav-in { display: flex; gap: 3px; align-items: center; overflow-x: auto; padding: 7px 20px; scrollbar-width: none; }
+  .subnav-in { display: flex; gap: var(--sp-1); align-items: center; overflow-x: auto; padding: 7px 20px; scrollbar-width: none; }
   .subnav-in::-webkit-scrollbar { display: none; }
-  .subnav button { white-space: nowrap; padding: 5px 11px; border-radius: 7px; font-size: 13px; color: var(--ink-2); border: 1px solid transparent; }
-  .subnav button:hover { background: var(--rule-2); }
-  .subnav button[aria-current="true"] { background: var(--accent-soft); border-color: var(--accent-line); color: var(--ink); font-weight: 500; }
+  .subnav button { white-space: nowrap; padding: 7px 12px; border-radius: var(--r-sm); font-size: var(--fs-label); font-weight: 500; color: var(--ink-2); border: 1px solid transparent; transition: background .15s ease, color .15s ease; }
+  .subnav button:hover { background: var(--rule-2); color: var(--ink); }
+  .subnav button[aria-current="true"] { background: var(--accent-soft); border-color: transparent; color: var(--accent); font-weight: 600; }
   .sn-sep { width: 1px; height: 18px; background: var(--rule); margin: 0 6px; flex: 0 0 auto; }
   .sn-spacer { flex: 1 1 auto; min-width: 8px; }
 
   .layout { display: flex; align-items: flex-start; }
   /* --topbar-h is measured at runtime (App.jsx) rather than assumed, so this
-   stays correct when the masthead wraps or the demo banner shows.
+   stays correct when the masthead wraps or the demo banner shows. Never
+   replace either var(--topbar-h) reference with a hard-coded offset.
    align-self must NOT be stretch: a rail stretched to the flex container's
    full height can never engage position:sticky — it just scrolls away. */
 .rail {
@@ -67,240 +126,485 @@
   padding: 20px 14px 24px 20px;
 }
 /* The divider belongs to the content column so it runs the whole page, now
-   that the rail is only as tall as its own contents. */
+   that the rail is only as tall as its own contents. Do not move it back
+   onto .rail — it would stop partway down the page. */
 .layout > .main { border-left: 1px solid var(--rule); }
-  .railnav { display: flex; flex-direction: column; gap: 2px; margin-bottom: 24px; }
-  .railnav button { display: grid; grid-template-columns: 22px 1fr auto; align-items: baseline; gap: 8px; text-align: left; padding: 8px 10px; border-radius: 7px; color: var(--ink-2); border-left: 2px solid transparent; }
-  .railnav button:hover { background: var(--rule-2); }
-  .railnav button[aria-current="true"] { background: var(--accent-soft); border-left-color: var(--accent); color: var(--ink); }
-  .railnav .rn-n { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+  /* The active item used to be marked with a 2px accent LEFT BORDER BAR next
+     to a zero-padded mono number — the docs-site / IDE-sidebar idiom. It is
+     now a filled rounded pill, which is what every mainstream PM sidebar
+     does. The '01'..'05' numbers are generated in labels.js, so they stay,
+     but as plain tabular sans rather than code type. */
+  .railnav { display: flex; flex-direction: column; gap: 2px; margin-bottom: var(--sp-5); }
+  .railnav button { display: grid; grid-template-columns: 22px 1fr auto; align-items: baseline; gap: var(--sp-2); text-align: left; padding: 9px 11px; border-radius: var(--r-sm); color: var(--ink-2); transition: background .15s ease, color .15s ease; }
+  .railnav button:hover { background: var(--rule-2); color: var(--ink); }
+  .railnav button[aria-current="true"] { background: var(--accent-soft); color: var(--ink); }
+  .railnav .rn-n { font-family: var(--sans); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--ink-3); }
   .railnav button[aria-current="true"] .rn-n { color: var(--accent); }
-  .railnav .rn-t { font-size: 14px; font-weight: 450; }
-  .railnav .rn-c { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
-  .railcard { border-top: 1px solid var(--rule); padding-top: 15px; }
-  .railcard + .railcard { margin-top: 16px; }
+  .railnav .rn-t { font-size: 14.5px; font-weight: 500; }
+  .railnav button[aria-current="true"] .rn-t { font-weight: 600; }
+  .railnav .rn-c { font-family: var(--sans); font-size: var(--fs-cap); font-variant-numeric: tabular-nums; color: var(--ink-3); }
+  .railcard { border-top: 1px solid var(--rule-2); padding-top: var(--sp-4); }
+  .railcard + .railcard { margin-top: var(--sp-4); }
   .railcard h4 { margin-bottom: 9px; }
+  /* The rail's completion figure and past-due note. App.jsx sets their sizes
+     inline; these classes are here so that markup can drop the inline styles
+     without losing the treatment. */
+  .railpct { font-family: var(--sans); font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.01em; line-height: 1.2; color: var(--ink); }
+  /* The past-due note. font-size carries !important for one reason: the inline
+     style this class replaces sets fontSize: 11, and a stylesheet cannot beat
+     an inline style. 11px red type is below the product's 12px label floor and
+     this is the one line in the rail that says something is wrong, so it may
+     not silently lose the cascade if the inline style is left behind. Nothing
+     else in the file sets a size on .raillate. --stop on --paper is 6.0:1 in
+     light and 7.0:1 in dark. */
+  .raillate { font-family: var(--sans); font-size: var(--fs-cap) !important; font-variant-numeric: tabular-nums; color: var(--stop); margin-top: 9px; }
 
-  .main { flex: 1 1 auto; min-width: 0; padding: 24px 24px 80px; }
+  .main { flex: 1 1 auto; min-width: 0; padding: var(--sp-5) var(--sp-5) 80px; }
   .wrap { max-width: 1000px; margin: 0 auto; }
   .tabstrip { display: none; }
 
   /* ---------- section headers ---------- */
   .shead { margin-bottom: 20px; }
-  .shead h2 { font-family: var(--display); font-size: 27px; letter-spacing: -.015em; margin-top: 3px; }
+  .shead h2 { font-family: var(--display); font-size: 27px; font-weight: 600; letter-spacing: -.018em; margin-top: 4px; }
   .shead p { color: var(--ink-2); margin-top: 7px; max-width: 64ch; }
-  .callout { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--rule); border-left: 2px solid var(--accent); background: var(--raise); border-radius: 0 8px 8px 0; padding: 11px 14px; font-size: 13px; color: var(--ink-2); margin-bottom: 20px; }
-  .panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 17px 19px; }
-  .panel + .panel { margin-top: 13px; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+  /* Was the 'Note:' admonition block from a documentation site — square left
+     edge, 2px accent rule, raw text arrow as its marker. Now a tinted rounded
+     card with the marker in a round badge. */
+  .callout { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--accent-line); background: var(--accent-soft); border-radius: var(--r-md); padding: 12px 15px; font-size: 13.5px; color: var(--ink-2); margin-bottom: 20px; }
+  /* Same 11px small-text floor as .avatar, and the same remedy: hue in the
+     background, glyph in --ink. 12.1:1 light / 9.5:1 dark, on a badge that
+     sits on the callout's own --accent-soft ground. */
+  .callout > span:first-child { flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 11px; line-height: 1; background: color-mix(in srgb, var(--accent) 22%, var(--surface)); color: var(--ink); }
+  /* Surfaces used to be a hairline outline with no shadow at all — a flat
+     wireframe. A resting soft shadow plus a near-invisible border is what
+     makes a card read as something you can pick up. */
+  .panel { background: var(--surface); border: 1px solid var(--rule-2); border-radius: var(--r-md); padding: var(--sp-4) 19px; box-shadow: var(--shadow-sm); }
+  .panel + .panel { margin-top: var(--sp-3); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
 
   /* ---------- scope ---------- */
-  .phasetrack { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-bottom: 18px; }
-  .phasebtn { text-align: left; padding: 11px 12px 12px; background: var(--surface); border: 1px solid var(--rule); border-radius: 7px; display: flex; flex-direction: column; gap: 3px; position: relative; }
-  .phasebtn:hover { border-color: var(--accent-line); }
-  .phasebtn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
-  .phasebtn .pb-bar { height: 3px; border-radius: 2px; background: var(--rule); margin-bottom: 6px; }
+  .phasetrack { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--sp-2); margin-bottom: 18px; }
+  .phasebtn { text-align: left; padding: 12px 13px 13px; background: var(--surface); border: 1px solid var(--rule-2); border-radius: var(--r-md); display: flex; flex-direction: column; gap: 3px; position: relative; box-shadow: var(--shadow-sm); transition: box-shadow .15s ease, background .15s ease, transform .15s ease; }
+  .phasebtn:hover { background: var(--raise); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  .phasebtn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-line); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 38%, transparent), var(--shadow-sm); }
+  .phasebtn .pb-bar { height: 6px; border-radius: var(--r-pill); background: var(--rule-2); margin-bottom: 7px; overflow: hidden; }
   .phasebtn.done .pb-bar { background: var(--st-done); }
-  .phasebtn.active .pb-bar { background: linear-gradient(90deg, var(--accent) 0 var(--pct), var(--rule) var(--pct) 100%); }
-  .phasebtn .pb-n { font-family: var(--mono); font-size: 10px; letter-spacing: .09em; color: var(--ink-3); text-transform: uppercase; }
-  .phasebtn .pb-name { font-size: 14px; font-weight: 500; }
-  .phasebtn .pb-date { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
-  .phasebtn .pb-now { position: absolute; top: -8px; right: 8px; font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; background: var(--accent); color: var(--on-accent); padding: 1px 6px; border-radius: 99px; }
+  .phasebtn.active .pb-bar { background: linear-gradient(90deg, var(--accent) 0 var(--pct), color-mix(in srgb, var(--accent) 18%, var(--rule-2)) var(--pct) 100%); }
+  .phasebtn .pb-n { font-family: var(--sans); font-size: 12px; letter-spacing: 0; text-transform: none; color: var(--ink-3); }
+  .phasebtn .pb-name { font-size: 14.5px; font-weight: 600; }
+  .phasebtn .pb-date { font-family: var(--sans); font-size: var(--fs-cap); font-variant-numeric: tabular-nums; color: var(--ink-3); }
+  /* 'You are here' used to be a 9.5px uppercase mono pill floating -8px
+     OUTSIDE the card, which reads as a debug annotation pinned to a box. It
+     now sits inside the card as its first row (order:-1 keeps it first
+     whatever order the markup renders it in).
+     11.5px/600 accent text on a 14% accent tint was 4.43:1 in light, and the
+     pill also lands on --accent-soft when its card is pressed, where accent
+     text is 4.71:1 at best. Hue in the fill, word in --ink: 13.2:1 light,
+     10.7:1 dark, on --surface and on --accent-soft alike. The 1px ring keeps
+     the pill's edge visible on the pressed card, where fill and card ground
+     are 1.09:1 apart. (Scope.jsx now renders .pc-now from timeline.css
+     instead of .pb-now; this is kept in step with it rather than left to rot.) */
+  .phasebtn .pb-now { position: static; order: -1; align-self: flex-start; margin-bottom: 2px; font-family: var(--sans); font-size: var(--fs-micro); font-weight: 600; letter-spacing: 0; text-transform: none; background: color-mix(in srgb, var(--accent) 16%, var(--surface)); color: var(--ink); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 42%, transparent); padding: 2px 9px; border-radius: var(--r-pill); }
   .ticklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
-  .ticklist li { display: grid; grid-template-columns: 16px 1fr; gap: 9px; font-size: 13.5px; color: var(--ink-2); }
-  .ticklist .mk { font-family: var(--mono); font-size: 12px; line-height: 1.5; }
-  .ticklist.yes .mk { color: var(--st-done); }
-  .ticklist.no .mk { color: var(--ink-3); }
-  .deflist { display: grid; grid-template-columns: auto 1fr; gap: 7px 16px; font-size: 13.5px; align-items: baseline; }
-  .deflist dt { font-family: var(--mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
+  .ticklist li { display: grid; grid-template-columns: 16px 1fr; gap: 10px; font-size: var(--fs-body); color: var(--ink-2); }
+  /* The mark used to be a raw text glyph in mono — a monospaced em-dash
+     standing in for an unchecked box is a plain-text README convention. The
+     glyph still comes from the markup; it now sits in a round badge. Keep the
+     16px grid column above so nothing reflows. */
+  .ticklist .mk { font-family: var(--sans); font-size: 11px; font-weight: 600; line-height: 1; width: 16px; height: 16px; border-radius: 50%; display: inline-grid; place-items: center; margin-top: 3px; }
+  .ticklist.yes .mk { color: var(--st-done); background: color-mix(in srgb, var(--st-done) 14%, var(--surface)); }
+  .ticklist.no .mk { color: var(--ink-3); background: var(--raise); box-shadow: inset 0 0 0 1.5px var(--rule); }
+  .deflist { display: grid; grid-template-columns: auto 1fr; gap: var(--sp-2) var(--sp-4); font-size: var(--fs-body); align-items: baseline; }
+  .deflist dt { font-family: var(--sans); font-size: var(--fs-cap); font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink-3); white-space: nowrap; }
   .deflist dd { margin: 0; color: var(--ink-2); }
 
   /* ---------- plan ---------- */
-  .vision { font-family: var(--display); font-size: 21px; line-height: 1.45; letter-spacing: -.01em; max-width: 44ch; }
-  .priority { margin-top: 28px; border-top: 1px solid var(--rule); padding-top: 20px; }
-  .priority-head { display: flex; gap: 14px; align-items: baseline; }
-  .pri-n { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .08em; color: var(--accent); padding-top: 4px; white-space: nowrap; }
-  .priority h3 { font-family: var(--display); font-size: 25px; letter-spacing: -.015em; }
+  /* One of exactly two places the serif survives: the vision statement. It is
+     what keeps this from reading as generic SaaS. The other is .quote. */
+  .vision { font-family: var(--serif); font-size: 21px; line-height: 1.5; letter-spacing: -.005em; max-width: 44ch; }
+  .priority { margin-top: 28px; border-top: 1px solid var(--rule-2); padding-top: 20px; }
+  .priority-head { display: flex; gap: var(--sp-3); align-items: baseline; flex-wrap: wrap; }
+  /* Hierarchy ids used to be bold mono, placed FIRST in every row, so the eye
+     landed on a dotted decimal code before the human sentence — which is most
+     of why this read as a traceability matrix. They are demoted throughout:
+     quiet sans, and either a soft pill or plain --ink-3 meta. */
+  .pri-n { font-family: var(--sans); font-size: var(--fs-cap); font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--accent); background: var(--accent-soft); padding: 3px 10px; border-radius: var(--r-pill); white-space: nowrap; }
+  .priority h3 { font-family: var(--display); font-size: 24px; font-weight: 600; letter-spacing: -.018em; }
   .thesis { color: var(--ink-2); margin-top: 9px; max-width: 66ch; font-size: 14.5px; }
-  .kpibox { margin-top: 14px; background: var(--raise); border: 1px solid var(--rule); border-radius: 9px; padding: 13px 16px; }
-  .kpi { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: baseline; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--rule-2); }
+  .kpibox { margin-top: var(--sp-4); background: var(--raise); border: 1px solid var(--rule-2); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); }
+  .kpi { display: grid; grid-template-columns: 1fr auto auto; gap: var(--sp-3); align-items: baseline; font-size: 13.5px; padding: 7px 0; border-bottom: 1px solid var(--rule-2); }
   .kpi:last-child { border-bottom: 0; }
-  .kpi .k-now { font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); text-align: right; }
-  .kpi .k-tgt { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); text-align: right; white-space: nowrap; }
-  .init { margin-top: 13px; background: var(--surface); border: 1px solid var(--rule); border-radius: 9px; padding: 14px 17px; }
+  .kpi .k-now { font-family: var(--sans); font-size: 13px; font-weight: 500; color: var(--ink); text-align: right; }
+  .kpi .k-tgt { font-family: var(--sans); font-size: var(--fs-cap); color: var(--ink-3); text-align: right; white-space: nowrap; }
+  .init { margin-top: var(--sp-3); background: var(--surface); border: 1px solid var(--rule-2); border-radius: var(--r-md); padding: var(--sp-3) 17px; box-shadow: var(--shadow-sm); }
   .init-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
-  .init-id { font-family: var(--mono); font-size: 11.5px; font-weight: 600; color: var(--ink-3); }
-  .init h4 { font-size: 16px; font-weight: 500; }
-  .init-detail { color: var(--ink-2); font-size: 13.5px; margin-top: 6px; max-width: 64ch; }
-  .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; align-items: center; }
-  .chips-label { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-right: 3px; }
-  .chip { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--rule); border-radius: 99px; padding: 2px 9px 2px 6px; font-size: 11.5px; color: var(--ink-2); background: var(--raise); max-width: 100%; }
-  .chip:hover { border-color: var(--accent-line); color: var(--ink); background: var(--accent-soft); }
-  .chip .ck { font-family: var(--mono); font-size: 9.5px; font-weight: 600; width: 15px; height: 15px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+  .init h4 { font-size: 16px; font-weight: 600; }
+  /* The id now follows the title rather than leading the row. */
+  .init-head > h4 { order: 1; }
+  .init-id { order: 2; font-family: var(--sans); font-size: var(--fs-micro); font-weight: 500; letter-spacing: 0; color: var(--ink-3); background: var(--raise); padding: 1px 8px; border-radius: var(--r-pill); }
+  .init-detail { color: var(--ink-2); font-size: var(--fs-body); margin-top: 7px; max-width: 64ch; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; align-items: center; }
+  .chips-label { font-family: var(--sans); font-size: var(--fs-cap); font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink-3); margin-right: 3px; }
+  /* The evidence chips are the signature interaction of the product. They were
+     the right shape and far too small to read as the friendly tags they are. */
+  .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--rule-2); border-radius: var(--r-pill); padding: 4px 11px 4px 7px; font-size: var(--fs-cap); color: var(--ink-2); background: var(--raise); max-width: 100%; transition: background .15s ease, box-shadow .15s ease, color .15s ease; }
+  .chip:hover { border-color: var(--accent-line); color: var(--ink); background: var(--accent-soft); box-shadow: var(--shadow-sm); }
+  .chip .ck { font-family: var(--sans); font-size: 10.5px; font-weight: 600; width: 17px; height: 17px; border-radius: var(--r-xs); display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
   .chip .cn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 26ch; }
-  .chip .cc { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
-  .k-S { background: var(--s-soft); color: var(--s); }
-  .k-W { background: var(--w-soft); color: var(--w); }
-  .k-O { background: var(--o-soft); color: var(--o); }
-  .k-T { background: var(--t-soft); color: var(--t); }
-  .track-mile { display: grid; grid-template-columns: 14px 1fr auto; gap: 11px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--rule-2); font-size: 13.5px; }
+  .chip .cc { font-family: var(--sans); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--ink-3); }
+  /* The single-letter category badge (.themerow .tk at 11px/600, .chip .ck at
+     10.5px/600). The letter used to be drawn in the category hue on that hue's
+     own tint: 4.46 / 4.10 / 4.56 / 4.79:1 in light, so S and W sat under the
+     4.5:1 floor for text this small. Same remedy as every other chip here —
+     the hue stays in the fill (and now in a 1px ring so it still reads as a
+     coloured badge across a room), the LETTER goes to --ink: 14.6 / 14.4 /
+     14.3 / 14.2:1 in light, 13.1 / 13.1 / 13.3 / 13.6:1 in dark. */
+  .k-S { background: var(--s-soft); color: var(--ink); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--s) 55%, transparent); }
+  .k-W { background: var(--w-soft); color: var(--ink); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--w) 55%, transparent); }
+  .k-O { background: var(--o-soft); color: var(--ink); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--o) 55%, transparent); }
+  .k-T { background: var(--t-soft); color: var(--ink); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--t) 55%, transparent); }
+  /* 18px, not 14px, so a 16px .dot sits in the column without overflowing. */
+  .track-mile { display: grid; grid-template-columns: 18px 1fr auto; gap: var(--sp-3); align-items: center; padding: 9px 0; border-bottom: 1px solid var(--rule-2); font-size: var(--fs-body); }
   .track-mile:last-child { border-bottom: 0; }
+  /* The milestone date. Plan.jsx sets it inline; this class is here so the
+     markup can drop the inline style without losing the treatment. */
+  .mile-date { font-family: var(--sans); font-size: var(--fs-cap); font-variant-numeric: tabular-nums; color: var(--ink-3); }
 
   /* ---------- findings ---------- */
-  .filterbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 15px; }
-  .filterbar input[type="search"] { font: inherit; font-size: 13.5px; padding: 6px 11px; border: 1px solid var(--rule); border-radius: 7px; background: var(--surface); color: var(--ink); min-width: 200px; flex: 1 1 200px; max-width: 320px; }
+  .filterbar { display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; margin-bottom: 15px; }
+  .filterbar input[type="search"] { font: inherit; font-size: 13.5px; padding: 8px 12px; border: 1px solid var(--rule); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); min-width: 200px; flex: 1 1 200px; max-width: 320px; }
   .themelist { display: flex; flex-direction: column; gap: 6px; }
-  .themerow { display: grid; grid-template-columns: 20px 1fr 148px 54px; gap: 12px; align-items: center; text-align: left; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 13px; }
-  .themerow:hover { border-color: var(--accent-line); }
-  .themerow .tk { font-family: var(--mono); font-size: 10px; font-weight: 600; width: 20px; height: 20px; border-radius: 5px; display: flex; align-items: center; justify-content: center; }
-  .themerow .tn { display: block; font-size: 14px; font-weight: 450; }
+  .themerow { display: grid; grid-template-columns: 20px 1fr 148px 54px; gap: var(--sp-3); align-items: center; text-align: left; background: var(--surface); border: 1px solid var(--rule-2); border-radius: var(--r-md); padding: 11px var(--sp-3); box-shadow: var(--shadow-sm); transition: box-shadow .15s ease, background .15s ease, transform .15s ease; }
+  .themerow:hover { background: var(--raise); border-color: var(--accent-line); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  /* The single-letter SWOT badge is one of only two places case survives —
+     there is no case to speak of in 'S'. */
+  .themerow .tk { font-family: var(--sans); font-size: 11px; font-weight: 600; width: 20px; height: 20px; border-radius: var(--r-xs); display: flex; align-items: center; justify-content: center; }
+  .themerow .tn { display: block; font-size: 14.5px; font-weight: 500; }
   /* display:block, or margin-top does nothing and the metadata runs straight
-     into the end of the theme name. */
-  .themerow .tsub { display: block; font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-top: 2px; }
-  .bar { height: 7px; border-radius: 4px; background: var(--rule-2); overflow: hidden; display: flex; }
-  .bar i { display: block; height: 100%; }
+     into the end of the theme name. The smoke test asserts none of .tn .tsub
+     .tc .tcl computes to display:inline — it read '37sources' and
+     '…partnerships, space)survey + interviews' when they did. */
+  .themerow .tsub { display: block; font-family: var(--sans); font-size: var(--fs-cap); color: var(--ink-3); margin-top: 3px; }
+  .bar { height: 8px; border-radius: var(--r-pill); background: var(--rule-2); overflow: hidden; display: flex; gap: 2px; }
+  .bar i { display: block; height: 100%; border-radius: var(--r-pill); }
   .bar .b-survey { background: currentColor; }
-  .bar .b-qual { background: currentColor; opacity: .42; }
-  .themerow .tc { display: block; font-family: var(--mono); font-size: 14px; text-align: right; }
-  .themerow .tcl { display: block; font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); text-align: right; }
-  .backbtn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); margin-bottom: 14px; }
+  /* Was opacity: .42, which made the qualitative half a ghost of the
+     quantitative one. A genuinely lighter tint reads as a second colour. */
+  .bar .b-qual { background: color-mix(in srgb, currentColor 40%, transparent); }
+  .themerow .tc { display: block; font-family: var(--sans); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+  .themerow .tcl { display: block; font-family: var(--sans); font-size: var(--fs-micro); color: var(--ink-3); text-align: right; }
+  .backbtn { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-label); color: var(--ink-2); margin-bottom: var(--sp-3); }
   .backbtn:hover { color: var(--accent); }
-  .theme-detail h3 { font-family: var(--display); font-size: 24px; letter-spacing: -.015em; margin-top: 4px; max-width: 34ch; }
-  .statline { display: flex; gap: 18px; flex-wrap: wrap; margin: 14px 0 16px; padding: 12px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .theme-detail h3 { font-family: var(--display); font-size: 24px; font-weight: 600; letter-spacing: -.018em; margin-top: 4px; max-width: 34ch; }
+  .statline { display: flex; gap: var(--sp-5); flex-wrap: wrap; margin: var(--sp-3) 0 var(--sp-4); padding: var(--sp-3) 0; border-top: 1px solid var(--rule-2); border-bottom: 1px solid var(--rule-2); }
   .stat { display: flex; flex-direction: column; }
-  .stat .sv { display: block; font-family: var(--mono); font-size: 19px; }
-  .stat .sl { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
-  .quote { border-left: 2px solid var(--rule); padding: 3px 0 3px 14px; font-family: var(--display); font-size: 16.5px; line-height: 1.5; color: var(--ink); }
-  .quotes { display: flex; flex-direction: column; gap: 13px; margin-top: 12px; }
-  .resp { border-top: 1px solid var(--rule-2); padding: 11px 0; }
-  .resp .rp { font-family: var(--mono); font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); }
-  .resp .rt { font-size: 13.5px; color: var(--ink-2); margin-top: 4px; white-space: pre-wrap; }
-  .morebtn { border: 1px solid var(--rule); border-radius: 7px; padding: 7px 13px; font-size: 13px; color: var(--ink-2); background: var(--surface); margin-top: 12px; }
-  .morebtn:hover { border-color: var(--accent-line); color: var(--ink); }
+  /* Both stay non-inline: these once rendered as '49OF 105 SOURCES'. */
+  .stat .sv { display: block; font-family: var(--sans); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .stat .sl { display: block; font-family: var(--sans); font-size: var(--fs-cap); font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink-2); }
+  /* The other serif voice, and the one place a 2px left rule earns its keep —
+     it is the real convention for a pull-quote. */
+  .quote { border-left: 2px solid var(--accent-line); padding: 3px 0 3px var(--sp-4); font-family: var(--serif); font-size: 17px; line-height: 1.55; color: var(--ink); }
+  .quotes { display: flex; flex-direction: column; gap: var(--sp-3); margin-top: var(--sp-3); }
+  .resp { border-top: 1px solid var(--rule-2); padding: var(--sp-3) 0; }
+  .resp .rp { font-family: var(--sans); font-size: var(--fs-cap); font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink-3); }
+  .resp .rt { font-size: var(--fs-body); color: var(--ink-2); margin-top: 5px; white-space: pre-wrap; }
+  .morebtn { border: 1px solid var(--rule-2); border-radius: var(--r-sm); padding: 8px 14px; font-size: 13.5px; font-weight: 500; color: var(--ink-2); background: var(--raise); margin-top: var(--sp-3); transition: background .15s ease, box-shadow .15s ease, color .15s ease; }
+  .morebtn:hover { background: var(--accent-soft); border-color: var(--accent-line); color: var(--ink); box-shadow: var(--shadow-sm); }
 
   /* ---------- workplan ---------- */
-  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 8px; }
-  .tile { background: var(--surface); border: 1px solid var(--rule); border-radius: 9px; padding: 12px 14px; }
-  .tile .tv { font-family: var(--mono); font-size: 25px; line-height: 1.1; }
-  .tile .tl { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-top: 3px; }
-  .tile.is-late { border-color: var(--stop); }
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: var(--sp-2); }
+  .tile { background: var(--surface); border: 1px solid var(--rule-2); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); box-shadow: var(--shadow-sm); }
+  /* The KPI tiles are the most-looked-at objects on the Dashboard and the
+     Workplan. 25px mono over a 10px uppercase mono label was a server
+     readout. .num on the value keeps the figures tabular. */
+  .tile .tv { font-family: var(--sans); font-size: 30px; font-weight: 600; line-height: 1.1; letter-spacing: -.02em; }
+  .tile .tl { font-family: var(--sans); font-size: var(--fs-cap); font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink-2); margin-top: 5px; }
+  .tile.is-late { border-color: color-mix(in srgb, var(--stop) 40%, var(--rule-2)); }
   .tile.is-late .tv { color: var(--stop); }
   .progressbig { margin: 15px 0 18px; }
-  .pb-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
-  .pb-track { height: 10px; border-radius: 5px; background: var(--rule-2); display: flex; overflow: hidden; gap: 2px; }
-  .pb-track i { display: block; height: 100%; }
-  .wpbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
-  .initgroup { margin-top: 16px; }
-  .initgroup-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding-bottom: 7px; border-bottom: 1px solid var(--rule); }
-  .ig-id { font-family: var(--mono); font-size: 11.5px; font-weight: 600; color: var(--ink-3); }
-  .ig-t { font-size: 15px; font-weight: 500; }
+  .pb-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); margin-bottom: 7px; }
+  .pb-track { height: 10px; border-radius: var(--r-pill); background: var(--rule-2); display: flex; overflow: hidden; gap: 2px; }
+  .pb-track i { display: block; height: 100%; border-radius: var(--r-pill); }
+  /* The workplan completion readout. Workplan.jsx sets it inline; this class
+     is here so the markup can drop the inline style. */
+  .wp-complete { font-family: var(--sans); font-size: 13.5px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .wpbar { display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; margin-bottom: var(--sp-3); }
+  .initgroup { margin-top: var(--sp-4); }
+  .initgroup-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding-bottom: var(--sp-2); border-bottom: 1px solid var(--rule-2); }
+  .ig-id { font-family: var(--sans); font-size: var(--fs-micro); font-weight: 500; letter-spacing: 0; color: var(--ink-3); background: var(--raise); padding: 1px 8px; border-radius: var(--r-pill); }
+  .ig-t { font-size: 15.5px; font-weight: 600; }
   .ig-p { margin-left: auto; display: flex; align-items: center; gap: 9px; }
-  .ig-pct { font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); }
-  .minitrack { width: 84px; height: 6px; border-radius: 3px; background: var(--rule-2); display: flex; overflow: hidden; gap: 2px; }
-  .minitrack i { display: block; height: 100%; }
+  .ig-pct { font-family: var(--sans); font-size: var(--fs-cap); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+  .minitrack { width: 84px; height: 8px; border-radius: var(--r-pill); background: var(--rule-2); display: flex; overflow: hidden; gap: 2px; }
+  .minitrack i { display: block; height: 100%; border-radius: var(--r-pill); }
   .prihead { display: flex; align-items: baseline; gap: 10px; margin: 26px 0 2px; flex-wrap: wrap; }
-  .ph-n { font-family: var(--mono); font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); }
-  .prihead h3 { font-family: var(--display); font-size: 20px; letter-spacing: -.01em; }
+  .ph-n { font-family: var(--sans); font-size: var(--fs-cap); font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--accent); }
+  .prihead h3 { font-family: var(--display); font-size: 20px; font-weight: 600; letter-spacing: -.012em; }
 
-  .task { display: grid; grid-template-columns: 18px 22px 64px 1fr 112px 88px; gap: 10px; align-items: center; padding: 8px 6px 8px 4px; border-bottom: 1px solid var(--rule-2); text-align: left; width: 100%; }
+  /* The task list was a 6-column ruled grid with a mono id in its own 64px
+     lead column — a spreadsheet export. Taller rows, a rounded hover, and the
+     id demoted to quiet meta. Any new fixed-width column here needs a
+     collapse rule in the 920px block below or the phone scrolls sideways. */
+  .task { display: grid; grid-template-columns: 24px 26px 54px 1fr 112px 88px; gap: 10px; align-items: center; padding: 10px 8px; border-bottom: 1px solid var(--rule-2); border-radius: var(--r-sm); text-align: left; width: 100%; min-height: 40px; transition: background .12s ease; }
   .task:hover { background: var(--raise); }
-  .task.sub { padding-left: 30px; background: linear-gradient(90deg, var(--rule-2) 0 2px, transparent 2px); }
-  .task.sub .tt { font-size: 13px; color: var(--ink-2); }
-  .task .tid { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
-  .task .tt { font-size: 13.8px; }
-  .task .town { font-size: 12.5px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .task .tdue { font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); text-align: right; }
+  /* The status WORD-pill (.spill) sits in this row next to the swatch. Without
+     a track of its own it is auto-placed into an implicit column appended past
+     .tdue, which steals width from the title instead. The three variants below
+     cover the three places the pill can sit; each is keyed to the sibling it
+     follows, because a grid assigns tracks in DOM order. Each one has a
+     matching override in the 920px block — these selectors are 0,3,0 and would
+     otherwise beat the phone's 0,1,0 `.task` rule. */
+  .task:has(> .tt + .spill) { grid-template-columns: 24px 26px 54px minmax(0, 1fr) auto 112px 88px; }
+  .task:has(> .statusbtn + .spill) { grid-template-columns: 24px 26px auto 54px minmax(0, 1fr) 112px 88px; }
+  .task:has(> .tdue + .spill) { grid-template-columns: 24px 26px 54px minmax(0, 1fr) 112px 88px auto; }
+  /* If the pill is emitted inside the title button instead, it needs no track —
+     only air. */
+  .task .tt .spill { margin-left: 8px; vertical-align: 1px; }
+  /* Was a 2px linear-gradient stripe down the left edge. A plain indent with a
+     small elbow connector reads as hierarchy rather than as a diff gutter. */
+  .task.sub { padding-left: 34px; position: relative; }
+  .task.sub::before { content: ""; position: absolute; left: 18px; top: 50%; width: 8px; height: 1px; background: var(--rule); }
+  .task.sub .tt { font-size: 13.5px; color: var(--ink-2); }
+  .task .tid { font-family: var(--sans); font-size: var(--fs-micro); font-variant-numeric: tabular-nums; color: var(--ink-3); }
+  /* .tt is a <button>, and the UA's `button { text-align: center }` beats the
+     inherited `text-align: left` on .task — which is why every task title
+     used to sit centred in its column, ragged on both edges. A task list
+     reads as a list only when the titles share a left edge. */
+  .task .tt { font-size: var(--fs-body); text-align: left; }
+  .task .town { font-size: var(--fs-label); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .task .tdue { font-family: var(--sans); font-size: var(--fs-cap); font-variant-numeric: tabular-nums; color: var(--ink-2); text-align: right; }
   .task.done .tt { color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--rule); }
-  .task.overdue .tdue { color: var(--stop); font-weight: 500; }
-  .tdep { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
-  .twist { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; color: var(--ink-3); font-size: 9px; }
+  .task.overdue .tdue { color: var(--stop); font-weight: 600; }
+  .tdep { font-family: var(--sans); font-size: var(--fs-micro); color: var(--ink-3); }
+  /* The disclosure was a 9px '▶' text character in an 18px box, rotated by
+     CSS — a fallback-glyph look with a hit target below the 24px floor. The
+     glyph still comes from the markup; it is hidden (font-size: 0) and a real
+     chevron is drawn instead. Keep .twist and the aria-expanded rotation: the
+     smoke test clicks '.twist' to expand subtasks. */
+  .twist { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: var(--r-sm); color: var(--ink-3); transition: background .15s ease, color .15s ease; }
   .twist:hover { background: var(--rule-2); color: var(--ink); }
   .twist[aria-expanded="true"] .tw-ico { transform: rotate(90deg); }
-  .tw-ico { display: block; transition: transform .12s ease; }
-  .subcount { font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin-left: 6px; }
+  .tw-ico { display: block; position: relative; width: 14px; height: 14px; font-size: 0; transition: transform .15s ease; }
+  .tw-ico::before { content: ""; position: absolute; left: 3.5px; top: 4px; width: 6px; height: 6px; border-right: 1.6px solid currentColor; border-bottom: 1.6px solid currentColor; border-radius: 1px; transform: rotate(-45deg); }
+  .subcount { font-family: var(--sans); font-size: var(--fs-micro); font-variant-numeric: tabular-nums; color: var(--ink-3); margin-left: 6px; }
 
-  .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; flex: 0 0 auto; }
-  .dot.next { border: 1.5px solid var(--ink-3); }
-  .dot.doing { border: 1.5px solid var(--st-doing); background: linear-gradient(90deg, var(--st-doing) 50%, transparent 50%); }
+  /* Status was a 14px circle you had to decode against a legend: 'doing' a
+     gradient half-fill, 'blocked' a disc at opacity .32, 'late' a halo ring.
+     It is now a filled rounded square carrying its own mark — a check for
+     done, a bar for blocked — so the swatch says something on its own.
+     The .dot class NAMES are load-bearing: the smoke test reads the class
+     string on .task .dot before and after advancing a status and requires it
+     to change. The visual is free; the names are not. */
+  .dot { width: 16px; height: 16px; border-radius: 5px; display: inline-block; position: relative; flex: 0 0 auto; background: var(--surface); }
+  /* 'next' is the most common state in the list, so its swatch is the one that
+     has to survive a projector. A 1.5px --st-next ring on --surface was
+     2.63:1 in light and 2.14:1 in dark — under the 3:1 floor for a graphical
+     object that carries meaning. 2px, and the ring mixed 70% toward --ink:
+     4.37:1 on --surface, 4.18:1 on a hovered --raise row and 4.07:1 on
+     --paper in light; 4.25 / 3.91 / 4.60:1 in dark. Class string untouched. */
+  .dot.next { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--st-next) 70%, var(--ink)); }
+  .dot.doing { background: linear-gradient(90deg, var(--st-doing) 0 50%, transparent 50% 100%); box-shadow: inset 0 0 0 1.5px var(--st-doing); }
   .dot.done { background: var(--st-done); }
-  .dot.blocked { border: 1.5px solid var(--st-blocked); background: var(--st-blocked); opacity: .32; }
-  .dot.late { border: 1.5px solid var(--stop); box-shadow: 0 0 0 2.5px color-mix(in srgb, var(--stop) 22%, transparent); }
-  .dot.sm { width: 11px; height: 11px; }
-  .statusbtn { display: inline-flex; align-items: center; justify-content: center; padding: 3px; border-radius: 6px; }
+  /* Percentage geometry so the mark scales with .dot.sm. */
+  .dot.done::after { content: ""; position: absolute; left: 27%; top: 20%; width: 28%; height: 46%; border: 0 solid var(--on-status); border-right-width: 1.8px; border-bottom-width: 1.8px; transform: rotate(40deg); }
+  .dot.blocked { background: var(--st-blocked); }
+  .dot.blocked::after { content: ""; position: absolute; left: 22%; top: 44%; width: 56%; height: 1.8px; border-radius: 1px; background: var(--on-status); }
+  /* --st-blocked, NOT --stop. --stop was lightened to #d98b82 so it clears 4.5:1
+     as small overdue TEXT, which drops white-on-fill to 2.64:1 in dark — below
+     the 3:1 floor for a glyph that is the only late signal. --st-blocked stayed
+     at #c96a60 for exactly this job; the halo keeps the --stop hue. */
+  .dot.late { background: var(--st-blocked); box-shadow: 0 0 0 3px color-mix(in srgb, var(--stop) 20%, transparent); }
+  .dot.late::after { content: ""; position: absolute; left: 44%; top: 20%; width: 1.8px; height: 56%; border-radius: 1px; background: var(--on-status); }
+  .dot.sm { width: 13px; height: 13px; border-radius: 4px; }
+  .statusbtn { display: inline-flex; align-items: center; justify-content: center; padding: 4px; border-radius: var(--r-sm); transition: background .15s ease; }
   .statusbtn:hover { background: var(--rule-2); }
   .statusbtn[disabled] { cursor: default; }
   .statusbtn[disabled]:hover { background: none; }
-  .legend { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; font-size: 11.5px; color: var(--ink-3); margin-top: 13px; }
-  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  /* A pill that says the status in words, for markup that wants to show the
+     word rather than only the swatch (STATUS_LABEL in lib/format.js has the
+     strings). Tinted background with --ink text plus a status dot: that
+     pairing holds AA in BOTH themes, which neither status-coloured text on a
+     tint nor white on the recessive --st-next does. */
+  .spill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    /* 8px on the dot side, 10px on the word side: the dot is optically lighter
+       than a letter and centres wrong on symmetric padding. */
+    padding: 2px 10px 2px 8px;
+    border-radius: var(--r-pill);
+    font-size: var(--fs-cap);
+    font-weight: 500;
+    /* A FIXED 16px line box, not the 1.6 body leading. 16 + 2 + 2 = 20px, which
+       is under the 24px .statusbtn that already sets the height of a .task row,
+       so the pill adds words to the row without adding a pixel to it. */
+    line-height: 16px;
+    white-space: nowrap;
+    color: var(--ink);
+    background: var(--raise);
+    /* An INSET ring, not a border: a border would add 2px to the pill's height,
+       which is the one thing a dense row cannot afford. Same reason .pc-pill
+       does it this way. */
+    box-shadow: inset 0 0 0 1px var(--rule-2);
+    /* It is a grid item in a .task row: keep it at its own width, hard against
+       the left of its track, and never let it stretch the row. */
+    flex: 0 0 auto;
+    justify-self: start;
+    align-self: center;
+    max-width: 100%;
+  }
+  .spill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); flex: 0 0 auto; }
+  /* If the markup puts a real .dot inside the pill, that IS the colour channel —
+     the ::before dot would be a second swatch 6px from the first. One or the
+     other, never both, and the .dot shrinks to the pill's line box so it cannot
+     grow the row either. */
+  .spill:has(.dot)::before { display: none; }
+  .spill .dot { width: 11px; height: 11px; border-radius: 3.5px; }
+  /* Every variant: tint the fill, keep the word --ink (11.4-14.2:1 in both
+     themes), and carry the status hue a second time in the dot. The tint is
+     16-18% rather than 13% for 'next' because --st-next is a deliberately
+     recessive neutral and a 13% mix of it is invisible against --surface. */
+  .spill.next { background: color-mix(in srgb, var(--st-next) 18%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--st-next) 45%, transparent); }
+  /* The same 70%-toward-ink mix .dot.next uses, for the same reason: raw
+     --st-next on this tint is 2.3:1 in light and 2.0:1 in dark. */
+  .spill.next::before { background: color-mix(in srgb, var(--st-next) 70%, var(--ink)); }
+  .spill.doing { background: color-mix(in srgb, var(--st-doing) 14%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--st-doing) 45%, transparent); }
+  .spill.doing::before { background: var(--st-doing); }
+  .spill.done { background: color-mix(in srgb, var(--st-done) 14%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--st-done) 45%, transparent); }
+  .spill.done::before { background: var(--st-done); }
+  .spill.blocked { background: color-mix(in srgb, var(--st-blocked) 14%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--st-blocked) 45%, transparent); }
+  .spill.blocked::before { background: var(--st-blocked); }
+  .spill.late { background: color-mix(in srgb, var(--stop) 14%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--stop) 45%, transparent); }
+  .spill.late::before { background: var(--stop); }
+  /* In a legend or a drawer the pill is prose-sized again; only the dense task
+     row needs the tight line box. */
+  .legend .spill, .drawer .spill { line-height: 17px; }
+  .legend { display: flex; gap: var(--sp-3) var(--sp-4); flex-wrap: wrap; align-items: center; font-size: var(--fs-cap); color: var(--ink-2); margin-top: var(--sp-3); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
 
   /* ---------- dashboard ---------- */
-  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
-  .chart { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 15px 17px; min-width: 0; }
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+  .chart { background: var(--surface); border: 1px solid var(--rule-2); border-radius: var(--r-md); padding: var(--sp-4) 17px; min-width: 0; box-shadow: var(--shadow-sm); }
   .chart.wide { grid-column: 1 / -1; }
-  .chart h4 { font-size: 14.5px; font-weight: 500; }
-  .csub { font-size: 12.5px; color: var(--ink-3); margin-top: 2px; }
-  .chartbody { margin-top: 13px; overflow-x: auto; }
+  .chart h4 { font-size: 15px; font-weight: 600; }
+  .csub { font-size: var(--fs-label); color: var(--ink-3); margin-top: 3px; }
+  .chartbody { margin-top: var(--sp-3); overflow-x: auto; }
   .chartbody svg { display: block; max-width: 100%; height: auto; }
-  .clegend { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; font-size: 11.5px; color: var(--ink-2); margin-top: 11px; }
-  .clegend span { display: inline-flex; align-items: center; gap: 5px; }
-  .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: 0 0 auto; }
-  .hrow { display: grid; grid-template-columns: 150px 1fr 54px; gap: 10px; align-items: center; padding: 5px 0; font-size: 13px; }
+  /* Dashboard.jsx writes NO font presentation attribute onto its axis <text>
+     elements. It used to set a monospace family and a 9-10px size on each one,
+     which made the chart labels the one monospaced 9px thing on the page. This
+     rule is now the single owner of chart type, so a new <text> inherits the
+     scale instead of drifting out of it one element at a time. Do not put a
+     font family or size back on those elements: CSS outranks an SVG
+     presentation attribute, so it would be dead code that only misleads, and a
+     repo-wide grep for such attributes is how that drift gets caught. The tick
+     values are counts, hence tabular-nums.
+     CHART COLOURS come from --st-*, --stop, --accent, --rule, --rule-2, --ink
+     and --ink-3 referenced INSIDE the SVG; those token names must keep
+     existing in all three token blocks or the charts silently blank. */
+  .chartbody svg text { font-family: var(--sans); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .clegend { display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: center; font-size: var(--fs-cap); color: var(--ink-2); margin-top: var(--sp-3); }
+  .clegend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: 0 0 auto; }
+  .hrow { display: grid; grid-template-columns: 150px 1fr 54px; gap: 10px; align-items: center; padding: 6px 0; font-size: 13.5px; }
   .hl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
-  .hv { font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); text-align: right; }
-  .hbar { height: 16px; border-radius: 3px; display: flex; gap: 2px; background: var(--rule-2); overflow: hidden; }
-  .hbar i { display: block; height: 100%; }
-  .dtable { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 12px; }
-  .dtable th, .dtable td { text-align: left; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--rule-2); }
-  .dtable th { font-family: var(--mono); font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
-  .dtable td.n { font-family: var(--mono); text-align: right; padding-right: 14px; }
+  .hv { font-family: var(--sans); font-size: var(--fs-cap); font-variant-numeric: tabular-nums; color: var(--ink-2); text-align: right; }
+  .hbar { height: 16px; border-radius: var(--r-pill); display: flex; gap: 2px; background: var(--rule-2); overflow: hidden; }
+  .hbar i { display: block; height: 100%; border-radius: var(--r-pill); }
+  /* A board member reading the KPI table used to see a database dump: 10px
+     uppercase mono headers over mono numeric cells. */
+  .dtable { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: var(--sp-3); }
+  .dtable th, .dtable td { text-align: left; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--rule-2); }
+  .dtable th { font-family: var(--sans); font-size: var(--fs-cap); letter-spacing: 0; text-transform: none; color: var(--ink-2); font-weight: 600; border-bottom-color: var(--rule); }
+  .dtable td.n { font-family: var(--sans); font-variant-numeric: tabular-nums; text-align: right; padding-right: var(--sp-4); }
   .tablewrap { overflow-x: auto; }
 
   /* ---------- controls ---------- */
-  .ghost { border: 1px solid var(--rule); border-radius: 7px; padding: 5px 11px; font-size: 12.5px; color: var(--ink-2); background: var(--surface); }
-  .ghost:hover { border-color: var(--accent-line); color: var(--ink); }
-  .ghost[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
-  .solid { background: var(--accent); color: var(--on-accent); border-radius: 7px; padding: 6px 13px; font-size: 13px; font-weight: 500; }
-  .solid:hover { filter: brightness(1.08); }
-  .solid[disabled] { opacity: .5; cursor: default; }
+  /* Every control used to be smaller than any mainstream PM control and
+     signalled hover only by swapping a border colour — nothing filled,
+     nothing lifted, so the app felt like a static spec. */
+  .ghost { border: 1px solid var(--rule-2); border-radius: var(--r-sm); padding: 7px 14px; font-size: 13.5px; font-weight: 500; color: var(--ink-2); background: var(--raise); transition: background .15s ease, box-shadow .15s ease, color .15s ease; }
+  .ghost:hover { background: var(--surface); border-color: var(--rule); color: var(--ink); box-shadow: var(--shadow-sm); }
+  /* A filled accent pill, which is what turns the Workplan filter row into the
+     tab group a PM tool uses. Transparent border keeps the box the same size. */
+  .ghost[aria-pressed="true"] { background: var(--accent-soft); border-color: transparent; color: var(--accent); font-weight: 600; box-shadow: none; }
+  /* Accent text on an 18% accent tint was 4.17:1 in light — under the floor
+     for 13.5px. 12% holds 4.57:1 (5.68:1 dark) and the inset accent-line ring
+     does the work of saying 'hovered' that the extra tint used to do. */
+  .ghost[aria-pressed="true"]:hover { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); border-color: transparent; color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent-line); }
+  .solid { background: var(--accent); color: var(--on-accent); border-radius: var(--r-sm); padding: 8px 16px; font-size: 13.5px; font-weight: 600; box-shadow: 0 1px 2px var(--sh-1), 0 4px 10px -4px color-mix(in srgb, var(--accent) 45%, transparent); transition: background .15s ease, box-shadow .15s ease; }
+  /* A real colour change, not filter: brightness(). Mixing toward --ink means
+     this darkens in light mode and lightens in dark, which is correct in both. */
+  .solid:hover { background: color-mix(in srgb, var(--accent) 88%, var(--ink)); box-shadow: 0 1px 2px var(--sh-1), 0 6px 14px -5px color-mix(in srgb, var(--accent) 50%, transparent); }
+  .solid[disabled] { opacity: .5; cursor: default; box-shadow: none; }
 
   /* ---------- overlays ---------- */
   .scrim { position: fixed; inset: 0; background: rgba(12, 14, 18, .45); z-index: 40; }
-  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 100%); background: var(--surface); border-left: 1px solid var(--rule); z-index: 41; overflow-y: auto; padding: 20px 22px calc(28px + env(safe-area-inset-bottom, 0px)); box-shadow: var(--shadow); }
-  .drawer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-  .drawer h3 { font-family: var(--display); font-size: 20px; letter-spacing: -.01em; margin-top: 6px; }
-  .modal { position: fixed; z-index: 41; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(430px, calc(100% - 32px)); background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 22px 24px; box-shadow: var(--shadow); max-height: calc(100% - 40px); overflow-y: auto; }
-  .modal h3 { font-family: var(--display); font-size: 21px; letter-spacing: -.01em; }
-  .field { margin-top: 13px; }
-  .field label { display: block; margin-bottom: 5px; }
-  .field input, .field select, .field textarea { font: inherit; font-size: 13.5px; width: 100%; padding: 7px 10px; border: 1px solid var(--rule); border-radius: 7px; background: var(--raise); color: var(--ink); }
-  .field textarea { min-height: 74px; resize: vertical; font-size: 13px; }
-  .field input.code { font-family: var(--mono); font-size: 20px; letter-spacing: .3em; text-align: center; }
-  .savenote { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-top: 12px; }
-  .errnote { font-size: 12.5px; color: var(--stop); margin-top: 10px; }
-  .expopt { text-align: left; padding: 11px 13px; }
-  .expopt strong { font-weight: 500; color: var(--ink); }
-  .expopt span { font-size: 12.5px; }
-  .sublist { margin-top: 14px; border-top: 1px solid var(--rule-2); padding-top: 12px; }
-  .subrow { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: center; padding: 5px 0; font-size: 13px; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 100%); background: var(--surface); border-left: 1px solid var(--rule); z-index: 41; overflow-y: auto; padding: 20px 22px calc(28px + env(safe-area-inset-bottom, 0px)); box-shadow: var(--shadow-lg); }
+  .drawer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-3); }
+  .drawer h3 { font-family: var(--display); font-size: 21px; font-weight: 600; letter-spacing: -.012em; margin-top: 6px; }
+  .modal { position: fixed; z-index: 41; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(430px, calc(100% - 32px)); background: var(--surface); border: 1px solid var(--rule-2); border-radius: var(--r-lg); padding: 22px 24px; box-shadow: var(--shadow-lg); max-height: calc(100% - 40px); overflow-y: auto; }
+  .modal h3 { font-family: var(--display); font-size: 21px; font-weight: 600; letter-spacing: -.012em; }
+  .field { margin-top: var(--sp-3); }
+  .field label { display: block; margin-bottom: 6px; }
+  .field input, .field select, .field textarea { font: inherit; font-size: 13.5px; width: 100%; padding: 9px 11px; border: 1px solid var(--rule); border-radius: var(--r-sm); background: var(--raise); color: var(--ink); }
+  .field input:focus, .field select:focus, .field textarea:focus { background: var(--surface); }
+  .field textarea { min-height: 74px; resize: vertical; font-size: var(--fs-label); }
+  /* One of the four places monospace still earns it: the sign-in code. */
+  .field input.code { font-family: var(--code); font-size: 20px; letter-spacing: .3em; text-align: center; }
+  .savenote { font-family: var(--sans); font-size: var(--fs-cap); color: var(--ink-3); margin-top: var(--sp-3); }
+  .errnote { font-size: var(--fs-label); color: var(--stop); margin-top: 10px; }
+  .expopt { text-align: left; padding: 12px 14px; }
+  .expopt strong { font-weight: 600; color: var(--ink); }
+  .expopt span { font-size: var(--fs-cap); }
+  .sublist { margin-top: var(--sp-3); border-top: 1px solid var(--rule-2); padding-top: var(--sp-3); }
+  .subrow { display: grid; grid-template-columns: 24px 1fr; gap: var(--sp-2); align-items: center; padding: 6px 0; font-size: 13.5px; }
   .subrow.done span { color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--rule); }
 
   /* ---------- responsive ---------- */
   @media (max-width: 920px) {
     .rail { display: none; }
     .layout > .main { border-left: 0; }
-    .main { padding: 16px 16px 90px; }
-    .tabstrip { display: flex; gap: 3px; overflow-x: auto; padding: 7px 16px; background: var(--surface); border-bottom: 1px solid var(--rule); scrollbar-width: none; }
+    .main { padding: var(--sp-4) var(--sp-4) 90px; }
+    .tabstrip { display: flex; gap: var(--sp-1); overflow-x: auto; padding: 7px 16px; background: var(--surface); border-bottom: 1px solid var(--rule); scrollbar-width: none; }
     .tabstrip::-webkit-scrollbar { display: none; }
-    .tabstrip button { white-space: nowrap; padding: 6px 12px; border-radius: 7px; font-size: 13.5px; color: var(--ink-2); border: 1px solid transparent; }
-    .tabstrip button[aria-current="true"] { background: var(--accent-soft); border-color: var(--accent-line); color: var(--ink); }
+    .tabstrip button { white-space: nowrap; padding: 7px 13px; border-radius: var(--r-sm); font-size: 13.5px; font-weight: 500; color: var(--ink-2); border: 1px solid transparent; }
+    .tabstrip button[aria-current="true"] { background: var(--accent-soft); border-color: transparent; color: var(--accent); font-weight: 600; }
     .subnav-in { padding: 7px 16px; }
     .phasetrack { grid-template-columns: 1fr 1fr; }
     .grid2, .charts { grid-template-columns: 1fr; }
     .tiles { grid-template-columns: 1fr 1fr; }
     .themerow { grid-template-columns: 20px 1fr 52px; }
     .themerow .bar { display: none; }
-    .task { grid-template-columns: 18px 22px 1fr 74px; row-gap: 3px; }
+    /* Six columns down to four: the id and the owner go, so nothing scrolls
+       sideways at 390px. These widths track the desktop grid above. */
+    .task { grid-template-columns: 24px 26px 1fr 78px; row-gap: 3px; }
     .task .tid, .task .town { display: none; }
+    /* On the phone the pill CANNOT share the one line: measured at 390px, a
+       fifth column left the title 42px and a four-word task wrapped to six
+       lines (247px for one row). So a row carrying a pill stops being a grid
+       and becomes a wrapping flex line — title on the first line, status word
+       and date on the second, which is what a PM tool's phone row does. This
+       also makes the pill's position in the markup irrelevant: flex wraps
+       whatever does not fit instead of needing a track per placement.
+       display:flex here is 0,2,0 and the three desktop grid rules are 0,3,0 —
+       that is fine and deliberate: nothing above declares `display`, so this
+       wins it, and grid-template-columns is simply inert on a flex container. */
+    .task:has(> .spill) {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 3px 10px;
+    }
+    .task:has(> .spill) > .tt { flex: 1 1 60%; min-width: 0; }
+    /* Indent the wrapped meta line to the title's left edge (24 + 26 + 2x10
+       gaps), so the second line reads as part of the row and not as a new one.
+       A .task.sub is already indented 34px as a whole, so the same 70px lands
+       the pill under ITS title too. The one placement that must not be indented
+       is a pill sitting next to the swatch, which stays on the first line. */
+    .task:has(> .spill) > .spill { margin-left: 70px; }
+    .task:has(> .statusbtn + .spill) > .spill { margin-left: 0; }
+    .task:has(> .spill) > .tdue { text-align: left; }
     .kpi { grid-template-columns: 1fr; gap: 2px; }
     .kpi .k-now, .kpi .k-tgt { text-align: left; }
     .hrow { grid-template-columns: 92px 1fr 48px; }
@@ -309,18 +613,29 @@
     .phasetrack { grid-template-columns: 1fr; }
     .brand { flex-basis: 100%; }
   }
+  /* Nulls every animation and transition, so the hover lifts and colour
+     transitions added above are accessible for free. Anything motion-like
+     must go through transition/animation to inherit this. */
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
   /* ---------- print: the board packet ---------- */
+  /* ExportMenu sells this as the 'Board packet (PDF)', so it is a real
+     deliverable, not a fallback. New chrome must be added to the hide-list,
+     and the new shadows must be suppressed or every card prints as a grey
+     smear. Neutrals stay light greys rather than pure black, and the print
+     font stack is stated explicitly so nothing falls back to a UA serif. */
   @media print {
     .masthead, .rail, .tabstrip, .subnav, .chips, .filterbar, .wpbar, .morebtn,
-    .drawer, .scrim, .modal, .noprint, .twist { display: none !important; }
-    body { background: #fff; color: #000; font-size: 11pt; }
+    .drawer, .scrim, .modal, .noprint, .twist, .seg { display: none !important; }
+    * { box-shadow: none !important; text-shadow: none !important; }
+    html { background: #fff; }
+    body { background: #fff; color: #1a1a1a; font-family: var(--sans); font-size: 11pt; line-height: 1.5; }
     .main { padding: 0; }
-    .panel, .init, .themerow, .chart { border-color: #bbb; break-inside: avoid; }
+    .panel, .init, .themerow, .chart, .phasebtn, .tile { border-color: #c8c8c8; break-inside: avoid; }
     .priority { break-before: page; }
     .priority:first-of-type { break-before: auto; }
     .task { break-inside: avoid; }
+    .quote, .vision { font-family: var(--serif); }
   }
 
 /* ---------- shell additions for the real app ---------- */
@@ -328,62 +643,76 @@
   min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: 24px 16px;
+  padding: var(--sp-5) var(--sp-4);
   background: var(--paper);
 }
 .splash-card {
   background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: 12px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--r-lg);
   padding: 26px 28px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-lg);
   width: min(420px, 100%);
 }
 .splash-card h1 {
   font-family: var(--display);
   font-size: 24px;
-  letter-spacing: -.015em;
+  font-weight: 600;
+  letter-spacing: -.018em;
   margin: 3px 0 0;
 }
-.splash-card p { color: var(--ink-2); font-size: 13.5px; margin-top: 9px; }
+.splash-card p { color: var(--ink-2); font-size: var(--fs-body); margin-top: 9px; }
 .splash-card code {
-  font-family: var(--mono);
-  font-size: 12px;
+  font-family: var(--code);
+  font-size: var(--fs-cap);
   background: var(--raise);
-  border: 1px solid var(--rule);
-  border-radius: 4px;
-  padding: 1px 5px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--r-xs);
+  padding: 1px 6px;
 }
 .splash-card .solid { margin-top: 15px; }
 
-.portalpick { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.portalpick { list-style: none; margin: var(--sp-3) 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .portalpick a {
   display: flex;
   flex-direction: column;
   gap: 1px;
-  padding: 11px 13px;
-  border: 1px solid var(--rule);
-  border-radius: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--r-sm);
   background: var(--raise);
   text-decoration: none;
   color: var(--ink);
+  transition: background .15s ease, box-shadow .15s ease;
 }
-.portalpick a:hover { border-color: var(--accent); background: var(--accent-soft); }
-.portalpick strong { font-weight: 500; font-size: 14.5px; }
-.portalpick span { font-size: 12.5px; color: var(--ink-3); }
+.portalpick a:hover { border-color: var(--accent-line); background: var(--accent-soft); box-shadow: var(--shadow-sm); }
+.portalpick strong { font-weight: 600; font-size: 14.5px; }
+.portalpick span { font-size: var(--fs-cap); color: var(--ink-3); }
 
-.brand-logo { height: 22px; width: auto; flex: 0 0 auto; border-radius: 3px; }
+.brand-logo { height: 22px; width: auto; flex: 0 0 auto; border-radius: var(--r-xs); }
 .whoami-mail { max-width: 22ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* The sticky header must not eat the phone. Everything in it wraps at 390px —
    the brand, the banner sentence, the tabs — which stacked to 359px of an
-   844px screen. Trim what is redundant there rather than letting it grow. */
+   844px screen; the smoke test fails above 28% (~236px). Trim what is
+   redundant there rather than letting it grow. The friendlier desktop type
+   scale and control padding are explicitly WOUND BACK here: a roomier subnav
+   button or a taller avatar is worth several px per header row, and four rows
+   stack. Re-measure .topbar at 390x844 after changing anything in it. */
 @media (max-width: 720px) {
   .brand-sub { display: none; }
   .masthead-in { padding: 7px 16px; gap: 10px; }
   .tabstrip { padding: 5px 16px !important; }
   .subnav-in { padding: 5px 16px; }
   .rail { max-height: none; }
+  /* An explicit tight line-height on every header control: body is 1.6, and
+     four header rows inheriting it cost ~10px of a 236px budget on their own. */
+  .subnav button, .tabstrip button { padding: 6px 11px; font-size: var(--fs-label); line-height: 1.35; }
+  .seg button { padding: 4px 10px; line-height: 1.35; }
+  .ghost { padding: 6px 12px; line-height: 1.35; }
+  .avatar { width: 24px; height: 24px; }
+  .syncpill { padding: 2px 9px 2px 7px; line-height: 1.4; }
+  .whoami { line-height: 1.35; }
 }
 
 @media (max-width: 920px) {
@@ -400,29 +729,79 @@
   background: var(--accent-soft);
   border-bottom: 1px solid var(--accent-line);
   color: var(--ink-2);
-  font-size: 12.5px;
+  font-size: var(--fs-label);
 }
 .demobar-short { display: none; }
+/* The word itself stays exactly 'Demo' — the smoke test string-compares
+   .demobar strong's textContent. text-transform: uppercase used to make it
+   LOOK uppercase while textContent stayed 'Demo'; the visual uppercase is
+   gone, the text is untouched. */
+/* 11.5px/600 accent text on a 14% accent tint was 4.43:1 in light. The chip
+   cannot simply take --accent-soft as its fill, because that is the colour of
+   the bar it sits on and the chip would vanish — so it does what .spill and
+   .pc-pill do: hue in the fill, word in --ink (13.2:1 light on the 20% mix,
+   10.7:1 dark), with a 45% accent ring so the chip's edge stays visible
+   against a ground only 1.16:1 away from it. */
 .demobar strong {
-  font-family: var(--mono);
-  font-size: 10px;
+  font-family: var(--sans);
+  font-size: var(--fs-micro);
   font-weight: 600;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: var(--accent);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--accent) 20%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+  padding: 1px 9px;
+  border-radius: var(--r-pill);
   flex: 0 0 auto;
 }
+/* The same bar, in its "you are looking at another engagement's content" state.
+   Amber rather than accent, because on this portal the accent colour means
+   "this client's own" and the difference has to be legible at a glance from
+   across a room. */
+.demobar.is-sample {
+  background: var(--w-soft);
+  border-bottom-color: color-mix(in srgb, var(--w) 34%, var(--surface));
+}
+/* This is the one label in the product that must not be borderline: it is what
+   tells a room of board members that the section they are looking at is another
+   engagement's content and not their plan. --w on a 16% --w mix was 3.81:1 at
+   11.5px. The hue now lives only in the fill and the ring; the word is --ink —
+   12.7:1 in light on #ebe1d2, 9.5:1 in dark on #3f3a31. */
+.demobar.is-sample strong {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--w) 20%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--w) 45%, transparent);
+}
+
 @media (max-width: 920px) {
   .demobar { padding: 9px 16px; }
 }
-@media print { .demobar { display: none !important; } }
+/* The board packet is a file that leaves the room, gets forwarded, and is opened
+   next month with no banner around it. The demo/draft bar is chrome and goes;
+   the bar that says "this is not your plan" is CONTENT and must survive, or the
+   PDF is a strategic plan with the client's name on it and nothing to say it is
+   somebody else's. Printed as an outlined note rather than a tinted chip, since
+   background colours are commonly dropped by print settings. */
+@media print {
+  .demobar { display: none !important; }
+  .demobar.is-sample {
+    display: block !important; background: #fff !important; color: #1a1a1a !important;
+    border: 1.5px solid #6b4a10; border-radius: 4px; padding: 7px 10px; margin: 0 0 14px;
+    font-size: 10pt; line-height: 1.45; break-inside: avoid; break-after: avoid;
+  }
+  .demobar.is-sample strong { background: none !important; color: #1a1a1a !important; padding: 0; }
+  .demobar.is-sample .demobar-long { display: inline !important; }
+  .demobar.is-sample .demobar-short { display: none !important; }
+}
 
 
 /* Must come AFTER the base .demobar rules above: when these lived earlier in
    the file the unconditional `.demobar-short { display: none }` below them
-   won the cascade, and the phone showed a bare "DEMO" chip with no text. */
+   won the cascade, and the phone showed a bare "DEMO" chip with no text.
+   The smoke test asserts the phone banner carries >= 10 characters. */
 @media (max-width: 720px) {
-  .demobar { padding: 6px 16px; font-size: 12px; gap: 8px; }
+  .demobar { padding: 6px 16px; font-size: var(--fs-cap); gap: 8px; line-height: 1.45; }
   .demobar-long { display: none; }
   .demobar-short { display: inline; }
 }
@@ -436,46 +815,51 @@
   background: var(--accent-soft);
   border-bottom: 1px solid var(--accent-line);
 }
-.savehint { font-size: 12.5px; color: var(--ink-2); }
-.savemsg { font-family: var(--mono); font-size: 11px; color: var(--ink-2); }
+.savehint { font-size: var(--fs-cap); color: var(--ink-2); }
+.savemsg { font-family: var(--sans); font-size: var(--fs-cap); color: var(--ink-2); }
 
-.efield { margin-top: 12px; }
-.efield label { display: block; margin-bottom: 4px; }
+.efield { margin-top: var(--sp-3); }
+.efield label { display: block; margin-bottom: 5px; }
 .efield input, .efield select, .efield textarea {
   font: inherit;
   font-size: 13.5px;
   width: 100%;
-  padding: 7px 10px;
+  padding: 8px 11px;
   border: 1px solid var(--rule);
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   background: var(--raise);
   color: var(--ink);
 }
+.efield input:focus, .efield select:focus, .efield textarea:focus { background: var(--surface); }
 .efield textarea { min-height: 70px; resize: vertical; }
-.efield .mono, .ekpi .mono { font-family: var(--mono); font-size: 12.5px; }
+/* These hold KPI values like 'Draft in elder review' and '4 groups into 8' —
+   prose, not code. They keep the class name and lose the code type. */
+.efield .mono, .ekpi .mono { font-family: var(--sans); font-size: var(--fs-label); }
 
-.priority.editing, .init.editing { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 16px 18px; }
-.priority.editing { margin-top: 16px; border-top: 1px solid var(--rule); }
+.priority.editing, .init.editing { background: var(--surface); border: 1px solid var(--rule-2); border-radius: var(--r-md); padding: var(--sp-4) 18px; box-shadow: var(--shadow-sm); }
+.priority.editing { margin-top: var(--sp-4); border-top: 1px solid var(--rule-2); }
 .ehead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.etasks { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
-.esub { margin-top: 16px; border-top: 1px solid var(--rule-2); padding-top: 12px; }
+.etasks { font-family: var(--sans); font-size: var(--fs-cap); font-variant-numeric: tabular-nums; color: var(--ink-3); }
+.esub { margin-top: var(--sp-4); border-top: 1px solid var(--rule-2); padding-top: var(--sp-3); }
 .esub > .ghost { margin-top: 10px; }
 
-.rowtools { margin-left: auto; display: inline-flex; gap: 3px; }
+.rowtools { margin-left: auto; display: inline-flex; gap: var(--sp-1); }
 .tool {
-  width: 26px; height: 26px;
-  border: 1px solid var(--rule);
-  border-radius: 6px;
+  width: 28px; height: 28px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--r-sm);
   color: var(--ink-2);
-  background: var(--surface);
+  background: var(--raise);
   display: inline-flex; align-items: center; justify-content: center;
-  font-size: 12px; line-height: 1;
+  font-size: var(--fs-cap); line-height: 1;
+  transition: background .15s ease, box-shadow .15s ease, color .15s ease;
 }
-.tool:hover { border-color: var(--accent); color: var(--ink); }
+.tool:hover { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); box-shadow: var(--shadow-sm); }
 .tool[disabled] { opacity: .4; cursor: default; }
-.tool[disabled]:hover { border-color: var(--rule); color: var(--ink-2); }
-.tool.danger:hover { border-color: var(--stop); color: var(--stop); }
-.solid.danger { background: var(--stop); }
+.tool[disabled]:hover { background: var(--raise); border-color: var(--rule-2); color: var(--ink-2); box-shadow: none; }
+.tool.danger:hover { background: color-mix(in srgb, var(--stop) 10%, var(--surface)); border-color: color-mix(in srgb, var(--stop) 40%, transparent); color: var(--stop); }
+.solid.danger { background: var(--stop); box-shadow: 0 1px 2px var(--sh-1), 0 4px 10px -4px color-mix(in srgb, var(--stop) 45%, transparent); }
+.solid.danger:hover { background: color-mix(in srgb, var(--stop) 88%, var(--ink)); }
 
 .ekpi {
   display: grid;
@@ -484,60 +868,63 @@
   grid-template-columns: minmax(0, 1fr) 160px 170px 78px 26px;
   gap: 6px;
   align-items: center;
-  margin-top: 7px;
+  margin-top: var(--sp-2);
 }
 .ekpi input, .ekpi select {
-  font: inherit; font-size: 13px; width: 100%;
-  padding: 6px 9px;
-  border: 1px solid var(--rule); border-radius: 6px;
+  font: inherit; font-size: var(--fs-label); width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--rule); border-radius: var(--r-sm);
   background: var(--raise); color: var(--ink);
 }
 
 .chipx {
   margin-left: 2px;
   color: var(--ink-3);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1;
   padding: 2px;
-  border-radius: 3px;
+  border-radius: var(--r-xs);
 }
-.chipx:hover { color: var(--stop); background: var(--rule-2); }
-.chip.addchip { border-style: dashed; color: var(--accent); }
-.chip.addchip:hover { background: var(--accent-soft); }
+.chipx:hover { color: var(--stop); background: color-mix(in srgb, var(--stop) 12%, transparent); }
+.chip.addchip { border-style: dashed; border-color: var(--accent-line); color: var(--accent); background: transparent; }
+.chip.addchip:hover { background: var(--accent-soft); color: var(--accent); }
 
-.pickerlist { margin-top: 12px; max-height: 42vh; overflow-y: auto; border-top: 1px solid var(--rule-2); }
+.pickerlist { margin-top: var(--sp-3); max-height: 42vh; overflow-y: auto; border-top: 1px solid var(--rule-2); }
 .pickrow {
   display: grid;
-  grid-template-columns: 20px 1fr auto 16px;
+  grid-template-columns: 22px 1fr auto 16px;
   gap: 9px;
   align-items: center;
   width: 100%;
   text-align: left;
-  padding: 8px 4px;
+  padding: 9px 6px;
   border-bottom: 1px solid var(--rule-2);
+  border-radius: var(--r-sm);
   font-size: 13.5px;
+  transition: background .12s ease;
 }
 .pickrow:hover { background: var(--raise); }
 .pickrow.on { background: var(--accent-soft); }
 .pickname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pickn { font-size: 11.5px; color: var(--ink-3); }
-.pickmark { color: var(--accent); font-size: 12px; }
+.pickn { font-size: var(--fs-cap); font-variant-numeric: tabular-nums; color: var(--ink-3); }
+.pickmark { color: var(--accent); font-size: var(--fs-label); }
 
 /* ---------- settings ---------- */
 .modal.wide { width: min(640px, calc(100% - 32px)); }
-.setgroup { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--rule-2); }
-.sethint { font-size: 12.5px; color: var(--ink-3); margin-top: 6px; }
-.egrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.setgroup { margin-top: 20px; padding-top: var(--sp-3); border-top: 1px solid var(--rule-2); }
+.sethint { font-size: var(--fs-cap); color: var(--ink-3); margin-top: 6px; }
+.egrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--sp-3); }
 .setsections { margin-top: 10px; }
 .setrow {
   display: flex; align-items: center; gap: 10px;
-  padding: 7px 0; border-bottom: 1px solid var(--rule-2); font-size: 13.5px;
+  padding: 8px 0; border-bottom: 1px solid var(--rule-2); font-size: 13.5px;
 }
-.setrow label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.setrow label { display: flex; align-items: center; gap: var(--sp-2); cursor: pointer; }
 .setrow.off { color: var(--ink-3); }
-.accentrow { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
-.accentrow input[type="color"] { width: 38px; height: 32px; padding: 2px; border: 1px solid var(--rule); border-radius: 6px; background: var(--raise); }
-.accentrow input.mono { flex: 1 1 auto; font-family: var(--mono); font-size: 12.5px; padding: 7px 10px; border: 1px solid var(--rule); border-radius: 7px; background: var(--raise); color: var(--ink); }
+.accentrow { display: flex; align-items: center; gap: var(--sp-2); margin-top: 10px; }
+.accentrow input[type="color"] { width: 40px; height: 34px; padding: 2px; border: 1px solid var(--rule); border-radius: var(--r-sm); background: var(--raise); }
+/* A hex value genuinely is code — one of the four places --code survives. */
+.accentrow input.mono { flex: 1 1 auto; font-family: var(--code); font-size: var(--fs-label); padding: 8px 11px; border: 1px solid var(--rule); border-radius: var(--r-sm); background: var(--raise); color: var(--ink); }
 
 @media (max-width: 720px) {
   .egrid { grid-template-columns: 1fr; }
@@ -546,25 +933,37 @@
   .savebar { padding: 6px 16px; gap: 7px; }
   .savebar .savehint, .savebar .savemsg { display: none; }
 }
+/* The export modal says plainly, before the click, that these files are samples. */
+.expsample {
+  margin-top: 11px; padding: 9px 11px; border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--w) 14%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--w) 40%, var(--surface));
+  font-size: var(--fs-label); line-height: 1.5; color: var(--ink-2);
+}
+.expsample strong { color: var(--ink); font-weight: 600; }
+
 @media print { .savebar, .rowtools, .chipx, .addchip { display: none !important; } }
 
 /* ---------- who has access ---------- */
-.teamadd { display: grid; grid-template-columns: minmax(0, 1fr) 190px auto; gap: 8px; margin-top: 10px; }
+.teamadd { display: grid; grid-template-columns: minmax(0, 1fr) 190px auto; gap: var(--sp-2); margin-top: 10px; }
 .teamadd input, .teamadd select {
   font: inherit; font-size: 13.5px; width: 100%;
-  padding: 7px 10px; border: 1px solid var(--rule); border-radius: 7px;
+  padding: 8px 11px; border: 1px solid var(--rule); border-radius: var(--r-sm);
   background: var(--raise); color: var(--ink);
 }
-.teamcheck { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; font-size: 12.5px; color: var(--ink-2); cursor: pointer; }
-.teamcheck code { font-family: var(--mono); font-size: 11.5px; background: var(--raise); border: 1px solid var(--rule); border-radius: 4px; padding: 0 4px; }
-.teamlist { margin-top: 8px; }
-.teamrow { display: grid; grid-template-columns: minmax(0, 1fr) 110px 26px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--rule-2); }
+.teamcheck { display: flex; gap: var(--sp-2); align-items: flex-start; margin-top: 10px; font-size: var(--fs-label); color: var(--ink-2); cursor: pointer; }
+/* A literal token string — one of the four places --code survives. */
+.teamcheck code { font-family: var(--code); font-size: var(--fs-cap); background: var(--raise); border: 1px solid var(--rule-2); border-radius: var(--r-xs); padding: 0 5px; }
+.teamlist { margin-top: var(--sp-2); }
+.teamrow { display: grid; grid-template-columns: minmax(0, 1fr) 110px 26px; gap: var(--sp-2); align-items: center; padding: 9px 0; border-bottom: 1px solid var(--rule-2); }
 .teamwho { display: flex; flex-direction: column; gap: 1px; font-size: 13.5px; min-width: 0; }
-.teamwho > span { font-size: 11px; }
-.teamseen { font-family: var(--mono); color: var(--ink-3); }
-.teamwarn { color: var(--stop); font-weight: 500; }
-.teamrow select { font: inherit; font-size: 12.5px; padding: 5px 7px; border: 1px solid var(--rule); border-radius: 6px; background: var(--raise); color: var(--ink); }
-.teamnote { font-size: 12.5px; color: var(--ink-2); margin-top: 12px; border-left: 2px solid var(--st-done); padding-left: 10px; }
+.teamwho > span { font-size: var(--fs-cap); }
+.teamseen { font-family: var(--sans); font-variant-numeric: tabular-nums; color: var(--ink-3); }
+.teamwarn { color: var(--stop); font-weight: 600; }
+.teamrow select { font: inherit; font-size: var(--fs-cap); padding: 6px 8px; border: 1px solid var(--rule); border-radius: var(--r-sm); background: var(--raise); color: var(--ink); }
+/* Was a fourth 2px-left-rule block. Four of them in one product made the page
+   read as a typeset document; the rule now belongs to .quote alone. */
+.teamnote { font-size: var(--fs-label); color: var(--ink-2); margin-top: var(--sp-3); background: color-mix(in srgb, var(--st-done) 9%, var(--surface)); border: 1px solid color-mix(in srgb, var(--st-done) 22%, transparent); border-radius: var(--r-md); padding: 10px 13px; }
 @media (max-width: 720px) {
   .teamadd { grid-template-columns: 1fr; }
   .teamrow { grid-template-columns: minmax(0, 1fr) 96px 26px; }
