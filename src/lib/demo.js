@@ -29,7 +29,7 @@ const ALL = ['scope', 'plan', 'findings', 'workplan', 'dashboard'];
    `engagement` jsonb, so a portal that moves to the database keeps this shape
    rather than needing a second adapter. */
 
-function filePortal({ id, slug, client, engagement, plan, findings, sampleSections }) {
+function filePortal({ id, slug, client, engagement, plan, findings, sampleSections, sampleClient }) {
   return {
     id,
     slug,
@@ -50,6 +50,12 @@ function filePortal({ id, slug, client, engagement, plan, findings, sampleSectio
       track: plan.track,
     },
     findings,
+    /* WHOSE the borrowed sections are. The sample is a whole other
+       organisation's plan, and the masthead wears this name while you are
+       reading them, so the identity on screen always matches the content
+       under it rather than putting this client's name over someone else's
+       priorities. Absent on a portal that borrows nothing. */
+    sampleClient,
     /* Which of the five sections are illustrative rather than this client's
        own. The app marks these; a section not listed here is real content.
        Stated as data because the honest answer differs per portal, and a
@@ -131,6 +137,11 @@ export async function loadPaact() {
     /* Scope & timeline is PAACT's. The other four are another client's,
        anonymised, and have to say so wherever they are shown. */
     sampleSections: ['plan', 'findings', 'workplan', 'dashboard'],
+    sampleClient: {
+      name: SAMPLE.client.name,
+      place: SAMPLE.client.place,
+      engagement: SAMPLE.client.engagement,
+    },
   });
 
   /* Sample tasks, so the Workplan and Dashboard previews have something in

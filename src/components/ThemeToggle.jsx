@@ -49,13 +49,25 @@ function osTheme() {
 
 /* What the page is actually WEARING right now: an explicit choice if there is
    one, otherwise whatever the OS says. */
-function resolvedTheme() {
+export function resolvedTheme() {
   const attr = document.documentElement.getAttribute('data-theme');
   return attr === 'dark' || attr === 'light' ? attr : osTheme();
 }
 
-function applyTheme(next) {
+/* `persist` separates a PREFERENCE from a FORCED theme.
+
+   A forced theme (the section-driven one — see App.jsx) must always write the
+   attribute, even when it matches the OS: dropping the override because the OS
+   agrees today would let the OS flipping at sunset silently take the light
+   "this is your content" page dark, which is the one thing the signal must
+   never do. It also never touches storage, because it is not a choice the
+   person made and must not outlive the portal. */
+function applyTheme(next, { persist = true } = {}) {
   const root = document.documentElement;
+  if (!persist) {
+    root.setAttribute('data-theme', next);
+    return;
+  }
   if (next === osTheme()) {
     /* Back in step with the OS — drop the override rather than pinning a
        value that will go stale the next time the OS flips. */
@@ -74,6 +86,82 @@ function applyTheme(next) {
       /* as above */
     }
   }
+}
+
+/* Where the circle grows from. A keyboard activation reports clientX/clientY
+   as 0, so fall back to the centre of the element that was activated — read
+   the rect now, while the event is still on the stack. */
+export function originOf(ev) {
+  const el = ev && (ev.currentTarget || ev.target);
+  if (ev && (ev.clientX || ev.clientY)) return { x: ev.clientX, y: ev.clientY };
+  if (el && el.getBoundingClientRect) {
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+  return null;
+}
+
+/* The wipe, extracted so that BOTH the toggle and the section change can drive
+   it. `persist` is false for the section-driven theme: it is a signal about
+   what you are looking at, not a preference, and must not outlive the portal. */
+export function wipeToTheme(next, origin, { persist = true } = {}) {
+  const root = document.documentElement;
+
+  let timer = 0;
+  let cleared = false;
+  const clear = () => {
+    if (cleared) return;
+    cleared = true;
+    if (timer) clearTimeout(timer);
+    root.classList.remove('theme-wipe');
+  };
+
+  const reduce = mq('(prefers-reduced-motion: reduce)');
+  const supported = typeof document.startViewTransition === 'function';
+
+  /* startViewTransition REJECTS on a hidden tab rather than resolving, so a
+     theme flipped from a background tab throws unless document.hidden is
+     checked. Firefox and older Safari have no API at all. Reduced motion is a
+     request, not a hint. All three take the instant flip — and the instant
+     flip is not a degraded outcome here: the theme still lands, so the signal
+     it carries still lands. */
+  if (!supported || document.hidden || (reduce && reduce.matches)) {
+    applyTheme(next, { persist });
+    return;
+  }
+
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const x = origin ? origin.x : W / 2;
+  const y = origin ? origin.y : 0;
+
+  /* The radius has to reach the FARTHEST corner from the origin, or the circle
+     stops growing before it has covered the screen and you watch a hard edge
+     park mid-page. The +4 hides sub-pixel rounding at the end. */
+  const r = Math.hypot(Math.max(x, W - x), Math.max(y, H - y)) + 4;
+
+  root.style.setProperty('--wipe-x', `${x}px`);
+  root.style.setProperty('--wipe-y', `${y}px`);
+  root.style.setProperty('--wipe-r', `${r}px`);
+  root.classList.add('theme-wipe');
+
+  let t;
+  try {
+    t = document.startViewTransition(() => {
+      applyTheme(next, { persist });
+    });
+  } catch (e) {
+    /* Threw before or after running the callback — applyTheme is idempotent,
+       so just make sure the theme landed and the class came off. */
+    applyTheme(next, { persist });
+    clear();
+    return;
+  }
+
+  timer = setTimeout(clear, WIPE_FAILSAFE_MS);
+  /* BOTH paths. A rejected transition that skips this leaves .theme-wipe on
+     <html> and every transition on the page permanently dead. */
+  t.finished.then(clear, clear);
 }
 
 export default function ThemeToggle() {
@@ -96,81 +184,11 @@ export default function ThemeToggle() {
   }, []);
 
   const onClick = useCallback((ev) => {
-    const root = document.documentElement;
     const next = resolvedTheme() === 'dark' ? 'light' : 'dark';
-
     /* Synchronously, before anything else: the ARIA state. This only rewrites
        attributes, never pixels, so it is safe to let React land it whenever. */
     setDark(next === 'dark');
-
-    let timer = 0;
-    let cleared = false;
-    const clear = () => {
-      if (cleared) return;
-      cleared = true;
-      if (timer) clearTimeout(timer);
-      root.classList.remove('theme-wipe');
-    };
-
-    const reduce = mq('(prefers-reduced-motion: reduce)');
-    const supported = typeof document.startViewTransition === 'function';
-
-    /* startViewTransition REJECTS on a hidden tab rather than resolving, so a
-       theme flipped from a background tab throws unless document.hidden is
-       checked. Firefox and older Safari have no API at all. Reduced motion is
-       a request, not a hint. All three take the instant flip. */
-    if (!supported || document.hidden || (reduce && reduce.matches)) {
-      applyTheme(next);
-      return;
-    }
-
-    /* Origin of the circle. A keyboard activation reports clientX/clientY as
-       0, so fall back to the centre of the button itself — read the rect now,
-       while the event is still on the stack. */
-    let x;
-    let y;
-    const btn = ev && ev.currentTarget;
-    if (ev && (ev.clientX || ev.clientY)) {
-      x = ev.clientX;
-      y = ev.clientY;
-    } else if (btn && btn.getBoundingClientRect) {
-      const r = btn.getBoundingClientRect();
-      x = r.left + r.width / 2;
-      y = r.top + r.height / 2;
-    } else {
-      x = 0;
-      y = window.innerHeight;
-    }
-
-    /* The radius has to reach the FARTHEST corner from the origin, or the
-       circle stops growing before it has covered the screen and you watch a
-       hard edge park mid-page. The +4 hides sub-pixel rounding at the end. */
-    const W = window.innerWidth;
-    const H = window.innerHeight;
-    const r = Math.hypot(Math.max(x, W - x), Math.max(y, H - y)) + 4;
-
-    root.style.setProperty('--wipe-x', `${x}px`);
-    root.style.setProperty('--wipe-y', `${y}px`);
-    root.style.setProperty('--wipe-r', `${r}px`);
-    root.classList.add('theme-wipe');
-
-    let t;
-    try {
-      t = document.startViewTransition(() => {
-        applyTheme(next);
-      });
-    } catch (e) {
-      /* Threw before or after running the callback — applyTheme is idempotent,
-         so just make sure the theme landed and the class came off. */
-      applyTheme(next);
-      clear();
-      return;
-    }
-
-    timer = setTimeout(clear, WIPE_FAILSAFE_MS);
-    /* BOTH paths. A rejected transition that skips this leaves .theme-wipe on
-       <html> and every transition on the page permanently dead. */
-    t.finished.then(clear, clear);
+    wipeToTheme(next, originOf(ev));
   }, []);
 
   return (

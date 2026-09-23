@@ -6,6 +6,7 @@ import { DEMO_SLUG, loadFilePortal, fileBackedSlug } from './lib/demo.js';
 import { counts, indexPlan, findingDrives, fmt, pct, today } from './lib/format.js';
 import SignIn from './components/SignIn.jsx';
 import Masthead from './components/Masthead.jsx';
+import { wipeToTheme, resolvedTheme, originOf } from './components/ThemeToggle.jsx';
 import Scope, { currentPhaseOf } from './sections/Scope.jsx';
 import Plan from './sections/Plan.jsx';
 import Findings from './sections/Findings.jsx';
@@ -348,6 +349,37 @@ export default function App() {
   }, [editing]);
 
   /* ---- gates ---- */
+  /* THESE THREE MUST STAY ABOVE THE EARLY RETURNS BELOW. They lived beside
+     the rest of the sample logic further down, which put them after the
+     loading and sign-in returns — so they ran on the full render and not on
+     the others, and React counted a different number of hooks between renders
+     and blanked the page (error #310). The values they need are derived inside
+     the effect for the same reason: deriving them above would mean moving more
+     code up here rather than less.
+
+     Where the circle grows from is held in a ref because the swap runs in an
+     effect, after the section has changed, by which time the click event is
+     long gone. */
+  const wipeOrigin = useRef(null);
+  const pickSection = useCallback((id, ev) => {
+    wipeOrigin.current = originOf(ev);
+    setSection(id);
+    setOpenTask(null);
+    window.scrollTo(0, 0);
+  }, []);
+  useEffect(() => {
+    const ss = Array.isArray(portal?.sampleSections) ? portal.sampleSections : [];
+    const all = Array.isArray(portal?.sections) ? portal.sections : [];
+    /* Mixed only: on /demo everything is borrowed and on a real client portal
+       nothing is, and in both of those a theme that never changes says
+       nothing. Leave the person's own preference alone there. */
+    if (!(isFile && !isDemo && ss.length > 0 && ss.length < all.length)) return;
+    const want = ss.includes(section) ? 'dark' : 'light';
+    if (resolvedTheme() === want) return;
+    wipeToTheme(want, wipeOrigin.current, { persist: false });
+    wipeOrigin.current = null;
+  }, [portal, section, isFile, isDemo]);
+
   if (session === undefined || reason === 'loading') return <Splash>Loading…</Splash>;
 
   if (!isFile && !isConfigured) {
@@ -398,16 +430,11 @@ export default function App() {
      the portal, so a portal with nothing borrowed shows none of this. */
   const sampleSections = Array.isArray(portal.sampleSections) ? portal.sampleSections : [];
   const sampleHere = sampleSections.includes(section);
-  const sampleTabs = sections.filter((s) => sampleSections.includes(s.id)).map((s) => s.title);
   /* Read aloud, "PAACT (Promise All Atlanta Children Thrive)'s" twice in one
      sentence is a mail merge. The parenthetical earns its place in the masthead,
      once, and nowhere else. */
   const shortClient = shortName(portal.client_name);
-  /* "The plan, Findings, Workplan, Dashboard" is a list that trails off; a
-     reader hears a missing item. */
-  const sampleList = sampleTabs.length > 1
-    ? `${sampleTabs.slice(0, -1).join(', ')} and ${sampleTabs[sampleTabs.length - 1]}`
-    : sampleTabs[0] || '';
+  const sampleName = portal.sampleClient?.name || 'another engagement';
   /* The rail is on screen on EVERY tab, including the one section that is this
      client's own. A figure in it drawn from the borrowed workplan is therefore
      attributed to this client with nothing beside it to say otherwise: the
@@ -415,6 +442,16 @@ export default function App() {
      one of them. On the all-sample /demo the banner covers the whole page, so
      this only applies to a MIXED portal. */
   const sampleWorkplan = sampleSections.includes('workplan') && !isDemo;
+  /* A MIXED portal: some sections are this client's, some are borrowed. On one
+     of those the theme stops being a preference and becomes a signal — their
+     own section is light, the borrowed ones are dark — so crossing between
+     them is a thing you feel rather than a caption you have to read.
+
+     The manual toggle is hidden here, and that is the deliberate cost: a theme
+     that means "whose content is this" cannot also mean "what I find easier to
+     read", because the moment someone pins dark the signal reads "borrowed" on
+     every page and stops being true. Everywhere else the toggle is untouched. */
+  const mixedPortal = isFile && !isDemo && sampleSections.length > 0 && sampleSections.length < sections.length;
 
   const Body = { scope: Scope, plan: Plan, findings: Findings, workplan: Workplan, dashboard: Dashboard }[section];
   /* While editing, §2 becomes the same layout with fields in it. */
@@ -432,6 +469,8 @@ export default function App() {
         saveErr={saveErr}
         isFile={isFile}
         isDemo={isDemo}
+        sampleHere={sampleHere}
+        showTheme={!mixedPortal}
         onSignOut={() => signOut().then(() => setSession(null))}
       />
       {isDemo ? (
@@ -446,29 +485,29 @@ export default function App() {
           <span className="demobar-short">Sample content. Nothing is saved.</span>
         </div>
       ) : null}
-      {isFile && !isDemo ? (
-        /* A file-backed portal that carries REAL client content in some
-           sections and another engagement's sample in the others. Which is
-           which has to be visible on every section, not only on the one that
-           happens to explain it — a strategic plan showing priorities this
-           client never agreed to is worse than no plan at all. */
-        <div className={`demobar${sampleHere ? ' is-sample' : ''}`}>
-          <strong>{sampleHere ? 'Sample' : 'Working draft'}</strong>
+      {isFile && !isDemo && sampleHere ? (
+        /* ONLY on a borrowed section. The client's own section carries no bar
+           at all — a banner on every page is a banner nobody reads, and here
+           the bar's PRESENCE is the message: it appears at the same moment the
+           masthead changes name and the page goes dark. Three signals, one
+           crossing. */
+        <div className="demobar is-sample">
+          <strong>Demo data</strong>
           <span className="demobar-long">
-            {sampleHere
-              ? `${labels[section] || section} is illustrative content from another engagement, shown so you can see the shape of what this one produces. It is not ${shortClient}'s.`
-              : `${shortClient}'s own content. ${sampleTabs.length ? `${sampleList} still show a sample from another engagement.` : ''}`}
-            {' '}Everything works — nothing is saved.
+            {/* No section label in the sentence: the five labels are a mixed
+                bag of nouns ("The plan", "Findings", "Workplan") and any
+                template that fits one reads as a typo in another — "Findings
+                shows their plan". Naming the two organisations is the part
+                that matters anyway. */}
+            {`Everything on this page is ${sampleName}'s, not ${shortClient}'s — an example of what this section will hold once the engagement produces it. Everything works; nothing is saved.`}
           </span>
-          <span className="demobar-short">
-            {sampleHere ? 'Another engagement’s sample.' : 'Nothing is saved.'}
-          </span>
+          <span className="demobar-short">{`Demo data — not ${shortClient}'s.`}</span>
         </div>
       ) : null}
 
       <nav className="tabstrip" aria-label="Sections">
         {sections.map((s) => (
-          <button key={s.id} aria-current={section === s.id} onClick={() => { setSection(s.id); setOpenTask(null); window.scrollTo(0, 0); }}>
+          <button key={s.id} aria-current={section === s.id} onClick={(e) => pickSection(s.id, e)}>
             {s.title}
           </button>
         ))}
@@ -503,7 +542,7 @@ export default function App() {
         <aside className="rail">
           <nav className="railnav" aria-label="Sections">
             {sections.map((s) => (
-              <button key={s.id} aria-current={section === s.id} onClick={() => { setSection(s.id); setOpenTask(null); window.scrollTo(0, 0); }}>
+              <button key={s.id} aria-current={section === s.id} onClick={(e) => pickSection(s.id, e)}>
                 <span className="rn-n">{s.n}</span>
                 <span className="rn-t">{s.title}</span>
                 <span className="rn-c">{s.id === 'workplan' && !sampleWorkplan ? `${overall.done}/${overall.total}` : ''}</span>

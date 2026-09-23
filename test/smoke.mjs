@@ -386,10 +386,39 @@ results.paactKeyDatesShown = ['Fall Luncheon', 'Impact Report', 'RFP project end
 results.paactCadenceShown = /Shawnell/.test(paactAgreement) && /Weekly/i.test(paactAgreement);
 await paact.screenshot({ path: path.join(root, 'test/shot-09-paact-timeline.png'), fullPage: true });
 
+/* THE CROSSING. Three signals fire together when you leave the client's own
+   section for a borrowed one: the page wipes from light to dark, the masthead
+   changes to the organisation whose content it actually is, and a bar appears.
+   Section 01 carries none of them. Any one of the three surviving alone is a
+   half-signal, so all three are asserted on both sides of the crossing. */
+const crossing = async (label) => ({
+  where: label,
+  theme: await paact.evaluate(() => document.documentElement.getAttribute('data-theme')),
+  brand: (await paact.textContent('.brand-name').catch(() => '')) || '',
+  bar: await paact.evaluate(() => !!document.querySelector('.demobar')),
+  toggle: await paact.evaluate(() => !!document.querySelector('.themetoggle')),
+});
+results.cross01 = await crossing('scope');
+
 /* Sections 2-5 are another engagement's anonymised content. Unmarked, a client
    would read priorities they never agreed to as their own plan. */
 await paact.click('.railnav button:has-text("The plan")');
-await paact.waitForTimeout(500);
+await paact.waitForTimeout(1100);
+results.cross02 = await crossing('plan');
+/* And back: a signal that only fires one way is worse than none, because the
+   page stays dark over the client's own content. */
+await paact.click('.railnav button:has-text("Scope")');
+await paact.waitForTimeout(1100);
+results.cross01back = await crossing('scope again');
+results.paactStorage = await paact.evaluate(() => {
+  try { return Object.entries(localStorage).map(([k, v]) => `${k}=${v}`).join(','); }
+  catch (e) { return 'THREW ' + e.message; }
+});
+results.wipeClassStuck = await paact.evaluate(
+  () => document.documentElement.classList.contains('theme-wipe'),
+);
+await paact.click('.railnav button:has-text("The plan")');
+await paact.waitForTimeout(1100);
 results.paactPlanMarkedSample = await paact.evaluate(() => {
   const t = (document.querySelector('.topbar')?.innerText || '') + ' ' + (document.querySelector('.main')?.innerText || '');
   return /sample|illustrative/i.test(t);
@@ -450,30 +479,36 @@ results.paactTouchedNoDatabase = paactRest.length === 0;
 results.paactRestCalls = paactRest.slice(0, 3);
 
 /* ---- the theme toggle ---- */
-const themeBtn = await paact.$('[aria-label*="theme" i], [aria-label*="dark" i], [aria-label*="light" i], .themetoggle');
+/* The toggle is checked on /demo, NOT /paact. On a mixed portal the theme is
+   a signal about whose content you are reading, so the manual control is
+   deliberately hidden there — see App.jsx. Asserting it here would have been
+   asserting the bug. */
+const themeBtn = await demo.$('[aria-label*="theme" i], [aria-label*="dark" i], [aria-label*="light" i], .themetoggle');
 results.themeToggleFound = !!themeBtn;
 if (themeBtn) {
-  const before = await paact.evaluate(() => document.documentElement.getAttribute('data-theme'));
+  const before = await demo.evaluate(() => document.documentElement.getAttribute('data-theme'));
   await themeBtn.click();
-  await paact.waitForTimeout(800);
-  const after = await paact.evaluate(() => document.documentElement.getAttribute('data-theme'));
+  await demo.waitForTimeout(800);
+  const after = await demo.evaluate(() => document.documentElement.getAttribute('data-theme'));
   results.themeFlipped = before !== after;
   results.themeAfter = after;
   /* The wipe adds a suppression class that kills every transition on the page.
      If it is not removed on BOTH the resolved and rejected paths, the app is
      left permanently un-animated. */
-  results.themeWipeClassCleared = await paact.evaluate(
+  results.themeWipeClassCleared = await demo.evaluate(
     () => !document.documentElement.classList.contains('theme-wipe'),
   );
-  /* Whatever key the toggle chose — assert a choice was stored, not the name. */
-  results.themePersisted = await paact.evaluate(() => {
-    try {
-      return Object.keys(localStorage)
-        .filter((k) => /theme/i.test(k) || /^(light|dark)$/i.test(localStorage.getItem(k) || ''))
-        .map((k) => k + '=' + localStorage.getItem(k)).join(',') || '';
-    } catch { return 'threw'; }
+  /* The whole of storage, on the SAME page the toggle was clicked on. This
+     read from `paact` while the click happened on `demo`, and reported "" —
+     correctly, because a mixed portal's forced theme deliberately never
+     persists. An assertion pointed at the wrong page fails on a working app
+     and says nothing about why, so it dumps everything now and lets the
+     assertion below do the matching. */
+  results.themeStorage = await demo.evaluate(() => {
+    try { return Object.entries(localStorage).map(([k, v]) => `${k}=${v}`).join(','); }
+    catch (e) { return 'THREW ' + e.message; }
   });
-  await paact.screenshot({ path: path.join(root, 'test/shot-11-paact-dark.png') });
+  await demo.screenshot({ path: path.join(root, 'test/shot-11-demo-dark.png') });
 }
 
 const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
@@ -567,6 +602,21 @@ if (/PAACT/i.test(results.paactPlanH2 || ''))
 if (!/sample/i.test(results.paactPlanH2 || ''))
   failures.push('the sample plan headline does not say it is a sample: ' + JSON.stringify(results.paactPlanH2));
 if (results.paactLeaksRealClient) failures.push('/paact LEAKS THE REAL CLIENT OF THE SAMPLE CONTENT');
+/* ---- the crossing into demo data ---- */
+if (results.cross01?.theme === 'dark') failures.push("the client's own section is dark — the demo-data signal is inverted");
+if (results.cross02?.theme !== 'dark') failures.push('a borrowed section did not go dark: ' + JSON.stringify(results.cross02?.theme));
+if (results.cross01back?.theme !== 'light') failures.push('coming back to the client\u2019s own section did not return to light: ' + JSON.stringify(results.cross01back?.theme));
+if (!/PAACT/i.test(results.cross01?.brand || '')) failures.push('section 01 masthead is not PAACT: ' + JSON.stringify(results.cross01?.brand));
+if (!/PAACT/i.test(results.cross01back?.brand || '')) failures.push('masthead did not return to PAACT: ' + JSON.stringify(results.cross01back?.brand));
+if (/PAACT/i.test(results.cross02?.brand || ''))
+  failures.push("a borrowed section still wears the client's name over another organisation's plan: " + JSON.stringify(results.cross02?.brand));
+if (!results.cross02?.brand) failures.push('a borrowed section has no masthead name at all');
+if (results.cross01?.bar) failures.push("the client's own section shows a demo bar");
+if (!results.cross02?.bar) failures.push('a borrowed section shows no demo bar');
+if (results.cross01back?.bar) failures.push('the demo bar stayed after returning to the client\u2019s own section');
+if (results.wipeClassStuck) failures.push('.theme-wipe was left on <html> after a section change — every transition on the page is now dead');
+if (results.cross02?.toggle || results.cross01?.toggle)
+  failures.push('the manual theme toggle is reachable on a mixed portal, where the theme is a signal rather than a preference');
 if (!results.sampleTermsChecked)
   failures.push('the section-01 purity check built an empty term list and tested nothing');
 if (results.section01Leaks?.length)
@@ -576,8 +626,13 @@ if (!results.themeToggleFound) failures.push('no theme toggle was found');
 if (results.themeToggleFound && !results.themeFlipped) failures.push('the theme toggle did not change the theme');
 if (results.themeToggleFound && !results.themeWipeClassCleared)
   failures.push('the wipe left .theme-wipe on <html> — every transition on the page is now dead');
-if (results.themeToggleFound && !results.themePersisted)
-  failures.push('the theme choice was not persisted: ' + JSON.stringify(results.themePersisted));
+if (results.themeToggleFound && !/=(light|dark)\b/.test(results.themeStorage || ''))
+  failures.push('the theme choice was not persisted. localStorage holds: ' + JSON.stringify(results.themeStorage));
+/* A mixed portal's theme is a signal, not a preference: it must never be
+   written to storage, or it would follow the person to their NEXT portal and
+   assert something about content it has never seen. */
+if (/paact/i.test(results.paactStorage || '') || /=(light|dark)\b/.test(results.paactStorage || ''))
+  failures.push('the section-driven theme was persisted; it must not outlive the portal: ' + JSON.stringify(results.paactStorage));
 
 if (errs.length) failures.push('page errors: ' + errs.join(' | '));
 

@@ -9,8 +9,19 @@ const ROLE_WORD = { owner: 'Owner', staff: 'Staff', board: 'Board — read only'
    but theirs — took the demo branch and announced itself as a Demo directly
    above a banner explaining that only SOME of its sections are samples. A
    client's own portal must never call itself a demo. */
-export default function Masthead({ portal, labels, role, session, saveErr, isFile, isDemo, onSignOut }) {
+export default function Masthead({
+  portal, labels, role, session, saveErr, isFile, isDemo, sampleHere, showTheme = true, onSignOut,
+}) {
   const email = session?.user?.email || '';
+  /* WEAR THE NAME OF WHOEVER OWNS WHAT IS ON SCREEN. On a portal whose other
+     sections are borrowed, holding this client's name across all five puts
+     their masthead over another organisation's vision and priorities — the
+     exact thing the sample marking exists to prevent, committed in the largest
+     type on the page. So the identity follows the section. */
+  const sc = sampleHere ? portal.sampleClient : null;
+  const shownName = sc?.name || portal.client_name;
+  const shownEngagement = sc?.engagement || portal.engagement_name;
+  const shownPlace = sc ? sc.place : portal.place;
   const accent = portal.brand?.accent;
   const roleWord = ROLE_WORD[role] || 'Board';
   /* "Board — read only · full access" would contradict itself, and at 390px it
@@ -24,9 +35,9 @@ export default function Masthead({ portal, labels, role, session, saveErr, isFil
           {portal.brand?.logoUrl ? (
             <img className="brand-logo" src={portal.brand.logoUrl} alt="" />
           ) : null}
-          <span className="brand-name">{portal.client_name}</span>
+          <span className="brand-name">{shownName}</span>
           <span className="brand-sub">
-            {portal.engagement_name}{portal.place ? ` · ${portal.place}` : ''}
+            {shownEngagement}{shownPlace ? ` · ${shownPlace}` : ''}
           </span>
         </div>
         <div className="mast-right">
@@ -41,7 +52,7 @@ export default function Masthead({ portal, labels, role, session, saveErr, isFil
                   so it lands in the same place whichever way the portal is
                   being viewed. The browser test reads its role text from
                   '.mast-right .eyebrow', which a later sibling cannot affect. */}
-              <ThemeToggle />
+              {showTheme ? <ThemeToggle /> : null}
             </>
           ) : (
             <>
@@ -49,7 +60,7 @@ export default function Masthead({ portal, labels, role, session, saveErr, isFil
                 {saveErr ? 'not saved' : 'live'}
               </span>
               <span className="eyebrow">{roleWord}</span>
-              <ThemeToggle />
+              {showTheme ? <ThemeToggle /> : null}
               {/* The identity cluster stays intact at the right edge: avatar,
                   address, sign out. The toggle goes before it, not after. */}
               <span className="whoami">
