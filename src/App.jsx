@@ -389,7 +389,6 @@ export default function App() {
      the first render rather than push, so the entry the person arrived on is
      corrected rather than duplicated. */
   useEffect(() => {
-    if (!slug) return undefined;
     const onPop = () => {
       const r = routeFromLocation();
       if (ALL_SECTIONS.includes(r.section)) setSection(r.section);
@@ -401,9 +400,18 @@ export default function App() {
 
   const firstUrlWrite = useRef(true);
   useEffect(() => {
-    if (!slug || reason !== 'ok') return;
+    /* fileSlug, not slug. Visiting the bare site root with no Supabase project
+       configured falls back to the demo — correct, a fresh deploy should show
+       the product rather than an error — but it did so at "/", a URL that says
+       nothing about whose content it is. Someone opening the root saw another
+       client's plan under a masthead bearing that client's name and reasonably
+       concluded the portal was broken. With a QR code pointing at a slide, a
+       whole room would do it at once. The address bar now says /demo, which is
+       true, and matches the banner. */
+    const base = fileSlug || slug;
+    if (!base || reason !== 'ok') return;
     const tail = section === 'scope' ? `/${SUB_SLUG[sub.scope] || 'timeline'}` : '';
-    const next = `/${slug}/${section}${tail}`;
+    const next = `/${base}/${section}${tail}`;
     if (window.location.pathname === next) return;
     try {
       if (firstUrlWrite.current) window.history.replaceState(null, '', next);
@@ -413,7 +421,7 @@ export default function App() {
          perfectly usable without the address bar following along. */
     }
     firstUrlWrite.current = false;
-  }, [slug, reason, section, sub.scope]);
+  }, [slug, fileSlug, reason, section, sub.scope]);
 
   const wipeOrigin = useRef(null);
   const pickSection = useCallback((id, ev) => {

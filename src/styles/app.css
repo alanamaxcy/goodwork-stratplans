@@ -700,14 +700,43 @@
    button or a taller avatar is worth several px per header row, and four rows
    stack. Re-measure .topbar at 390x844 after changing anything in it. */
 @media (max-width: 720px) {
-  .brand-sub { display: none; }
+  /* A PHONE IS THE PRIMARY SURFACE HERE, not a fallback: this portal is reached
+     by scanning a QR code off a slide, so the first screen a client ever sees is
+     390px wide. The header was 192px of an 844px screen — masthead 107, section
+     tabs 43, sub-nav 43 — a quarter of the viewport spent on navigation before a
+     word of content, and most of that 107 was the registered name wrapping to
+     two lines of display type while the engagement it belongs to was hidden. */
+  .bn-paren { display: none; }
+  .brand-name { font-size: 17px; }
+  .brand-sub { display: block; font-size: var(--fs-cap); white-space: normal; }
+  .brand { flex-direction: column; align-items: flex-start; gap: 1px; row-gap: 1px; }
+  /* Operator chrome, not client information. Somebody who scanned a code to read
+     their timeline does not need to be told the demo does not save, and it cost
+     a whole row. The desktop masthead still carries both. */
+  .mast-right .syncpill, .mast-right .eyebrow, .mast-right .whoami { display: none; }
   .masthead-in { padding: 7px 16px; gap: 10px; }
   .tabstrip { padding: 5px 16px !important; }
   .subnav-in { padding: 5px 16px; }
   .rail { max-height: none; }
   /* An explicit tight line-height on every header control: body is 1.6, and
      four header rows inheriting it cost ~10px of a 236px budget on their own. */
-  .subnav button, .tabstrip button { padding: 6px 11px; font-size: var(--fs-label); line-height: 1.35; }
+  /* 44px of touchable height, which is the floor a thumb needs — these were
+     32px. The padding stays small so the bar does not grow: the height comes
+     from a min-height on the control, and the extra area is above and below the
+     label rather than around it. */
+  .subnav button, .tabstrip button {
+    padding: 6px 12px; font-size: var(--fs-label); line-height: 1.35;
+    min-height: 40px; display: inline-flex; align-items: center;
+  }
+  .tabstrip, .subnav { position: relative; }
+  /* Both strips scroll sideways and neither said so — "Workpl…" and "Edit plan"
+     sat past the right edge with no cue that anything was there. */
+  .tabstrip::after, .subnav::after {
+    content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 26px;
+    pointer-events: none;
+  }
+  .tabstrip::after { background: linear-gradient(to right, transparent, var(--surface) 78%); }
+  .subnav::after { background: linear-gradient(to right, transparent, var(--paper) 78%); }
   .seg button { padding: 4px 10px; line-height: 1.35; }
   .ghost { padding: 6px 12px; line-height: 1.35; }
   .avatar { width: 24px; height: 24px; }

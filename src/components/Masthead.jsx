@@ -22,6 +22,14 @@ export default function Masthead({
   const shownName = sc?.name || portal.client_name;
   const shownEngagement = sc?.engagement || portal.engagement_name;
   const shownPlace = sc ? sc.place : portal.place;
+  /* "PAACT (Promise All Atlanta Children Thrive)" is two wrapped lines of
+     display type at 390px — a quarter of the screen spent on an expansion,
+     while the engagement it belongs to is hidden. The registered name earns
+     its place on a laptop and on the Team tab; on a phone the short form and
+     the engagement are worth more. */
+  const parenAt = shownName.indexOf('(');
+  const nameBase = parenAt > 0 ? shownName.slice(0, parenAt).trim() : shownName;
+  const nameParen = parenAt > 0 ? shownName.slice(parenAt).trim() : '';
   const accent = portal.brand?.accent;
   const roleWord = ROLE_WORD[role] || 'Board';
   /* "Board — read only · full access" would contradict itself, and at 390px it
@@ -35,7 +43,14 @@ export default function Masthead({
           {portal.brand?.logoUrl ? (
             <img className="brand-logo" src={portal.brand.logoUrl} alt="" />
           ) : null}
-          <span className="brand-name">{shownName}</span>
+          {/* Split, not duplicated: the phone hides .bn-paren and is left with
+              "PAACT", while the desktop still reads the full registered name
+              and textContent stays correct on both. Rendering two copies and
+              toggling them would double the name for a screen reader and for
+              anything reading .brand-name. */}
+          <span className="brand-name">
+            {nameBase}{nameParen ? <span className="bn-paren"> {nameParen}</span> : null}
+          </span>
           <span className="brand-sub">
             {shownEngagement}{shownPlace ? ` · ${shownPlace}` : ''}
           </span>

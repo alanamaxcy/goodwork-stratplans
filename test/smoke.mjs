@@ -521,6 +521,14 @@ if (themeBtn) {
   await demo.screenshot({ path: path.join(root, 'test/shot-11-demo-dark.png') });
 }
 
+/* The bare root, before anything else touches this context. */
+const rootPage = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+await rootPage.goto(`http://127.0.0.1:${WEB_PORT}/`, { waitUntil: 'networkidle' });
+await rootPage.waitForTimeout(900);
+results.rootPath = await rootPage.evaluate(() => location.pathname);
+results.rootBrand = (await rootPage.textContent('.brand-name').catch(() => '')) || '';
+await rootPage.close();
+
 const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
 await phone.goto(`http://127.0.0.1:${WEB_PORT}/demo`, { waitUntil: 'networkidle' });
 await phone.waitForTimeout(500);
@@ -531,6 +539,32 @@ results.phoneHScroll = await phone.evaluate(() => document.documentElement.scrol
 results.phoneBannerText = await phone.evaluate(
   () => (document.querySelector('.demobar')?.innerText || '').replace(/\s+/g, ' ').trim(),
 );
+/* A QR CODE ON A SLIDE MAKES THE PHONE THE PRIMARY SURFACE, so these are not
+   "does it survive at 390px" checks — this is the first screen a client ever
+   sees. The header was 23% of the viewport, most of it the registered name
+   wrapping to two lines of display type while the engagement was hidden. */
+await phone.goto(`http://127.0.0.1:${WEB_PORT}/paact`, { waitUntil: 'networkidle' });
+await phone.waitForTimeout(900);
+/* innerText, not textContent: the parenthetical is hidden with display:none
+   rather than removed, so textContent still reports it and an assertion
+   against it would pass while the phone shows two lines of wrapped name. */
+results.phoneBrand = await phone.evaluate(() => document.querySelector('.brand-name')?.innerText.trim() || '');
+results.phoneSub = await phone.evaluate(() => {
+  const e = document.querySelector('.brand-sub');
+  return e && getComputedStyle(e).display !== 'none' ? e.textContent.trim() : '';
+});
+/* 40px is the floor a thumb needs; every nav control was 32px. */
+results.phoneSmallTargets = await phone.$$eval('.tabstrip button, .subnav button', (els) =>
+  els.map((e) => ({ t: e.textContent.trim().slice(0, 20), h: Math.round(e.getBoundingClientRect().height) }))
+     .filter((x) => x.h < 40));
+results.phonePaactHeaderPct = await phone.evaluate(() => {
+  const el = document.querySelector('.topbar');
+  return el ? Math.round((el.getBoundingClientRect().height / window.innerHeight) * 100) : -1;
+});
+await phone.screenshot({ path: path.join(root, 'test/shot-12-phone-paact.png') });
+await phone.goto(`http://127.0.0.1:${WEB_PORT}/demo`, { waitUntil: 'networkidle' });
+await phone.waitForTimeout(600);
+
 results.phoneHeaderPctOfScreen = await phone.evaluate(() => {
   const el = document.querySelector('.topbar');
   if (!el) return -1; // no header on this screen: the assertion below catches it
@@ -563,7 +597,26 @@ if (results.phoneHScroll) failures.push('horizontal scroll at 390px');
 if ((results.phoneBannerText || '').replace(/^Demo\s*/i, '').length < 10)
   failures.push('the demo banner has no text at phone width: ' + JSON.stringify(results.phoneBannerText));
 if (results.phoneHeaderPctOfScreen < 0) failures.push('phone check never found the header — it measured nothing');
-if (results.phoneHeaderPctOfScreen > 28) failures.push(`sticky header takes ${results.phoneHeaderPctOfScreen}% of a phone screen`);
+/* Two budgets, because /demo carries a banner a client portal does not. The
+   client-facing number is the one that matters: it is the first screen someone
+   sees after scanning a code off a slide. */
+if (results.phoneHeaderPctOfScreen > 28) failures.push(`the /demo sticky header takes ${results.phoneHeaderPctOfScreen}% of a phone screen`);
+if (results.phonePaactHeaderPct < 0) failures.push('the phone check never found the client portal header');
+if (results.phonePaactHeaderPct > 23) failures.push(`the client portal's sticky header takes ${results.phonePaactHeaderPct}% of a phone screen`);
+if (/\(/.test(results.phoneBrand || ''))
+  failures.push('the phone masthead still carries the parenthetical name, which wraps to two lines of display type: ' + JSON.stringify(results.phoneBrand));
+if (!/PAACT/.test(results.phoneBrand || ''))
+  failures.push('the phone masthead lost the client name: ' + JSON.stringify(results.phoneBrand));
+if (!/Strategic Plan/.test(results.phoneSub || ''))
+  failures.push('the engagement name is hidden on a phone: ' + JSON.stringify(results.phoneSub));
+if (results.phoneSmallTargets?.length)
+  failures.push(`${results.phoneSmallTargets.length} nav targets are under 40px on a phone: ` + JSON.stringify(results.phoneSmallTargets));
+/* The site root falls back to the demo. It must SAY so in the address bar: a
+   QR code pointing at the root would otherwise put a whole room in front of
+   another client's plan under that client's name, which is exactly how this
+   was found. */
+if (results.rootBrand && !/^\/[a-z0-9-]+\b/.test(results.rootPath || ''))
+  failures.push(`the site root rendered "${results.rootBrand}" at ${JSON.stringify(results.rootPath)} — a portal whose URL does not say whose content it is`);
 if (!results.demoSkipsSignIn) failures.push('demo asked for a sign-in');
 if (results.demoBanner !== 'Demo') failures.push('demo banner missing');
 if (results.demoSections !== 5) failures.push('demo did not render all five sections');
