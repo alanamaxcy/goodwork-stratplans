@@ -93,7 +93,7 @@ export const PORTAL = {
    "status": "not_started",
    "purpose": "Listen widely enough that no one can say the plan came from one room.",
    "deliverables": [
-    { "name": "Stakeholder interviews (target 20, cap 25)", "done": false },
+    { "name": "Stakeholder interviews (up to 20)", "done": false },
     { "name": "Focus groups: Advisory Board, providers, parents and ambassadors, civic leaders", "done": false },
     { "name": "Listening sessions at existing gatherings (4)", "done": false },
     { "name": "SWOT/SOAR webform launched and closed (target 60+ responses)", "done": false },
@@ -167,7 +167,7 @@ export const PORTAL = {
   "inScope": [
    "Up to 4 partner convenings (2–3 hrs each)",
    "Up to 4 kickoff-phase workshops with PAACT staff",
-   "15–25 stakeholder interviews",
+   "Up to 20 stakeholder interviews",
    "4 focus groups (60–90 min)",
    "4 listening sessions at existing gatherings",
    "6 hours of Strategic Planning Team meetings",
