@@ -477,6 +477,15 @@ for (const tab of ['Timeline', 'Scope', 'Team']) {
     () => (document.querySelector('.rail')?.innerText || '') + '\n' + (document.querySelector('.main')?.innerText || ''),
   );
 }
+/* No two-digit years anywhere in section 01. This engagement spans 2026, 2027
+   and 2028, and "15 Feb 27" and "15 Feb 28" sitting one line apart differ by a
+   single character. A month name followed by exactly two digits can only be a
+   truncated year here, because the format puts the day first ("23 Sep 2026").
+   A bare month with no year at all is fine and deliberate on the axis, and so
+   is "Feb 15, 2027" — prose quoting the contract in month-first order, where
+   the two digits are a DAY and the full year follows. Hence the lookahead. */
+results.shortYears = [...section01.matchAll(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ?(\d{2})(?!\d)(?!,? ?\d{4})/g)]
+  .map((m) => m[0]).filter((v, i, a) => a.indexOf(v) === i);
 results.sampleTermsChecked = sampleOnly.length;
 results.section01Leaks = sampleOnly.filter((x) => section01.includes(x));
 
@@ -680,6 +689,8 @@ if (results.cross01back?.bar) failures.push('the demo bar stayed after returning
 if (results.wipeClassStuck) failures.push('.theme-wipe was left on <html> after a section change — every transition on the page is now dead');
 if (results.cross02?.toggle || results.cross01?.toggle)
   failures.push('the manual theme toggle is reachable on a mixed portal, where the theme is a signal rather than a preference');
+if (results.shortYears?.length)
+  failures.push('section 01 still shows two-digit years, which is unreadable across a three-year engagement: ' + results.shortYears.join(', '));
 if (!results.sampleTermsChecked)
   failures.push('the section-01 purity check built an empty term list and tested nothing');
 if (results.section01Leaks?.length)

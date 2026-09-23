@@ -7,10 +7,15 @@ export const STATUS_VAR = { done: '--st-done', doing: '--st-doing', next: '--st-
 /* Stack order for every bar in the product: progress first, absence last. */
 export const STACK = ['done', 'doing', 'blocked', 'next'];
 
+/* FOUR-DIGIT YEARS, everywhere. This printed "23 Sep 26", and an engagement
+   that runs across 2026, 2027 and 2028 turns that into a reading puzzle —
+   "15 Feb 27" and "15 Feb 28" sit one line apart in the same sentence and the
+   difference between them is a single character. The three extra characters
+   are cheap; working out which year you are looking at is not. */
 export function fmt(d) {
   if (!d) return '—';
   const p = String(d).split('-');
-  return `${+p[2]} ${MON[+p[1] - 1]} ${p[0].slice(2)}`;
+  return `${+p[2]} ${MON[+p[1] - 1]} ${p[0]}`;
 }
 
 export function fmtLong(d) {

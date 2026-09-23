@@ -76,7 +76,7 @@ function rangeParts(a, b) {
   if (A.length < 3 || B.length < 3) return [fmt(a), fmt(b)];
   const day = (p) => +p[2];
   const mon = (p) => MON[+p[1] - 1];
-  const yr = (p) => p[0].slice(2);
+  const yr = (p) => p[0];
   if (A[0] === B[0] && A[1] === B[1]) return [`${day(A)}`, `${day(B)} ${mon(B)} ${yr(B)}`];
   if (A[0] === B[0]) return [`${day(A)} ${mon(A)}`, `${day(B)} ${mon(B)} ${yr(B)}`];
   return [fmt(a), fmt(b)];
@@ -441,7 +441,7 @@ function monthTicks(a, b) {
   const step = out.length <= 8 ? 1 : out.length <= 14 ? 2 : 3;
   return out.map((tick, i) => ({
     ...tick,
-    label: i % step === 0 ? `${MON[tick.m]}${tick.m === 0 || i === 0 ? ` ${String(tick.y).slice(2)}` : ''}` : null,
+    label: i % step === 0 ? `${MON[tick.m]}${tick.m === 0 || i === 0 ? ` ${tick.y}` : ''}` : null,
   }));
 }
 
