@@ -77,15 +77,17 @@
   /* The label gutter. One value drives the flag row, the axis, every lane, the
      key-date row and the tail, so nothing can drift out of alignment with the
      bars it annotates. */
-  --gut: 136px;
+  /* Wide enough for the longest phase name a plan is likely to carry.
+     "Adoption & implementation" truncated to "Adoption &…" the moment that
+     phase stopped being a footnote and became a normal lane. */
+  --gut: 168px;
   --overhang: 3px;
 }
 
 .pt-flagrow,
 .pt-axisrow,
 .pt-markrow,
-.pt-lane,
-.pt-tail {
+.pt-lane {
   display: grid;
   grid-template-columns: var(--gut) minmax(0, 1fr);
   align-items: center;
@@ -190,9 +192,15 @@
   font-size: var(--fs-label);
   font-weight: 500;
   color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* WRAPS rather than truncating. The gutter also carries the number badge and
+     its padding, so a 168px gutter leaves the name 121px — and "Adoption &
+     implementation" wants 179px, which truncated it to "Adoption & impl…".
+     Widening the gutter far enough would cost a fifth of the chart to one
+     label. Two short lines cost nothing: the row is already taller than one
+     line of 13px text, so the lane height barely moves, and the phone rule
+     below has wrapped these all along. */
+  overflow-wrap: break-word;
+  line-height: 1.25;
   min-width: 0;
 }
 .pt-lane.is-current .pt-lanename { font-weight: 600; }
@@ -270,46 +278,6 @@
   background: var(--accent);
   box-shadow: inset 0 0 0 2px var(--accent), 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
 }
-
-/* ---------- the tail: the phase that is too long to share the axis ---------- */
-.pt-tail {
-  margin-top: 6px;
-  padding: 3px 0;
-  border-radius: var(--r-sm);
-  text-align: left;
-  transition: background .15s ease;
-}
-.pt-tail:hover { background: var(--rule-2); }
-.pt-tail.is-current { box-shadow: inset 3px 0 0 0 var(--accent); }
-.pt-taillab { font-size: var(--fs-micro); font-weight: 600; color: var(--ink-2); padding-left: 8px; }
-.pt-tailbody { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
-.pt-tailrule {
-  flex: 0 0 34px;
-  height: 0;
-  border-top: 2px dashed var(--rule);
-  position: relative;
-}
-.pt-tailrule::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  top: -3px;
-  width: 5px;
-  height: 5px;
-  border-top: 2px solid var(--rule);
-  border-right: 2px solid var(--rule);
-  transform: rotate(45deg);
-}
-.pt-tailtext {
-  font-size: var(--fs-cap);
-  color: var(--ink-2);
-  min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0 6px;
-}
-.pt-tailtext strong { font-weight: 600; color: var(--ink); }
 
 .pt-cap {
   margin-top: var(--sp-3);
@@ -771,7 +739,7 @@
 
 /* 920px and down: the rail is gone and the main column is the page. */
 @media (max-width: 920px) {
-  .pt-strip { --gut: 112px; }
+  .pt-strip { --gut: 132px; }
   .pc-cad li { grid-template-columns: minmax(0, 1fr); gap: var(--sp-2); }
   .pc-cad li:first-child { padding-top: 0; }
   .pc-bodies li { grid-template-columns: minmax(0, 1fr); }
@@ -783,15 +751,12 @@
    at the same x. */
 @media (max-width: 560px) {
   .pt-strip { --gut: 0px; }
-  .pt-flagrow, .pt-axisrow, .pt-lane, .pt-markrow, .pt-tail { grid-template-columns: minmax(0, 1fr); }
+  .pt-flagrow, .pt-axisrow, .pt-lane, .pt-markrow { grid-template-columns: minmax(0, 1fr); }
   .pt-flagrow > .pt-gutter, .pt-axisrow > .pt-gutter { display: none; }
   .pt-gutter { padding-right: 0; }
   .pt-lane { padding: 5px 6px; }
   .pt-lanelab { margin-bottom: 3px; padding-left: 0; }
-  .pt-lanename { white-space: normal; }
   .pt-markrow { margin-top: 6px; }
-  .pt-tail { padding: 5px 6px; }
-  .pt-taillab { padding-left: 0; }
   /* Seven month labels do not fit across 318px: every second one goes, so
      "Feb" and "Mar" stop printing as "FebMar". */
   .pt-ticklab.alt { display: none; }
@@ -851,7 +816,7 @@
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .pt-lane:hover, .pt-tail:hover { background: none; }
+  .pt-lane:hover { background: none; }
 }
 
 /* ---- scope of work: outcomes, strategic questions, document list ------- */

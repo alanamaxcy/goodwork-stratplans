@@ -441,43 +441,29 @@ function monthTicks(a, b) {
   const step = out.length <= 8 ? 1 : out.length <= 14 ? 2 : 3;
   return out.map((tick, i) => ({
     ...tick,
-    label: i % step === 0 ? `${MON[tick.m]}${tick.m === 0 || i === 0 ? ` ${tick.y}` : ''}` : null,
+    /* The year goes on the first tick and on every tick where it CHANGES —
+       not just on January, which a three-month step can skip entirely. Over an
+       eighteen-month span the axis otherwise read "Sep 2026, Dec, Mar, Jun,
+       Sep, Dec, Mar" with two unlabelled Decembers a year apart. */
+    label: i % step === 0 ? `${MON[tick.m]}${i === 0 || tick.y !== out[i - step]?.y ? ` ${tick.y}` : ''}` : null,
   }));
 }
 
-/* Which phases can share one linear axis, and which are a tail.
+/* EVERY PHASE IS A LANE, on one shared axis.
 
-   A phase is taken off the axis only when it is BOTH more than three times
-   longer than everything else AND the last thing to finish — a trailing tail,
-   never a hole in the middle. PAACT's twelve-month implementation year is the
-   case this exists for: leave it in and Foundation is a 5% sliver beside it,
-   which is the reading that makes a chart need a scale break and a sixty-word
-   caption before it is honest. Take it out and the rest are 26 to 95 days on
-   one true scale. The tail is not dropped — it is stated as a labelled rule at
-   the right-hand edge, and its card underneath carries every number. */
-function splitTail(dated) {
-  const inc = dated.slice();
-  const tail = [];
-  while (inc.length > 2) {
-    let li = 0;
-    for (let i = 1; i < inc.length; i += 1) if (inc[i].days > inc[li].days) li = i;
-    const longest = inc[li];
-    const rest = inc.filter((_, i) => i !== li);
-    const restMax = Math.max(...rest.map((p) => p.days));
-    const restEnd = Math.max(...rest.map((p) => p.b));
-    if (longest.days > restMax * 3 && longest.b >= restEnd) {
-      tail.push(longest);
-      inc.splice(li, 1);
-    } else break;
-  }
-  tail.sort((x, y) => x.a - y.a);
-  return { inc, tail };
-}
-
+   A twelve-month implementation year beside a four-week Foundation does squash
+   the short phases — Foundation is 5% of the span — and an earlier version
+   lifted such a phase off the axis onto a labelled rule at the edge, so the
+   remaining bars stayed comparable. It was mathematically honest and nobody
+   could read it: "+ Phase 5" hanging below four numbered lanes reads as a
+   footnote about the chart rather than as the fifth step of the work. Five
+   phases, five lanes, numbered 1 to 5. The squashing is the truth about an
+   engagement whose last phase is longer than the other four combined, and the
+   card underneath each bar carries every number anyway. */
 function buildStrip(phases, nowMs) {
   const dated = phases.filter((p) => p.dated);
   if (dated.length < 2) return null;
-  const { inc, tail } = splitTail(dated);
+  const inc = dated;
   if (!inc.length) return null;
 
   let t0 = monthStartOf(Math.min(...inc.map((p) => p.a)));
@@ -510,7 +496,6 @@ function buildStrip(phases, nowMs) {
          29. */
       w: Math.max(1.2, ((Math.min(p.b + DAY, t1) - p.a) / span) * 100),
     })),
-    tail,
     nowIn: Number.isFinite(nowMs) && nowMs >= t0 && nowMs <= t1,
     nowPct: Number.isFinite(nowMs) ? pctOf(nowMs) : 0,
   };
@@ -957,9 +942,9 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
   const doneD = phases.reduce((n, p) => n + p.doneN, 0);
   const strip = buildStrip(phases, nowMs);
   const undated = phases.filter((p) => !p.dated).length;
-  /* Every phase the strip carries, bars AND tail, so its group label cannot
+  /* Every phase the strip carries, so its group label cannot
      describe a shorter period than the strip draws. */
-  const stripAll = strip ? [...strip.lanes.map((l) => l.phase), ...strip.tail] : [];
+  const stripAll = strip ? strip.lanes.map((l) => l.phase) : [];
   const stripStart = stripAll.reduce((acc, p) => (!acc || p.start < acc ? p.start : acc), '');
   const stripEnd = stripAll.reduce((acc, p) => (p.end > acc ? p.end : acc), '');
 
@@ -1111,7 +1096,7 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
               so a screen reader was told a period that contradicted both the
               deck two lines above it and the row underneath. */}
           <div className="pt-strip" role="group"
-               aria-label={`Phase schedule, ${fmt(stripStart)} to ${fmt(stripEnd)}${strip.tail.length ? `, including ${strip.tail.length === 1 ? `phase ${strip.tail[0].number}` : `${strip.tail.length} phases`} stated at the right-hand edge` : ''}`}>
+               aria-label={`Phase schedule, ${fmt(stripStart)} to ${fmt(stripEnd)}`}>
             {/* Today's flag sits on its own row so it can never collide with a
                 month label. */}
             <div className="pt-flagrow">
@@ -1218,33 +1203,6 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
               </div>
             ) : null}
 
-            {/* The tail. Taken off the axis so the bars above it stay
-                comparable, and stated in full rather than dropped. */}
-            {strip.tail.map((p) => {
-              const isCurrent = current?.id === p.id;
-              return (
-                <button
-                  type="button"
-                  key={p.id}
-                  className={`pt-tail${isCurrent ? ' is-current' : ''}`}
-                  onClick={() => jumpTo(p.id)}
-                >
-                  <span className="pt-gutter pt-taillab" aria-hidden="true">+ Phase {p.number}</span>
-                  <span className="pt-tailbody">
-                    <span className="pt-tailrule" aria-hidden="true" />
-                    <span className="pt-tailtext">
-                      <strong>{p.name}</strong>
-                      <span className="num">
-                        {' '}<RangeTime a={p.start} b={p.end} />
-                      </span>
-                      {p.length ? ` · ${p.length}` : ''}
-                      {' · extends beyond this range'}
-                      {isCurrent ? <span className="pc-now">Current phase</span> : null}
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
           </div>
 
           <p className="pt-cap">{cap.join(' ')}</p>
