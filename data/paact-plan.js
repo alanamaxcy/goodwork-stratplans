@@ -246,8 +246,8 @@ export const PORTAL = {
      firm would file him on the client side. */
   "consultingTeam": [
    { "name": "Dr. Folami Prescott-Adams", "org": "HTI Catalysts", "role": "Engagement lead, facilitator", "owns": "Client relationship, all convenings and interviews, final presentation" },
-   { "name": "Gina", "org": "HTI Catalysts", "role": "Co-facilitator", "owns": "Convenings, interviews, focus groups, listening sessions" },
-   { "name": "Rachel", "org": "HTI Catalysts", "role": "Advisor", "owns": "ToP facilitation design, inclusivity review of instruments and findings" },
+   { "name": "Gina Glymph", "org": "HTI Catalysts", "role": "Co-facilitator", "owns": "Convenings, interviews, focus groups, listening sessions" },
+   { "name": "Rachel Alterman Wallack", "org": "HTI Catalysts", "role": "Advisor", "owns": "ToP facilitation design, inclusivity review of instruments and findings" },
    { "name": "Alan Maxcy", "org": "Good Work Atlanta · subcontracted to HTI Catalysts", "role": "Analyst and writer", "owns": "Document review, SWOT/SOAR, synthesis, findings, plan document, four formats, workspace, close-out report" }
   ],
   "clientTeam": [
