@@ -1,7 +1,13 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { isConfigured, slugFromLocation, currentSession, signOut } from './lib/supabase.js';
+import { isConfigured, slugFromLocation, routeFromLocation, currentSession, signOut } from './lib/supabase.js';
 import { loadPortal, loadTasks, saveTask, saveTasks, deleteTasks, savePlan, savePortalSettings, watchTasks, listPortals } from './lib/store.js';
-import { makeLabels, visibleSections, lower } from './lib/labels.js';
+import { makeLabels, visibleSections, lower, ALL_SECTIONS } from './lib/labels.js';
+
+/* The sub-tab's id and the word that goes in the URL. Only Scope differs:
+   'agreement' is what the code has always called it, and /paact/scope/cadence
+   is what a person would expect to see in an address bar. */
+const SUB_SLUG = { timeline: 'timeline', agreement: 'cadence', team: 'team' };
+const SUB_ID = { timeline: 'timeline', cadence: 'agreement', team: 'team' };
 import { DEMO_SLUG, loadFilePortal, fileBackedSlug } from './lib/demo.js';
 import { counts, indexPlan, findingDrives, fmt, pct, today } from './lib/format.js';
 import SignIn from './components/SignIn.jsx';
@@ -48,8 +54,17 @@ export default function App() {
   const [tasks, setTasks] = useState([]);
   const [portals, setPortals] = useState([]);
 
-  const [section, setSection] = useState('plan');
-  const [sub, setSub] = useState({ scope: 'timeline', plan: 'all', findings: 'ALL', workplan: 'all', dashboard: 'all' });
+  /* THE URL DECIDES, when it says anything. Opening a portal used to land on
+     whatever section the app started on, so a link to a client's portal opened
+     their kickoff on section two. */
+  const [section, setSection] = useState(() => {
+    const r = routeFromLocation();
+    return ALL_SECTIONS.includes(r.section) ? r.section : 'plan';
+  });
+  const [sub, setSub] = useState(() => ({
+    scope: SUB_ID[routeFromLocation().sub] || 'timeline',
+    plan: 'all', findings: 'ALL', workplan: 'all', dashboard: 'all',
+  }));
   const [openTask, setOpenTask] = useState(null);
   const [openTheme, setOpenTheme] = useState(null);
   const [modal, setModal] = useState(null);
@@ -94,7 +109,10 @@ export default function App() {
            is the one thing this portal must not do. */
         const sample = portal.sampleSections || [];
         const own = (portal.sections || []).find((id) => !sample.includes(id));
-        if (own) setSection(own);
+        /* Only when the URL did not ask for a section. An explicit link beats
+           this — someone sending a board member straight to the workplan means
+           it, even on a portal whose own content is section one. */
+        if (own && !ALL_SECTIONS.includes(routeFromLocation().section)) setSection(own);
       });
       return () => { live = false; };
     }
@@ -360,6 +378,43 @@ export default function App() {
      Where the circle grows from is held in a ref because the swap runs in an
      effect, after the section has changed, by which time the click event is
      long gone. */
+  /* KEEP THE ADDRESS BAR HONEST, both ways.
+
+     Writing: every section or sub-tab change pushes /portal/section/sub, so a
+     section can be sent to a board ahead of a meeting and the browser's own
+     back button works — without it, Back leaves the portal entirely, which on
+     a five-section document is the wrong thing on every press but the first.
+
+     Reading: popstate puts the state back where the URL says. replaceState on
+     the first render rather than push, so the entry the person arrived on is
+     corrected rather than duplicated. */
+  useEffect(() => {
+    if (!slug) return undefined;
+    const onPop = () => {
+      const r = routeFromLocation();
+      if (ALL_SECTIONS.includes(r.section)) setSection(r.section);
+      if (SUB_ID[r.sub]) setSub((v) => ({ ...v, scope: SUB_ID[r.sub] }));
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [slug]);
+
+  const firstUrlWrite = useRef(true);
+  useEffect(() => {
+    if (!slug || reason !== 'ok') return;
+    const tail = section === 'scope' ? `/${SUB_SLUG[sub.scope] || 'timeline'}` : '';
+    const next = `/${slug}/${section}${tail}`;
+    if (window.location.pathname === next) return;
+    try {
+      if (firstUrlWrite.current) window.history.replaceState(null, '', next);
+      else window.history.pushState(null, '', next);
+    } catch (e) {
+      /* A sandboxed or file:// context refuses history writes. The app is
+         perfectly usable without the address bar following along. */
+    }
+    firstUrlWrite.current = false;
+  }, [slug, reason, section, sub.scope]);
+
   const wipeOrigin = useRef(null);
   const pickSection = useCallback((id, ev) => {
     wipeOrigin.current = originOf(ev);
@@ -478,11 +533,11 @@ export default function App() {
           <strong>Demo</strong>
           {/* A phone cannot spend four lines of a sticky header on this. */}
           <span className="demobar-long">
-            Sample content for a real strategic planning engagement. Everything works —
-            open a task, tick a subtask, edit the plan itself. Nothing is saved, and no
-            client data is here.
+            Sample content for a strategic planning engagement. The tools are live —
+            open a task, complete a subtask, edit the plan. Nothing is saved, and no
+            client data is present.
           </span>
-          <span className="demobar-short">Sample content. Nothing is saved.</span>
+          <span className="demobar-short">Sample content. Not saved.</span>
         </div>
       ) : null}
       {isFile && !isDemo && sampleHere ? (
@@ -499,7 +554,7 @@ export default function App() {
                 template that fits one reads as a typo in another — "Findings
                 shows their plan". Naming the two organisations is the part
                 that matters anyway. */}
-            {`Everything on this page is ${sampleName}'s, not ${shortClient}'s — an example of what this section will hold once the engagement produces it. Everything works; nothing is saved.`}
+            {`This page shows ${sampleName}'s content, not ${shortClient}'s. It is an illustration of the format. Nothing here is saved.`}
           </span>
           <span className="demobar-short">{`Demo data — not ${shortClient}'s.`}</span>
         </div>
@@ -610,7 +665,7 @@ function SubNav({ section, sub, setSub, plan, labels, findings, topTasks, priori
 
   let items;
   if (section === 'scope') {
-    items = (<><B v="timeline">Timeline</B><B v="agreement">Scope &amp; cadence</B><B v="team">Who is on it</B></>);
+    items = (<><B v="timeline">Timeline</B><B v="agreement">Scope &amp; cadence</B><B v="team">Team</B></>);
   } else if (section === 'findings') {
     const by = { ALL: (findings.themes || []).length, S: 0, W: 0, O: 0, T: 0 };
     (findings.themes || []).forEach((t) => { by[t.cat]++; });

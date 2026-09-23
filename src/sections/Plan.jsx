@@ -31,7 +31,7 @@ export default function Plan({
 
       {!scoped && plan.vision ? (
         <Panel style={{ borderLeft: '2px solid var(--accent)' }}>
-          <h4 className="eyebrow" style={{ marginBottom: 9 }}>Where this is going</h4>
+          <h4 className="eyebrow" style={{ marginBottom: 9 }}>Vision</h4>
           <p className="vision">{plan.vision}</p>
         </Panel>
       ) : null}

@@ -27,6 +27,11 @@ jobs:
         run: node scripts/make-demo.mjs
       - name: Fail if the generated demo data drifted from the scrubber
         run: git diff --exit-code -- data/demo-plan.js data/demo-findings.js
+      # The package, then the browser. Adding playwright to package.json would
+      # desync package-lock.json and break `npm ci` above; --no-save installs it
+      # for this job only and leaves the lockfile alone. test/smoke.mjs resolves
+      # the bare specifier first and falls back to the dev container's copy.
+      - run: npm install --no-save playwright@1.56.0
       - run: npx playwright install --with-deps chromium
       - name: Build and drive the app end to end
         run: node test/smoke.mjs
@@ -53,9 +58,12 @@ jobs:
           # loosening permissions on the checkout. test-rls.sh resolves
           # schema.sql relative to its own location, so the directory moves as
           # a unit.
-          cp -r supabase "$RUNNER_TEMP/spp-supabase"
-          chmod -R a+rX "$RUNNER_TEMP/spp-supabase"
-          chmod +x "$RUNNER_TEMP/spp-supabase/test-rls.sh"
+          # /tmp, NOT $RUNNER_TEMP: that lives under /home/runner/work too, so
+          # copying there hit the same wall one directory over — "Permission
+          # denied" on the script itself this time instead of on schema.sql.
+          rm -rf /tmp/spp-supabase
+          cp -r supabase /tmp/spp-supabase
+          chmod -R a+rX /tmp/spp-supabase
           sudo -u postgres env PATH="$PATH" TMPDIR=/tmp \
-            bash "$RUNNER_TEMP/spp-supabase/test-rls.sh"
+            bash /tmp/spp-supabase/test-rls.sh
 

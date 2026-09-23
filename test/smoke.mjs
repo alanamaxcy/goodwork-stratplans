@@ -13,7 +13,17 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
-import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
+/* Playwright is resolved, not hard-coded. This used to import
+   /opt/node22/lib/node_modules/playwright/index.mjs — an absolute path that
+   exists in the dev container and nowhere else, so CI's build-and-smoke job
+   died on ERR_MODULE_NOT_FOUND before a single assertion ran, while the same
+   file passed locally. Try the normal specifier first (CI installs the
+   package), fall back to the container's copy. */
+const { chromium } = await (async () => {
+  try { return await import('playwright'); } catch (e) {
+    return import('/opt/node22/lib/node_modules/playwright/index.mjs');
+  }
+})();
 
 const root = path.resolve(import.meta.dirname, '..');
 const API_PORT = 8777;
@@ -372,7 +382,7 @@ results.paactShowsRealProgress = /\b2\b[^.]{0,12}\b7\b/.test(paactScope);
    presenting the latter as the engagement span overstates the contract by a year. */
 results.paactClaims2028AsEngagementEnd = /engagement[^.]{0,60}Feb 28\b/i.test(paactScope);
 
-await paact.click('.subnav button:has-text("Who is on it")');
+await paact.click('.subnav button:has-text("Team")');
 await paact.waitForTimeout(400);
 const paactTeam = await paact.evaluate(() => document.querySelector('.main')?.innerText || '');
 results.paactTeamNames = ['Folami', 'Shawnell', 'Kristin Bernhard', 'Danielle Wallace']
@@ -460,7 +470,7 @@ let section01 = '';
 /* The walk above ended on "The plan", where the sub-nav has no Timeline tab. */
 await paact.click('.railnav button:has-text("Scope")');
 await paact.waitForTimeout(500);
-for (const tab of ['Timeline', 'Scope', 'Who is on it']) {
+for (const tab of ['Timeline', 'Scope', 'Team']) {
   await paact.click(`.subnav button:has-text("${tab}")`);
   await paact.waitForTimeout(400);
   section01 += '\n' + await paact.evaluate(

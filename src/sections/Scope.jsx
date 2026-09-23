@@ -660,10 +660,10 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
        column for all of them without hard-coding a width that is a gutter for
        one portal and a clip for the next. */
     const rhythmCh = Math.max(6, ...cadence.map((c) => c.rhythm.length));
-    const cadSub = hasOwner && hasNext ? 'How often, what happens, who runs it, and when it next falls.'
-      : hasOwner ? 'How often, what happens, and who runs it.'
-        : hasNext ? 'How often, what happens, and when it next falls.'
-          : 'How often, and what happens.';
+    const cadSub = hasOwner && hasNext ? 'Frequency, activity, owner and next date.'
+      : hasOwner ? 'Frequency, activity and owner.'
+        : hasNext ? 'Frequency, activity and next date.'
+          : 'Frequency and activity.';
 
     const dates = (Array.isArray(scope.keyDates) ? scope.keyDates : [])
       .filter((d) => d && d.date)
@@ -684,9 +684,8 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
 
     return (
       <>
-        <SectionHead eyebrow={labels.scope} title="What we agreed to do">
-          {scope.scopeSummary
-            || 'The boundary matters as much as the list — half of these conversations are about what the engagement is not.'}
+        <SectionHead eyebrow={labels.scope} title="Scope and cadence">
+          {scope.scopeSummary || 'What the engagement covers, and what it does not.'}
         </SectionHead>
         <div className="grid2">
           <Panel>
@@ -706,7 +705,7 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
         {cadence.length ? (
           <Panel style={{ marginTop: 13 }}>
             <div className="pc-phead">
-              <h4 className="eyebrow">Working cadence</h4>
+              <h4 className="eyebrow">Cadence</h4>
               <p className="pc-psub">{cadSub}</p>
             </div>
             <ul className="pc-cad" role="list" style={{ '--rhy': `${rhythmCh}ch` }}>
@@ -720,7 +719,7 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
                     {c.owner ? (
                       <span className="pc-cowner">
                         <span className="pc-av sm" aria-hidden="true">{initials(c.owner)}</span>
-                        <span className="sr">Run by </span>
+                        <span className="sr">Owner: </span>
                         {c.owner}
                       </span>
                     ) : null}
@@ -743,7 +742,7 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
               <h4 className="eyebrow">Key dates</h4>
               <p className="pc-psub">
                 {Number.isFinite(nowMs)
-                  ? `${past} behind us, ${dates.length - past} ahead. Today is ${fmt(nowStr)}.`
+                  ? `${past} complete, ${dates.length - past} upcoming. Today is ${fmt(nowStr)}.`
                   : `${dates.length} dated commitments.`}
               </p>
             </div>
@@ -810,18 +809,18 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
 
     return (
       <>
-        <SectionHead eyebrow={labels.scope} title="Who is on it">
+        <SectionHead eyebrow={labels.scope} title="Team">
           {/* The convening organisation is a party to the engagement, and this
               is the tab that names the parties. */}
           {eng.convener ? `Convened by ${eng.convener}. ` : ''}
-          The named parties and what each one owns, plus everyone carrying work in the {workplan}.
+          Named parties and their responsibilities.
         </SectionHead>
 
         {consultants.length ? (
           <Panel>
             <div className="pc-phead">
-              <h4 className="eyebrow">{firm} team</h4>
-              <p className="pc-psub">{consultants.length} people on the consulting side.</p>
+              <h4 className="eyebrow">{firm}</h4>
+              <p className="pc-psub">{consultants.length} people.</p>
             </div>
             <ul className="pc-people" role="list">{consultants.map((m, i) => <Person key={`c${i}`} m={m} />)}</ul>
           </Panel>
@@ -830,8 +829,8 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
         {client.length ? (
           <Panel>
             <div className="pc-phead">
-              <h4 className="eyebrow">Client team</h4>
-              <p className="pc-psub">{client.length} people on the client side.</p>
+              <h4 className="eyebrow">Client</h4>
+              <p className="pc-psub">{client.length} people.</p>
             </div>
             <ul className="pc-people" role="list">{client.map((m, i) => <Person key={`k${i}`} m={m} />)}</ul>
           </Panel>
@@ -851,8 +850,8 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
         {governance.length ? (
           <Panel>
             <div className="pc-phead">
-              <h4 className="eyebrow">Bodies that decide</h4>
-              <p className="pc-psub">Groups the work goes through, and how often they sit.</p>
+              <h4 className="eyebrow">Governance</h4>
+              <p className="pc-psub">Groups the work goes through, and how often they meet.</p>
             </div>
             <ul className="pc-bodies" role="list">
               {governance.map((g, i) => (
@@ -879,8 +878,7 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
             <div className="pc-phead">
               <h4 className="eyebrow">Owners in the {workplan}</h4>
               <p className="pc-psub">
-                Nobody yet. Owners land here as the {workplan} is built — the
-                implementation roadmap is a phase&nbsp;4 deliverable.
+                Not yet assigned. The implementation roadmap is a phase&nbsp;4 deliverable.
               </p>
             </div>
           </Panel>
@@ -991,24 +989,24 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
      happens next — so those are sentences one and two, and the 17-month arc,
      which is context rather than news, comes after. */
   const intro = [];
-  if (current) intro.push(`You are at phase ${current.number}, ${current.name} — it ${STATE_CLAUSE[current.state]}.`);
+  if (current) intro.push(`Phase ${current.number}, ${current.name}, ${STATE_CLAUSE[current.state]}.`);
   /* The meeting the room is sitting in belongs on the first screen, in the
      words a person would use, not as a date three clicks down a checklist. */
   if (nextMilestone) {
     const w = whenLabel(nextMilestone.date, nowMs);
-    intro.push(`Next: ${nextMilestone.what} — ${w ? `${w}, ` : ''}${fmt(nextMilestone.date)}.`);
+    intro.push(`Next: ${nextMilestone.what}.${w ? ` ${w.charAt(0).toUpperCase()}${w.slice(1)},` : ''} ${fmt(nextMilestone.date)}.`);
   }
   if (phases.length) {
     const n = `${phases.length} phase${phases.length === 1 ? '' : 's'}`;
     const firmName = eng.firm?.name;
     intro.push(engStart && engEnd
-      ? `${n} in all. ${firmName ? `${possessive(firmName)} engagement` : 'The engagement'} runs ${fmt(engStart)} to ${fmt(engEnd)}.`
-      : `${n} in all.`);
+      ? `${n}. ${firmName ? `${possessive(firmName)} engagement` : 'The engagement'} runs ${fmt(engStart)} to ${fmt(engEnd)}.`
+      : `${n}.`);
   }
   if (engEnd && lastEnd && lastEnd > engEnd) {
     const tails = dated.filter((p) => p.end === lastEnd);
     const who = tails.length === 1 ? `Phase ${tails[0].number}, ${tails[0].name},` : 'The last phase';
-    intro.push(`${who} then carries year one of the plan to ${fmt(lastEnd)}${eng.planHorizon ? `, which itself looks ${eng.planHorizon} ahead` : ''}.`);
+    intro.push(`${who} carries year one of the plan to ${fmt(lastEnd)}${eng.planHorizon ? `. The plan covers ${eng.planHorizon}` : ''}.`);
   }
 
   /* One sentence, where a reader will see it, about the four sections that are
@@ -1020,12 +1018,12 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
     .filter((k) => sample.includes(k))
     .map((k) => labels?.[k] || k);
   const sampleLine = !sample.includes('scope') && sampleOthers.length
-    ? `${sampleOthers.slice(0, -1).join(', ')}${sampleOthers.length > 1 ? ' and ' : ''}${sampleOthers[sampleOthers.length - 1]} currently show illustrative sample content from another engagement, so you can see the shape of what is coming — this section is the only one carrying this engagement's own, and the rest get built through the phases below.`
+    ? `${sampleOthers.slice(0, -1).join(', ')}${sampleOthers.length > 1 ? ' and ' : ''}${sampleOthers[sampleOthers.length - 1]} show sample content from another engagement, as an illustration of the format. This section is the only one carrying this engagement's own content; the others are produced through the phases below.`
     : '';
 
   const cap = [];
-  if (widest) cap.push(`${widest.aName} and ${widest.bName} run at the same time for ${widest.length}.`);
-  if (byDels && totalD) cap.push(`Delivered so far: ${doneD} of ${totalD} deliverables across ${phases.length} phases.`);
+  if (widest) cap.push(`${widest.aName} and ${widest.bName} overlap by ${widest.length}.`);
+  if (byDels && totalD) cap.push(`${doneD} of ${totalD} deliverables complete across ${phases.length} phases.`);
   if (undated) cap.push(`${undated} phase${undated === 1 ? ' has no dates' : 's have no dates'} yet and ${undated === 1 ? 'is' : 'are'} not on the axis.`);
   if (strip) {
     /* What a filled bar MEANS, taken from the fills actually drawn rather than
@@ -1033,12 +1031,12 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
        describing those as time elapsed is not what anyone is looking at. */
     const kinds = new Set(strip.lanes.map(({ phase }) => meterFor(phase, nowMs, byDels).kind));
     if (kinds.has('time') && kinds.has('items')) {
-      cap.push('A filled bar is deliverables ticked off where a phase tracks them, and time elapsed where it does not.');
+      cap.push('Bars show deliverables completed where a phase tracks them, and time elapsed where it does not.');
     } else if (kinds.has('time')) {
       cap.push('A filled bar is time elapsed — these phases carry no per-deliverable status.');
     } else if (kinds.has('items')) {
       cap.push(byDels
-        ? 'A filled bar is deliverables ticked off, not time elapsed.'
+        ? 'Bars show deliverables completed, not time elapsed.'
         : 'A full bar is a phase that has finished — these phases carry no per-deliverable status.');
     }
     if (!strip.nowIn && Number.isFinite(nowMs)) {
@@ -1048,7 +1046,7 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
 
   return (
     <>
-      <SectionHead eyebrow={labels.scope} title="Where the engagement stands">
+      <SectionHead eyebrow={labels.scope} title="Timeline">
         {intro.join(' ')}
       </SectionHead>
 
@@ -1197,8 +1195,8 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
                         {' '}<RangeTime a={p.start} b={p.end} />
                       </span>
                       {p.length ? ` · ${p.length}` : ''}
-                      {' · continues past this view'}
-                      {isCurrent ? <span className="pc-now">You are here</span> : null}
+                      {' · extends beyond this range'}
+                      {isCurrent ? <span className="pc-now">Current phase</span> : null}
                     </span>
                   </span>
                 </button>
@@ -1236,7 +1234,7 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
                         {p.name}
                       </span>
                       <StatePill state={p.state} />
-                      {isCurrent ? <span className="pc-now">You are here</span> : null}
+                      {isCurrent ? <span className="pc-now">Current phase</span> : null}
                     </span>
                     <span className="pc-when">
                       <span className="num">

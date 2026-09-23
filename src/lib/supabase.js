@@ -52,3 +52,15 @@ export function slugFromLocation(loc = window.location) {
   const seg = loc.pathname.split('/').filter(Boolean)[0];
   return seg ? seg.toLowerCase() : '';
 }
+
+/* The SECTION is the second path segment, and the sub-tab the third:
+   /paact/scope/team. Two reasons it lives in the URL rather than in state
+   alone. A portal opened from a link used to land on whatever section the app
+   happened to start on, which on a portal whose own content is section one
+   meant opening the client's kickoff on somebody else's plan. And a section
+   nobody can link to cannot be sent to a board ahead of a meeting, which is
+   most of what this portal is for. */
+export function routeFromLocation(loc = window.location) {
+  const parts = loc.pathname.split('/').filter(Boolean);
+  return { section: (parts[1] || '').toLowerCase(), sub: (parts[2] || '').toLowerCase() };
+}

@@ -44,9 +44,9 @@ function EvidencePicker({ findings, selected, onToggle, onClose, CATNAME }) {
       <div className="scrim" onClick={onClose} />
       <div className="modal" role="dialog" aria-label="Link findings">
         <span className="eyebrow">Evidence</span>
-        <h3 style={{ marginTop: 3 }}>Which findings produced this?</h3>
+        <h3 style={{ marginTop: 3 }}>Link findings</h3>
         <p style={{ fontSize: 13.5, color: 'var(--ink-2)', marginTop: 8 }}>
-          The counts are how many separate sources raised each one.
+          Counts are the number of separate sources that raised each finding.
         </p>
         <div className="efield" style={{ marginTop: 12 }}>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search findings…" autoFocus />
@@ -112,7 +112,7 @@ export default function PlanEditor({
 
       <Panel>
         <Field label="Vision" area value={draft.vision}
-               placeholder="Where this is going, in a sentence or two."
+               placeholder="The vision, in a sentence or two."
                onChange={(v) => apply(E.setPlanField(draft, 'vision', v))} />
         <Field label="Framing" area value={draft.framing}
                placeholder="How the plan is structured, for the reader arriving cold."
