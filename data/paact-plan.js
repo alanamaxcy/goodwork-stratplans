@@ -181,6 +181,43 @@ export const PORTAL = {
    "Primary data collection beyond the engagement counts above",
    "Evaluation of PAACT programs (Danielle Wallace holds that role)"
   ],
+  /* Straight from the scope-of-work document, "Expected Outcomes". The SOW
+     lists the governance recommendation twice; carried once. */
+  "outcomes": [
+   "A shared understanding of Atlanta's early childhood landscape and systems",
+   "A collective SWOT analysis informed by partner and community voice",
+   "Recommendations for governance, partnership engagement, and backbone infrastructure",
+   "A strategic plan document outlining priority strategies, objectives, and measurable outcomes for the next 3\u20135 years",
+   "An implementation roadmap with timelines, roles, and resource considerations",
+   "A clear and inspiring vision, mission, and long-term impact goals for PAACT"
+  ],
+  /* The SOW's ten "Key Strategic Questions". These are what the process is
+     for, and the only place the engagement states its own purpose in PAACT's
+     words rather than in deliverables. */
+  "questions": [
+   "What is PAACT's unique role and value within Atlanta's early childhood ecosystem?",
+   "What outcomes should we hold ourselves collectively accountable for over the next 3\u20135 years?",
+   "How should PAACT measure collective impact and progress toward shared goals?",
+   "How can PAACT strengthen alignment and collaboration across partners where alliance members have shared ownership?",
+   "What is the long-term vision for PAACT's role within GEEARS and the Atlanta early childhood landscape?",
+   "How do we meaningfully include providers and families with lived experience in governance and strategy?",
+   "What policy and systems priorities should PAACT champion locally?",
+   "How do we deepen partnerships with the City of Atlanta and philanthropic partners?",
+   "What backbone infrastructure and capacity does PAACT need to sustain and grow its work?",
+   "How does PAACT remain responsive to community needs and emerging opportunities?"
+  ],
+  /* The SOW names these by title. The app said only "document library
+     assembled and shared", which is a task, not a list anyone could check. */
+  "documents": [
+   "PAACT Final Report",
+   "GEEARS Strategic Plan (Section 3)",
+   "PAACT Overview slide deck",
+   "Ambassador Research Report",
+   "Evaluation of the Repair and Renovation Program",
+   "Impact Report (ready November 2026)",
+   "List of centers that received renovation funds \u2014 Danielle Wallace",
+   "Spreadsheet of Ambassadors \u2014 Dawan"
+  ],
   /* A recurrence, an activity and an accountable person. No dates: the brief
      gives none, and a "next occurrence" would have to be invented. */
   "cadence": [

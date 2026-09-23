@@ -702,6 +702,49 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
           </Panel>
         </div>
 
+        {(scope.outcomes || []).length ? (
+          <Panel style={{ marginTop: 13 }}>
+            <div className="pc-phead">
+              <h4 className="eyebrow">Expected outcomes</h4>
+              <p className="pc-psub">What the engagement produces, from the scope of work.</p>
+            </div>
+            <ul className="ticklist no" style={{ marginTop: 11 }}>
+              {scope.outcomes.map((x, i) => (
+                <li key={i}><span className="mk" aria-hidden="true">·</span><span>{x}</span></li>
+              ))}
+            </ul>
+          </Panel>
+        ) : null}
+
+        {(scope.questions || []).length ? (
+          <Panel style={{ marginTop: 13 }}>
+            <div className="pc-phead">
+              <h4 className="eyebrow">Questions this process answers</h4>
+              <p className="pc-psub">
+                {scope.questions.length} strategic questions, from the scope of work. Everything in
+                the timeline exists to answer one of them.
+              </p>
+            </div>
+            <ol className="pc-qs" role="list">
+              {scope.questions.map((q, i) => (
+                <li key={i}><span className="pc-qn num" aria-hidden="true">{i + 1}</span><span>{q}</span></li>
+              ))}
+            </ol>
+          </Panel>
+        ) : null}
+
+        {(scope.documents || []).length ? (
+          <Panel style={{ marginTop: 13 }}>
+            <div className="pc-phead">
+              <h4 className="eyebrow">Documents under review</h4>
+              <p className="pc-psub">Named in the scope of work. Assembled during phase&nbsp;1.</p>
+            </div>
+            <ul className="pc-docs" role="list">
+              {scope.documents.map((d, i) => <li key={i}>{d}</li>)}
+            </ul>
+          </Panel>
+        ) : null}
+
         {cadence.length ? (
           <Panel style={{ marginTop: 13 }}>
             <div className="pc-phead">
