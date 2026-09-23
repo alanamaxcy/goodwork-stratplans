@@ -240,15 +240,21 @@ export const PORTAL = {
    { "date": "2027-01-16", "what": "Findings synthesis complete" },
    { "date": "2027-02-15", "what": "RFP project end date" }
   ],
-  /* Three groups, three shapes. Consultant-vs-client is explicit here rather
-     than inferred from the org string: Alan is a SUBCONTRACTOR to HTI
-     Catalysts, carried under his own org name, so any string match against the
-     firm would file him on the client side. */
+  /* Three groups, three shapes. No org on the consulting side: the panel is
+     headed "HTI Catalysts" and everyone under it is on that team, so repeating
+     the firm on all four rows is noise — and singling one person out with a
+     second firm's name draws a line through the team that the client has no
+     reason to care about. The client side keeps its orgs, because those differ
+     and the difference is the point: PAACT, GEEARS, and a contracted evaluator
+     are not the same party.
+
+     Consultant-vs-client is decided by which array a person is in, never by a
+     string match against the firm name. */
   "consultingTeam": [
-   { "name": "Dr. Folami Prescott-Adams", "org": "HTI Catalysts", "role": "Engagement lead, facilitator", "owns": "Client relationship, all convenings and interviews, final presentation" },
-   { "name": "Gina Glymph", "org": "HTI Catalysts", "role": "Co-facilitator", "owns": "Convenings, interviews, focus groups, listening sessions" },
-   { "name": "Rachel Alterman Wallack", "org": "HTI Catalysts", "role": "Advisor", "owns": "ToP facilitation design, inclusivity review of instruments and findings" },
-   { "name": "Alan Maxcy", "org": "Good Work Atlanta · subcontracted to HTI Catalysts", "role": "Analyst and writer", "owns": "Document review, SWOT/SOAR, synthesis, findings, plan document, four formats, workspace, close-out report" }
+   { "name": "Dr. Folami Prescott-Adams", "role": "Engagement lead, facilitator", "owns": "Client relationship, all convenings and interviews, final presentation" },
+   { "name": "Gina Glymph", "role": "Co-facilitator", "owns": "Convenings, interviews, focus groups, listening sessions" },
+   { "name": "Rachel Alterman Wallack", "role": "Advisor", "owns": "ToP facilitation design, inclusivity review of instruments and findings" },
+   { "name": "Alan Maxcy", "role": "Analyst and writer", "owns": "Document review, SWOT/SOAR, synthesis, findings, plan document, four formats, workspace, close-out report" }
   ],
   "clientTeam": [
    { "name": "Shawnell", "org": "PAACT", "role": "Director, primary contact", "owns": "Weekly check-in, interview introductions, approvals" },
