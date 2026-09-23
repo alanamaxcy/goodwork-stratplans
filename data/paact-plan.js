@@ -36,8 +36,8 @@ export const PORTAL = {
      written yet. */
  },
  "firm": {
-  "name": "HTI",
-  "lead": "Folami",
+  "name": "HTI Catalysts",
+  "lead": "Dr. Folami Prescott-Adams",
   "analyst": "Alan Maxcy"
  },
  "meta": {
@@ -142,7 +142,7 @@ export const PORTAL = {
     { "name": "Full plan, digital and print-ready", "done": false },
     { "name": "Social media and presentation asset set", "done": false }
    ],
-   "note": "Draft review cycle is the gap in the current HTI workplan. Findings and draft need to move earlier or the final presentation moves to March."
+   "note": "Draft review cycle is the gap in the current HTI Catalysts workplan. Findings and draft need to move earlier or the final presentation moves to March."
   },
   {
    "number": 5,
@@ -159,7 +159,7 @@ export const PORTAL = {
     { "name": "90-day check: workspace in active use", "done": false },
     { "name": "Year one progress review", "done": false }
    ],
-   "note": "HTI engagement closes Feb 15, 2027. Year one of the plan runs to Feb 2028. This workspace is deliverable #4 of the contract."
+   "note": "The HTI Catalysts engagement closes Feb 15, 2027. Year one of the plan runs to Feb 2028. This workspace is deliverable #4 of the contract."
   }
  ],
  "scope": {
@@ -184,10 +184,10 @@ export const PORTAL = {
   /* A recurrence, an activity and an accountable person. No dates: the brief
      gives none, and a "next occurrence" would have to be invented. */
   "cadence": [
-   { "rhythm": "Weekly", "what": "30-min check-in with Shawnell", "owner": "Folami" },
-   { "rhythm": "Weekly", "what": "Internal HTI team sync", "owner": "Folami" },
+   { "rhythm": "Weekly", "what": "30-min check-in with Shawnell", "owner": "Dr. Prescott-Adams" },
+   { "rhythm": "Weekly", "what": "Internal HTI Catalysts team sync", "owner": "Dr. Prescott-Adams" },
    { "rhythm": "Biweekly", "what": "Written update to PAACT: done, next, need", "owner": "Alan" },
-   { "rhythm": "Monthly", "what": "GEEARS leadership touchpoint", "owner": "Folami" },
+   { "rhythm": "Monthly", "what": "GEEARS leadership touchpoint", "owner": "Dr. Prescott-Adams" },
    { "rhythm": "Quarterly", "what": "Advisory Board meeting (align focus group and listening session)", "owner": "PAACT" }
   ],
   /* The only dated points in the engagement, and the spine the overlapping
@@ -204,14 +204,14 @@ export const PORTAL = {
    { "date": "2027-02-15", "what": "RFP project end date" }
   ],
   /* Three groups, three shapes. Consultant-vs-client is explicit here rather
-     than inferred from the org string: Alan sits on the HTI team under a
-     different org name, and any string match against the firm would file him
-     on the client side. */
+     than inferred from the org string: Alan is a SUBCONTRACTOR to HTI
+     Catalysts, carried under his own org name, so any string match against the
+     firm would file him on the client side. */
   "consultingTeam": [
-   { "name": "Folami", "org": "HTI", "role": "Engagement lead, facilitator", "owns": "Client relationship, all convenings and interviews, final presentation" },
-   { "name": "Gina", "org": "HTI", "role": "Co-facilitator", "owns": "Convenings, interviews, focus groups, listening sessions" },
-   { "name": "Rachel", "org": "HTI", "role": "Advisor", "owns": "ToP facilitation design, inclusivity review of instruments and findings" },
-   { "name": "Alan Maxcy", "org": "Good Work Atlanta (HTI team)", "role": "Analyst and writer", "owns": "Document review, SWOT/SOAR, synthesis, findings, plan document, four formats, workspace, close-out report" }
+   { "name": "Dr. Folami Prescott-Adams", "org": "HTI Catalysts", "role": "Engagement lead, facilitator", "owns": "Client relationship, all convenings and interviews, final presentation" },
+   { "name": "Gina", "org": "HTI Catalysts", "role": "Co-facilitator", "owns": "Convenings, interviews, focus groups, listening sessions" },
+   { "name": "Rachel", "org": "HTI Catalysts", "role": "Advisor", "owns": "ToP facilitation design, inclusivity review of instruments and findings" },
+   { "name": "Alan Maxcy", "org": "Good Work Atlanta · subcontracted to HTI Catalysts", "role": "Analyst and writer", "owns": "Document review, SWOT/SOAR, synthesis, findings, plan document, four formats, workspace, close-out report" }
   ],
   "clientTeam": [
    { "name": "Shawnell", "org": "PAACT", "role": "Director, primary contact", "owns": "Weekly check-in, interview introductions, approvals" },

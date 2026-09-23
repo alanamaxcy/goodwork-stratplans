@@ -403,6 +403,44 @@ results.paactPlanMarkedSample = await paact.evaluate(() => {
 results.paactPlanH2 = (await paact.textContent('.shead h2').catch(() => '')) || '';
 await paact.screenshot({ path: path.join(root, 'test/shot-10-paact-sample.png') });
 
+/* SECTION 01 MUST BE ALL PAACT. Sections 02-05 are deliberately the sample, so
+   the client can see the shape of what is coming — but the one section carrying
+   their own content must carry nothing else. This caught the real thing: the
+   "Who is on it" tab ended with the sample church workplan's owners, captioned
+   as a sample but sitting under three panels of real PAACT people, one of them
+   named "Elder board".
+
+   Built from the sample data rather than a hand-written list, so a new sample
+   name is covered the day it is added — minus anything PAACT legitimately
+   shares, since both engagements really do have phases called Discovery and
+   Synthesis and Alan's own org really is Good Work Atlanta. */
+const { PORTAL: SAMPLE } = await import(path.join(root, 'data', 'demo-plan.js'));
+const paactSource = fs.readFileSync(path.join(root, 'data', 'paact-plan.js'), 'utf8');
+const sampleOnly = (() => {
+  const t = new Set([SAMPLE.client.name, SAMPLE.client.place, SAMPLE.client.engagement]);
+  SAMPLE.tasks.forEach((x) => x.owner && t.add(x.owner));
+  (SAMPLE.plan.priorities || []).forEach((p) => {
+    t.add(p.title);
+    (p.initiatives || []).forEach((o) => t.add(o.title));
+  });
+  (SAMPLE.phases || []).forEach((p) => t.add(p.name));
+  return [...t].map((x) => String(x || '').trim())
+    .filter((x) => x.length > 3 && !paactSource.includes(x));
+})();
+let section01 = '';
+/* The walk above ended on "The plan", where the sub-nav has no Timeline tab. */
+await paact.click('.railnav button:has-text("Scope")');
+await paact.waitForTimeout(500);
+for (const tab of ['Timeline', 'Scope', 'Who is on it']) {
+  await paact.click(`.subnav button:has-text("${tab}")`);
+  await paact.waitForTimeout(400);
+  section01 += '\n' + await paact.evaluate(
+    () => (document.querySelector('.rail')?.innerText || '') + '\n' + (document.querySelector('.main')?.innerText || ''),
+  );
+}
+results.sampleTermsChecked = sampleOnly.length;
+results.section01Leaks = sampleOnly.filter((x) => section01.includes(x));
+
 /* PAACT's portal serves the anonymised sample, so it must not leak the real
    client of that sample either. */
 const paactText = await paact.evaluate(() => document.body.innerText);
@@ -529,6 +567,10 @@ if (/PAACT/i.test(results.paactPlanH2 || ''))
 if (!/sample/i.test(results.paactPlanH2 || ''))
   failures.push('the sample plan headline does not say it is a sample: ' + JSON.stringify(results.paactPlanH2));
 if (results.paactLeaksRealClient) failures.push('/paact LEAKS THE REAL CLIENT OF THE SAMPLE CONTENT');
+if (!results.sampleTermsChecked)
+  failures.push('the section-01 purity check built an empty term list and tested nothing');
+if (results.section01Leaks?.length)
+  failures.push('SECTION 01 IS NOT ALL PAACT — it carries content from the sample: ' + results.section01Leaks.join(', '));
 if (!results.paactTouchedNoDatabase) failures.push('/paact hit the database: ' + results.paactRestCalls.join(', '));
 if (!results.themeToggleFound) failures.push('no theme toggle was found');
 if (results.themeToggleFound && !results.themeFlipped) failures.push('the theme toggle did not change the theme');

@@ -520,6 +520,13 @@ function buildStrip(phases, nowMs) {
    two ends anchor instead of centring. */
 const anchorOf = (p) => (p <= 12 ? ' at-start' : p >= 88 ? ' at-end' : '');
 
+/* "HTI Catalysts's engagement" is wrong; an organisation name already ending in
+   s takes the bare apostrophe. */
+const possessive = (name) => {
+  const n = String(name || '').trim();
+  return /s$/i.test(n) ? `${n}\u2019` : `${n}\u2019s`;
+};
+
 const initials = (s) => String(s || '')
   .split(/[\s·]+/).filter(Boolean).slice(0, 2)
   .map((w) => w[0].toUpperCase()).join('') || '—';
@@ -604,6 +611,8 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
      to the current phase, and the empty string is a real "all collapsed". */
   const openId = open === '' ? '' : (phases.some((p) => p.id === open) ? open : (current?.id || ''));
   const view = scopeId; // the sub-nav writes 'timeline' | 'agreement' | 'team' here
+  /* The portal's own declaration, not a guess from the slug. */
+  const borrowedWorkplan = (pl.sampleSections || []).includes('workplan');
   const workplan = (labels?.workplan || 'Workplan').toLowerCase();
 
   /* Opening a phase from the strip, or from the nav at the foot of a card,
@@ -857,18 +866,28 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
           </Panel>
         ) : null}
 
+        {/* Derived from whatever tasks the portal holds — which, when the
+            portal declares its workplan to be sample content, are somebody
+            else's people. A caption saying so is not enough here: this is the
+            TEAM page, and its other three panels are this engagement's real
+            names, so a labelled list of nine strangers underneath them still
+            reads as part of the team. On the sample church's workplan one of
+            them is literally "Elder board". Say the panel is coming instead of
+            filling it with names from another engagement. */}
+        {borrowedWorkplan ? (
+          <Panel>
+            <div className="pc-phead">
+              <h4 className="eyebrow">Owners in the {workplan}</h4>
+              <p className="pc-psub">
+                Nobody yet. Owners land here as the {workplan} is built — the
+                implementation roadmap is a phase&nbsp;4 deliverable.
+              </p>
+            </div>
+          </Panel>
+        ) : (
         <Panel>
           <div className="pc-phead">
             <h4 className="eyebrow">Owners in the {workplan}</h4>
-            {/* Derived from whatever tasks the portal holds. When the portal
-                itself declares its workplan to be sample content, these names
-                are not this engagement's — and on a page whose other panels
-                ARE, that has to be said here rather than left to a banner. */}
-            {(pl.sampleSections || []).includes('workplan') && !(pl.sampleSections || []).includes('scope') ? (
-              <p className="pc-psub">
-                From the sample {workplan}. This engagement&rsquo;s own owners land here once its {workplan} is built.
-              </p>
-            ) : null}
           </div>
           <div className="deflist">
             {ownerLoad(topTasks || [], now).map((o) => (
@@ -882,6 +901,7 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
             ))}
           </div>
         </Panel>
+        )}
       </>
     );
   }
@@ -962,25 +982,33 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
   const engStart = eng.engagementStart || firstStart;
   const engEnd = eng.engagementEnd || lastEnd;
 
+  /* ORDER IS THE WHOLE POINT HERE, and getting it wrong once already made this
+     section unreadable. It used to open with the engagement span and then the
+     LAST phase — so the first thing a reader met was "Phase 5, Adoption &
+     implementation, runs on to 15 Feb 28", and "you are at phase 1" was the
+     fourth sentence. People read that as "we are in implementation" on the day
+     of the kickoff. The room asks two questions first — where are we, and what
+     happens next — so those are sentences one and two, and the 17-month arc,
+     which is context rather than news, comes after. */
   const intro = [];
-  if (phases.length) {
-    const n = `${phases.length} phase${phases.length === 1 ? '' : 's'}`;
-    const firmName = eng.firm?.name;
-    intro.push(engStart && engEnd
-      ? `${n}. ${firmName ? `${firmName}’s engagement` : 'The engagement'} runs ${fmt(engStart)} to ${fmt(engEnd)}.`
-      : `${n}.`);
-  }
-  if (engEnd && lastEnd && lastEnd > engEnd) {
-    const tails = dated.filter((p) => p.end === lastEnd);
-    const who = tails.length === 1 ? `Phase ${tails[0].number}, ${tails[0].name},` : 'The last phase';
-    intro.push(`${who} runs on to ${fmt(lastEnd)}${eng.planHorizon ? `, and the plan itself looks ${eng.planHorizon} ahead` : ''}.`);
-  }
   if (current) intro.push(`You are at phase ${current.number}, ${current.name} — it ${STATE_CLAUSE[current.state]}.`);
   /* The meeting the room is sitting in belongs on the first screen, in the
      words a person would use, not as a date three clicks down a checklist. */
   if (nextMilestone) {
     const w = whenLabel(nextMilestone.date, nowMs);
     intro.push(`Next: ${nextMilestone.what} — ${w ? `${w}, ` : ''}${fmt(nextMilestone.date)}.`);
+  }
+  if (phases.length) {
+    const n = `${phases.length} phase${phases.length === 1 ? '' : 's'}`;
+    const firmName = eng.firm?.name;
+    intro.push(engStart && engEnd
+      ? `${n} in all. ${firmName ? `${possessive(firmName)} engagement` : 'The engagement'} runs ${fmt(engStart)} to ${fmt(engEnd)}.`
+      : `${n} in all.`);
+  }
+  if (engEnd && lastEnd && lastEnd > engEnd) {
+    const tails = dated.filter((p) => p.end === lastEnd);
+    const who = tails.length === 1 ? `Phase ${tails[0].number}, ${tails[0].name},` : 'The last phase';
+    intro.push(`${who} then carries year one of the plan to ${fmt(lastEnd)}${eng.planHorizon ? `, which itself looks ${eng.planHorizon} ahead` : ''}.`);
   }
 
   /* One sentence, where a reader will see it, about the four sections that are
