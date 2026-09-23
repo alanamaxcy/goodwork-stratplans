@@ -9,6 +9,19 @@
     <meta name="robots" content="noindex, nofollow" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <title>Strategic Plan Portal</title>
+
+    <!-- SVG first: every current browser prefers it and it stays sharp at any
+         size. The 32px PNG is the fallback for the ones that do not, and the
+         apple-touch-icon is full-bleed because iOS rounds its own corners and
+         renders transparency as black. Served from public/, so these sit at the
+         site root rather than under a hashed asset name. -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- Colours the browser chrome on Android and on iOS standalone. Fixed to
+         the product accent, not the per-portal override: the chrome is painted
+         before any portal has loaded. -->
+    <meta name="theme-color" content="#6355e0" />
     <!-- Restore an explicit theme choice BEFORE first paint, so a returning
          visitor never sees a flash of the wrong theme while the bundle loads.
 

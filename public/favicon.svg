@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Strategic Plan Portal">
+  <!-- The product's mark, not a client's: three staggered bars, which is the
+       phase strip the timeline is built on. A Gantt read at 16px, where a
+       wordmark or a monogram would be mud. Solid ground on purpose so it holds
+       against both a light and a dark browser chrome. The accent is fixed here
+       even though --accent is overridable per portal — the tab icon belongs to
+       the tool, and a favicon that changed per client would just look broken
+       in a bookmark bar holding three of them. -->
+  <rect width="32" height="32" rx="7.5" fill="#6355e0"/>
+  <g fill="#fff">
+    <rect x="6"    y="8"  width="13" height="4" rx="2"/>
+    <rect x="10.5" y="14" width="15" height="4" rx="2"/>
+    <rect x="6"    y="20" width="9"  height="4" rx="2"/>
+  </g>
+</svg>
