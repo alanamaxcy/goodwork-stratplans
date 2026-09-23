@@ -12,7 +12,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # 22, not 20. @supabase/supabase-js reaches for a native WebSocket and
+          # Node only grew one in 22 — on 20 the realtime client throws
+          # "native WebSocket not found" and every access-function test fails
+          # for a reason that has nothing to do with the code under test.
+          node-version: '22'
           cache: npm
       - run: npm ci
       - name: Plan editor logic (renumbering, task migration)
@@ -42,5 +46,16 @@ jobs:
           sudo apt-get install -y postgresql-16
       - name: Apply the schema and assert who can read and write what
         run: |
-          chmod +x supabase/test-rls.sh
-          sudo -u postgres env PATH="$PATH" bash supabase/test-rls.sh
+          # initdb refuses to run as root, so this runs as `postgres` — but the
+          # runner's workspace under /home/runner/work is not traversable by
+          # that user, so psql got "schema.sql: Permission denied" before a
+          # single assertion ran. Work from a world-readable copy instead of
+          # loosening permissions on the checkout. test-rls.sh resolves
+          # schema.sql relative to its own location, so the directory moves as
+          # a unit.
+          cp -r supabase "$RUNNER_TEMP/spp-supabase"
+          chmod -R a+rX "$RUNNER_TEMP/spp-supabase"
+          chmod +x "$RUNNER_TEMP/spp-supabase/test-rls.sh"
+          sudo -u postgres env PATH="$PATH" TMPDIR=/tmp \
+            bash "$RUNNER_TEMP/spp-supabase/test-rls.sh"
+
