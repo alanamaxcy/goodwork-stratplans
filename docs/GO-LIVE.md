@@ -22,8 +22,8 @@ the app.
 ## Before you start: three checks
 
 The sign-in system is shared with the Impact Suite (the "Impact Software Login"
-project), so an account you add here is an account there too. Two things keep
-that safe.
+project), so an account you add here is an account there too. The first two
+checks keep that safe. The third makes sure the sign-in codes reach people.
 
 **1. Every Impact Suite site must say which client it belongs to.** In Netlify,
 open each Impact Suite site → *Site configuration* → *Environment variables*.
@@ -64,7 +64,8 @@ staff already sign in with codes, it is on.
 You should see **Success. No rows returned.**
 
 If instead it says *A different table called "public.tasks" already exists*,
-stop and send me the message. Nothing was changed.
+stop. Nothing was changed: another app in that project already uses one of the
+portal's table names, and the portal needs its own space before going further.
 
 ## Step 2 — Create the PAACT portal
 
@@ -102,12 +103,12 @@ Then *Deploys* → *Trigger deploy* → *Deploy site*. Wait for it to finish.
 ## Step 4 — Sign in and look
 
 Go to `strategy.goodworkimpact.com`, type your email, and type the code that
-arrives. Because you are tagged `*`, you get a list of portals; pick PAACT. You
-should see the timeline with **Edit timeline**, **Access** and **Settings** at
-the top right.
+arrives. You land on PAACT. (If the project ever holds more than one portal,
+you get a list and pick it.) You should see the timeline with **Edit
+timeline**, **Access** and **Settings** at the top right.
 
-The code email is the same one the Impact Suite already sends, so there is
-nothing to set up for it.
+The code email is the one the Impact Suite already sends. Check 3 above is the
+only email setup.
 
 ## Step 5 — Add the team
 
@@ -168,4 +169,6 @@ workplan section yet, so it does nothing here for now.
   many it sends in an hour. It resets on its own; the number is under
   *Authentication* → *Rate Limits*.
 - If the Access list says **tag mismatch** next to someone, they already had an
-  account for another client. Send me their email and I will fix it.
+  account tagged for another client, and they will not see PAACT until that tag
+  changes. Changing it also changes what they see in the other product, so it is
+  never done automatically.
