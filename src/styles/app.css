@@ -708,8 +708,14 @@
      two lines of display type while the engagement it belongs to was hidden. */
   .bn-paren { display: none; }
   .brand-name { font-size: 17px; }
-  .brand-sub { display: block; font-size: var(--fs-cap); white-space: normal; }
-  .brand { flex-direction: column; align-items: flex-start; gap: 1px; row-gap: 1px; }
+  .brand-sub { display: block; font-size: var(--fs-cap); }
+  .brand { flex-direction: column; align-items: flex-start; gap: 1px; row-gap: 1px; min-width: 0; }
+  /* The name and the engagement stack, and anything still in .mast-right — the
+     theme toggle — sits BESIDE them rather than wrapping onto a row of its own.
+     It wrapped once the toggle came back to this portal, and a 30px control on
+     its own line cost 40px of the first screen a client sees. */
+  .masthead-in { flex-wrap: nowrap; }
+  .brand-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* Operator chrome, not client information. Somebody who scanned a code to read
      their timeline does not need to be told the demo does not save, and it cost
      a whole row. The desktop masthead still carries both. */

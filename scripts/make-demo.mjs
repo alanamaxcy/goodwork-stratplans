@@ -15,14 +15,15 @@
 
      node scripts/make-demo.mjs
 
-   Writes data/demo-plan.js and data/demo-findings.js. The real data/plan.js
-   and data/findings.js stay put, for seeding that client's own portal. */
+   Writes clients/demo/plan.js and clients/demo/findings.js. The real
+   clients/resonate/* stay put, for seeding that client's own portal. */
 
 import fs from 'node:fs';
 import path from 'node:path';
 
 const root = path.resolve(import.meta.dirname, '..');
-const dataDir = path.join(root, 'data');
+const srcDir = path.join(root, 'clients', 'resonate');
+const outDir = path.join(root, 'clients', 'demo');
 
 /* The client's name is also an ordinary English verb, and "doesn't seem to
    resonate" must not become "doesn't seem to Northside". So verb uses are
@@ -72,8 +73,8 @@ function scrub(value) {
   return value;
 }
 
-const { PORTAL } = await import(path.join(dataDir, 'plan.js'));
-const { FINDINGS } = await import(path.join(dataDir, 'findings.js'));
+const { PORTAL } = await import(path.join(srcDir, 'plan.js'));
+const { FINDINGS } = await import(path.join(srcDir, 'findings.js'));
 
 const demoPortal = scrub(PORTAL);
 demoPortal.client = {
@@ -93,17 +94,17 @@ const header = (what) =>
   `   meant to show. */\n`;
 
 fs.writeFileSync(
-  path.join(dataDir, 'demo-plan.js'),
+  path.join(outDir, 'plan.js'),
   header('Demo engagement, plan and workplan.') + 'export const PORTAL = ' + JSON.stringify(demoPortal, null, 1) + ';\n',
 );
 fs.writeFileSync(
-  path.join(dataDir, 'demo-findings.js'),
+  path.join(outDir, 'findings.js'),
   header('Demo discovery findings.') + 'export const FINDINGS = ' + JSON.stringify(demoFindings) + ';\n',
 );
 
 /* Fail loudly rather than shipping a leak: assert nothing identifying survived. */
-const out = fs.readFileSync(path.join(dataDir, 'demo-plan.js'), 'utf8') +
-            fs.readFileSync(path.join(dataDir, 'demo-findings.js'), 'utf8');
+const out = fs.readFileSync(path.join(outDir, 'plan.js'), 'utf8') +
+            fs.readFileSync(path.join(outDir, 'findings.js'), 'utf8');
 
 /* The verb survives on purpose, so strip verb uses before looking for leaks —
    anything still matching is the organisation's name. */

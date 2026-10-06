@@ -26,7 +26,7 @@ jobs:
       - name: Regenerate the public demo data and assert it identifies nobody
         run: node scripts/make-demo.mjs
       - name: Fail if the generated demo data drifted from the scrubber
-        run: git diff --exit-code -- data/demo-plan.js data/demo-findings.js
+        run: git diff --exit-code -- clients/demo/plan.js clients/demo/findings.js
       # The package, then the browser. Adding playwright to package.json would
       # desync package-lock.json and break `npm ci` above; --no-save installs it
       # for this job only and leaves the lockfile alone. test/smoke.mjs resolves

@@ -30,8 +30,8 @@ const API_PORT = 8777;
 const WEB_PORT = 8778;
 
 /* ---------- the data the stub serves ---------- */
-const { PORTAL: P } = await import(path.join(root, 'data', 'plan.js'));
-const { FINDINGS: F } = await import(path.join(root, 'data', 'findings.js'));
+const { PORTAL: P } = await import(path.join(root, 'clients', 'resonate', 'plan.js'));
+const { FINDINGS: F } = await import(path.join(root, 'clients', 'resonate', 'findings.js'));
 
 const PORTAL_ID = '00000000-0000-0000-0000-0000000000aa';
 const USER = { id: '11111111-1111-1111-1111-111111111111', email: 'alan@goodworkatlanta.co', app_metadata: { gw_tenant: '*', gw_role: 'admin' } };
@@ -349,13 +349,18 @@ results.demoRestCalls = restCalls.slice(0, 3);
 await demo.screenshot({ path: path.join(root, 'test/shot-08-demo-workplan.png') });
 
 
-/* ---- /paact: the real engagement, with sample content in the other four ----
-   This route had none of this coverage, which is exactly why a completely
-   UNREACHABLE /paact once passed the build and every unit test: nothing here
-   mentioned it, so nothing noticed that App.jsx never loaded it. The
-   assertions below are deliberately written against visible TEXT rather than
-   the timeline's own class names, so a redesign of the section does not
-   silently stop testing whether the client's own facts are on screen. */
+/* ---- /paact: a real client portal, carrying only its own content ----------
+   This block used to assert a portal that showed PAACT's timeline and another
+   engagement's anonymised plan, findings and workplan beside it, marked as
+   samples. That arrangement did its job — it let a client see the shape of
+   what was coming before any of it existed — and it is gone. The sample is
+   somebody else's content, and the moment the portal became the client's real
+   workspace rather than a pitch, a page of another organisation's priorities
+   under their masthead was a liability with no upside.
+
+   So the assertions below are mostly about ABSENCE, which is the harder thing
+   to keep true: no borrowed content anywhere, no sample bar, no second
+   masthead identity, and no tab that opens onto nothing. */
 const paact = await browser.newPage({ viewport: { width: 1320, height: 1050 }, deviceScaleFactor: 2 });
 paact.on('pageerror', (e) => errs.push('PAACT ' + e.message));
 const paactRest = [];
@@ -366,35 +371,36 @@ await paact.waitForTimeout(900);
 
 results.paactSkipsSignIn = await paact.isVisible('.masthead');
 results.paactClient = (await paact.textContent('.brand-name').catch(() => '')) || '';
-/* A client's own portal must never call itself a Demo. */
 results.paactTopbarText = (await paact.evaluate(
   () => (document.querySelector('.topbar')?.innerText || '').replace(/\s+/g, ' ').trim(),
 )) || '';
-/* The one section carrying PAACT's own content is the one it must open on. */
 results.paactOpensOn = (await paact.textContent('.railnav [aria-current="true"] .rn-t').catch(() => '')) || '';
+/* One section, because one section exists. An empty tab a client clicks into
+   and finds nothing in is worse than a tab that is not there yet; each of the
+   other four is switched on from Settings on the day it has content. */
+results.paactSectionTabs = await paact.$$eval('.railnav .rn-t', (n) => n.map((x) => x.textContent.trim()));
+/* No sample bar at all — there is nothing borrowed left to disclaim. */
+results.paactHasBar = await paact.evaluate(() => !!document.querySelector('.demobar'));
+/* The theme is a preference again. It carried information only while the
+   portal was mixed: light for the client's own sections, dark for the borrowed
+   ones. With nothing borrowed the signal has nothing to say, so the manual
+   toggle comes back. */
+results.paactThemeToggle = await paact.evaluate(() => !!document.querySelector('.themetoggle'));
 
 const paactScope = await paact.evaluate(() => document.querySelector('.main')?.innerText || '');
-/* All five phases get a LANE, and the axis still stops at the engagement.
-   Two failures live here and they pull in opposite directions: lifting the
-   twelve-month phase off the axis made it read as a footnote rather than as
-   step five, and running the axis out to its end turned the four phases where
-   the work happens into nubs. The fifth bar runs off the right edge instead. */
+results.paactPhasesShown = ['Foundation', 'Discovery', 'Synthesis', 'Plan design', 'Adoption']
+  .filter((n) => paactScope.includes(n)).length;
+results.paactShowsRealProgress = /\b2\b[^.]{0,12}\b7\b/.test(paactScope);
+results.paactClaims2028AsEngagementEnd = /engagement[^.]{0,60}Feb 2028\b/i.test(paactScope);
 results.axisTicks = await paact.$$eval('.pt-axisrow .pt-tick, .pt-axisrow [class*=tick]',
   (els) => els.map((e) => e.textContent.trim()).filter(Boolean));
 results.laneCount = await paact.$$eval('.pt-lane', (n) => n.length);
 results.overrunBars = await paact.$$eval('.pt-bar.is-over', (n) => n.length);
-results.paactPhasesShown = ['Foundation', 'Discovery', 'Synthesis', 'Plan design', 'Adoption']
-  .filter((n) => paactScope.includes(n)).length;
-/* Phase 1 is the only phase with work behind it: 2 of its 7 deliverables. */
-results.paactShowsRealProgress = /\b2\b[^.]{0,12}\b7\b/.test(paactScope);
-/* HTI's engagement ends 15 Feb 2027. 15 Feb 2028 is the end of plan year one;
-   presenting the latter as the engagement span overstates the contract by a year. */
-results.paactClaims2028AsEngagementEnd = /engagement[^.]{0,60}Feb 28\b/i.test(paactScope);
 
 await paact.click('.subnav button:has-text("Team")');
 await paact.waitForTimeout(400);
 const paactTeam = await paact.evaluate(() => document.querySelector('.main')?.innerText || '');
-results.paactTeamNames = ['Folami', 'Shawnell', 'Kristin Bernhard', 'Danielle Wallace']
+results.paactTeamNames = ['Dr. Folami Prescott-Adams', 'Gina Glymph', 'Rachel Alterman Wallack', 'Shawnell']
   .filter((n) => paactTeam.includes(n)).length;
 
 await paact.click('.subnav button:has-text("Scope")');
@@ -402,68 +408,20 @@ await paact.waitForTimeout(400);
 const paactAgreement = await paact.evaluate(() => document.querySelector('.main')?.innerText || '');
 results.paactKeyDatesShown = ['Fall Luncheon', 'Impact Report', 'RFP project end date']
   .filter((n) => paactAgreement.includes(n)).length;
-results.paactCadenceShown = /Shawnell/.test(paactAgreement) && /Weekly/i.test(paactAgreement);
+results.paactCadenceShown = /Prescott-Adams/.test(paactAgreement) && /Weekly/i.test(paactAgreement);
+/* From the scope-of-work document, and absent from the brief that preceded it. */
+results.paactSowContent = ['Expected outcomes', 'Questions this process answers', 'Documents under review']
+  .filter((n) => paactAgreement.includes(n)).length;
 await paact.screenshot({ path: path.join(root, 'test/shot-09-paact-timeline.png'), fullPage: true });
 
-/* THE CROSSING. Three signals fire together when you leave the client's own
-   section for a borrowed one: the page wipes from light to dark, the masthead
-   changes to the organisation whose content it actually is, and a bar appears.
-   Section 01 carries none of them. Any one of the three surviving alone is a
-   half-signal, so all three are asserted on both sides of the crossing. */
-const crossing = async (label) => ({
-  where: label,
-  theme: await paact.evaluate(() => document.documentElement.getAttribute('data-theme')),
-  brand: (await paact.textContent('.brand-name').catch(() => '')) || '',
-  bar: await paact.evaluate(() => !!document.querySelector('.demobar')),
-  toggle: await paact.evaluate(() => !!document.querySelector('.themetoggle')),
-});
-results.cross01 = await crossing('scope');
-
-/* Sections 2-5 are another engagement's anonymised content. Unmarked, a client
-   would read priorities they never agreed to as their own plan. */
-await paact.click('.railnav button:has-text("The plan")');
-await paact.waitForTimeout(1100);
-results.cross02 = await crossing('plan');
-/* And back: a signal that only fires one way is worse than none, because the
-   page stays dark over the client's own content. */
-await paact.click('.railnav button:has-text("Scope")');
-await paact.waitForTimeout(1100);
-results.cross01back = await crossing('scope again');
-results.paactStorage = await paact.evaluate(() => {
-  try { return Object.entries(localStorage).map(([k, v]) => `${k}=${v}`).join(','); }
-  catch (e) { return 'THREW ' + e.message; }
-});
-results.wipeClassStuck = await paact.evaluate(
-  () => document.documentElement.classList.contains('theme-wipe'),
-);
-await paact.click('.railnav button:has-text("The plan")');
-await paact.waitForTimeout(1100);
-results.paactPlanMarkedSample = await paact.evaluate(() => {
-  const t = (document.querySelector('.topbar')?.innerText || '') + ' ' + (document.querySelector('.main')?.innerText || '');
-  return /sample|illustrative/i.test(t);
-});
-/* The banner alone is not enough, and checking only the banner is how a real
-   blocker got through this test once: the section HEADLINE still read
-   "PAACT (Promise All Atlanta Children Thrive) · Strategic Plan 2027-2031" over
-   another engagement's vision and priorities — attributing that plan to PAACT in
-   the largest type on the page, two inches under a banner saying it was not
-   theirs. A reader takes in the headline first. */
-results.paactPlanH2 = (await paact.textContent('.shead h2').catch(() => '')) || '';
-await paact.screenshot({ path: path.join(root, 'test/shot-10-paact-sample.png') });
-
-/* SECTION 01 MUST BE ALL PAACT. Sections 02-05 are deliberately the sample, so
-   the client can see the shape of what is coming — but the one section carrying
-   their own content must carry nothing else. This caught the real thing: the
-   "Who is on it" tab ended with the sample church workplan's owners, captioned
-   as a sample but sitting under three panels of real PAACT people, one of them
-   named "Elder board".
-
-   Built from the sample data rather than a hand-written list, so a new sample
-   name is covered the day it is added — minus anything PAACT legitimately
-   shares, since both engagements really do have phases called Discovery and
-   Synthesis and Alan's own org really is Good Work Atlanta. */
-const { PORTAL: SAMPLE } = await import(path.join(root, 'data', 'demo-plan.js'));
-const paactSource = fs.readFileSync(path.join(root, 'data', 'paact-plan.js'), 'utf8');
+/* NOTHING BORROWED, ANYWHERE. Built from the sample portal's own data rather
+   than a hand-written list, so a name added to the sample later is covered the
+   day it lands — minus whatever PAACT legitimately shares, since both
+   engagements really do have phases called Discovery and Synthesis and Alan's
+   own org really is Good Work Atlanta. This is the assertion that would catch
+   the old arrangement coming back by accident. */
+const { PORTAL: SAMPLE } = await import(path.join(root, 'clients', 'demo', 'plan.js'));
+const paactSource = fs.readFileSync(path.join(root, 'clients', 'paact', 'plan.js'), 'utf8');
 const sampleOnly = (() => {
   const t = new Set([SAMPLE.client.name, SAMPLE.client.place, SAMPLE.client.engagement]);
   SAMPLE.tasks.forEach((x) => x.owner && t.add(x.owner));
@@ -475,68 +433,49 @@ const sampleOnly = (() => {
   return [...t].map((x) => String(x || '').trim())
     .filter((x) => x.length > 3 && !paactSource.includes(x));
 })();
-let section01 = '';
-/* The walk above ended on "The plan", where the sub-nav has no Timeline tab. */
-await paact.click('.railnav button:has-text("Scope")');
-await paact.waitForTimeout(500);
+let whole = '';
 for (const tab of ['Timeline', 'Scope', 'Team']) {
   await paact.click(`.subnav button:has-text("${tab}")`);
   await paact.waitForTimeout(400);
-  section01 += '\n' + await paact.evaluate(
+  whole += '\n' + await paact.evaluate(
     () => (document.querySelector('.rail')?.innerText || '') + '\n' + (document.querySelector('.main')?.innerText || ''),
   );
 }
-/* No two-digit years anywhere in section 01. This engagement spans 2026, 2027
-   and 2028, and "15 Feb 27" and "15 Feb 28" sitting one line apart differ by a
-   single character. A month name followed by exactly two digits can only be a
-   truncated year here, because the format puts the day first ("23 Sep 2026").
-   A bare month with no year at all is fine and deliberate on the axis, and so
-   is "Feb 15, 2027" — prose quoting the contract in month-first order, where
-   the two digits are a DAY and the full year follows. Hence the lookahead. */
-results.shortYears = [...section01.matchAll(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ?(\d{2})(?!\d)(?!,? ?\d{4})/g)]
-  .map((m) => m[0]).filter((v, i, a) => a.indexOf(v) === i);
 results.sampleTermsChecked = sampleOnly.length;
-results.section01Leaks = sampleOnly.filter((x) => section01.includes(x));
-
-/* PAACT's portal serves the anonymised sample, so it must not leak the real
-   client of that sample either. */
-const paactText = await paact.evaluate(() => document.body.innerText);
-results.paactLeaksRealClient = /\bresonate\b/i.test(paactText.replace(/\bresonat(es|ed|ing)\b/gi, 'X'))
-  || /\bBelvedere\b/i.test(paactText);
+results.portalLeaks = sampleOnly.filter((x) => whole.includes(x));
+/* Two-digit years are unreadable across an engagement spanning 2026 to 2028:
+   "15 Feb 27" and "15 Feb 28" differ by one character. A month followed by
+   exactly two digits can only be a truncated year here, because the format
+   puts the day first — except in "Feb 15, 2027", prose quoting the contract
+   month-first, where the two digits are a day and the year follows. */
+results.shortYears = [...whole.matchAll(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ?(\d{2})(?!\d)(?!,? ?\d{4})/g)]
+  .map((m) => m[0]).filter((v, i, a) => a.indexOf(v) === i);
 results.paactTouchedNoDatabase = paactRest.length === 0;
 results.paactRestCalls = paactRest.slice(0, 3);
 
-/* ---- the theme toggle ---- */
-/* The toggle is checked on /demo, NOT /paact. On a mixed portal the theme is
-   a signal about whose content you are reading, so the manual control is
-   deliberately hidden there — see App.jsx. Asserting it here would have been
-   asserting the bug. */
+/* ---- the theme toggle, on /demo ----
+   Checked here and not on /paact: the toggle is suppressed only on a MIXED
+   portal, where the theme carries information about whose content you are
+   reading rather than a preference. /demo is wholly sample, so it has the
+   control like any ordinary portal. */
 const themeBtn = await demo.$('[aria-label*="theme" i], [aria-label*="dark" i], [aria-label*="light" i], .themetoggle');
 results.themeToggleFound = !!themeBtn;
 if (themeBtn) {
   const before = await demo.evaluate(() => document.documentElement.getAttribute('data-theme'));
   await themeBtn.click();
-  await demo.waitForTimeout(800);
-  const after = await demo.evaluate(() => document.documentElement.getAttribute('data-theme'));
-  results.themeFlipped = before !== after;
-  results.themeAfter = after;
-  /* The wipe adds a suppression class that kills every transition on the page.
-     If it is not removed on BOTH the resolved and rejected paths, the app is
-     left permanently un-animated. */
+  await demo.waitForTimeout(900);
+  results.themeAfter = await demo.evaluate(() => document.documentElement.getAttribute('data-theme'));
+  results.themeFlipped = before !== results.themeAfter;
+  /* The wipe adds a class that kills every transition on the page. Not removing
+     it on BOTH the resolved and rejected paths leaves the app permanently
+     un-animated. */
   results.themeWipeClassCleared = await demo.evaluate(
     () => !document.documentElement.classList.contains('theme-wipe'),
   );
-  /* The whole of storage, on the SAME page the toggle was clicked on. This
-     read from `paact` while the click happened on `demo`, and reported "" —
-     correctly, because a mixed portal's forced theme deliberately never
-     persists. An assertion pointed at the wrong page fails on a working app
-     and says nothing about why, so it dumps everything now and lets the
-     assertion below do the matching. */
   results.themeStorage = await demo.evaluate(() => {
     try { return Object.entries(localStorage).map(([k, v]) => `${k}=${v}`).join(','); }
     catch (e) { return 'THREW ' + e.message; }
   });
-  await demo.screenshot({ path: path.join(root, 'test/shot-11-demo-dark.png') });
 }
 
 /* The bare root, before anything else touches this context. */
@@ -657,71 +596,57 @@ if (!results.editorClosedOnSave) failures.push('the editor stayed open after sav
 if (!/Northside/.test(results.demoClient || '')) failures.push('demo is not showing the anonymised client');
 if (!results.demoInteractive) failures.push('demo workplan is not interactive');
 if (!results.demoTouchedNoDatabase) failures.push('demo hit the database: ' + results.demoRestCalls.join(', '));
-/* ---- /paact: the route the kickoff depends on ---- */
+/* ---- /paact: a real client portal ---- */
 if (!results.paactSkipsSignIn) failures.push('/paact asked for a sign-in — the client cannot open it');
 if (!/PAACT/.test(results.paactClient || ''))
   failures.push('/paact is not showing PAACT: ' + JSON.stringify(results.paactClient));
 if (/\bdemo\b/i.test(results.paactTopbarText || ''))
   failures.push("the client's own portal calls itself a Demo: " + JSON.stringify(results.paactTopbarText.slice(0, 120)));
 if (!/scope|timeline/i.test(results.paactOpensOn || ''))
-  failures.push('/paact opens on ' + JSON.stringify(results.paactOpensOn) + ' — it must open on the one section carrying PAACT’s own content');
+  failures.push('/paact opens on ' + JSON.stringify(results.paactOpensOn));
+/* ONE section. A tab that opens onto nothing is worse than a tab that is not
+   there yet, and each of the other four appears from Settings the day it has
+   content in it. */
+if (results.paactSectionTabs?.length !== 1)
+  failures.push(`/paact shows ${results.paactSectionTabs?.length} sections; only Scope & timeline has content yet: ` + JSON.stringify(results.paactSectionTabs));
+if (results.paactHasBar)
+  failures.push('/paact still renders a sample/demo bar, but it carries nothing borrowed to disclaim');
+if (!results.paactThemeToggle)
+  failures.push('the theme toggle is hidden on /paact; it is only suppressed where the theme carries information, and nothing is borrowed here');
+if (results.paactPhasesShown !== 5)
+  failures.push(`only ${results.paactPhasesShown} of 5 PAACT phases are on screen`);
+if (!results.paactShowsRealProgress)
+  failures.push("phase 1's real progress (2 of its 7 deliverables) is not shown");
+if (results.paactClaims2028AsEngagementEnd)
+  failures.push("the page presents Feb 2028 as the end of HTI Catalysts' engagement — it ends Feb 2027");
 if (results.laneCount !== 5)
   failures.push(`the strip draws ${results.laneCount} lanes, not 5 — a phase was taken off the axis and reads as a footnote rather than a step`);
 if (results.axisTicks?.some((t) => /2028/.test(t)))
   failures.push('the axis runs out to 2028, which squashes the four phases where the work happens: ' + results.axisTicks.join(' '));
 if (results.overrunBars !== 1)
   failures.push(`${results.overrunBars} bars are drawn open-ended; phase 5 runs past the axis and exactly one should be`);
-if (results.paactPhasesShown !== 5)
-  failures.push(`only ${results.paactPhasesShown} of 5 PAACT phases are on screen`);
-if (!results.paactShowsRealProgress)
-  failures.push("phase 1's real progress (2 of its 7 deliverables) is not shown");
-if (results.paactClaims2028AsEngagementEnd)
-  failures.push("the page presents Feb 2028 as the end of HTI's engagement — it ends Feb 2027; 2028 is the end of plan year one");
 if (results.paactTeamNames !== 4)
-  failures.push(`only ${results.paactTeamNames} of 4 named people appear on "Who is on it"`);
+  failures.push(`only ${results.paactTeamNames} of 4 named people appear on the Team tab`);
 if (results.paactKeyDatesShown !== 3)
-  failures.push(`only ${results.paactKeyDatesShown} of 3 checked key dates appear on "Scope & cadence"`);
+  failures.push(`only ${results.paactKeyDatesShown} of 3 checked key dates appear on Scope & cadence`);
 if (!results.paactCadenceShown) failures.push('the working cadence (owner and rhythm) is missing');
-if (!results.paactPlanMarkedSample)
-  failures.push("THE SAMPLE PLAN IS UNMARKED ON /paact — the client would read another engagement's priorities as their own");
-if (/PAACT/i.test(results.paactPlanH2 || ''))
-  failures.push('the sample plan is HEADED with the client name, which attributes it to them: ' + JSON.stringify(results.paactPlanH2));
-if (!/sample/i.test(results.paactPlanH2 || ''))
-  failures.push('the sample plan headline does not say it is a sample: ' + JSON.stringify(results.paactPlanH2));
-if (results.paactLeaksRealClient) failures.push('/paact LEAKS THE REAL CLIENT OF THE SAMPLE CONTENT');
-/* ---- the crossing into demo data ---- */
-if (results.cross01?.theme === 'dark') failures.push("the client's own section is dark — the demo-data signal is inverted");
-if (results.cross02?.theme !== 'dark') failures.push('a borrowed section did not go dark: ' + JSON.stringify(results.cross02?.theme));
-if (results.cross01back?.theme !== 'light') failures.push('coming back to the client\u2019s own section did not return to light: ' + JSON.stringify(results.cross01back?.theme));
-if (!/PAACT/i.test(results.cross01?.brand || '')) failures.push('section 01 masthead is not PAACT: ' + JSON.stringify(results.cross01?.brand));
-if (!/PAACT/i.test(results.cross01back?.brand || '')) failures.push('masthead did not return to PAACT: ' + JSON.stringify(results.cross01back?.brand));
-if (/PAACT/i.test(results.cross02?.brand || ''))
-  failures.push("a borrowed section still wears the client's name over another organisation's plan: " + JSON.stringify(results.cross02?.brand));
-if (!results.cross02?.brand) failures.push('a borrowed section has no masthead name at all');
-if (results.cross01?.bar) failures.push("the client's own section shows a demo bar");
-if (!results.cross02?.bar) failures.push('a borrowed section shows no demo bar');
-if (results.cross01back?.bar) failures.push('the demo bar stayed after returning to the client\u2019s own section');
-if (results.wipeClassStuck) failures.push('.theme-wipe was left on <html> after a section change — every transition on the page is now dead');
-if (results.cross02?.toggle || results.cross01?.toggle)
-  failures.push('the manual theme toggle is reachable on a mixed portal, where the theme is a signal rather than a preference');
-if (results.shortYears?.length)
-  failures.push('section 01 still shows two-digit years, which is unreadable across a three-year engagement: ' + results.shortYears.join(', '));
+if (results.paactSowContent !== 3)
+  failures.push(`only ${results.paactSowContent} of 3 scope-of-work panels are present (outcomes, questions, documents)`);
 if (!results.sampleTermsChecked)
-  failures.push('the section-01 purity check built an empty term list and tested nothing');
-if (results.section01Leaks?.length)
-  failures.push('SECTION 01 IS NOT ALL PAACT — it carries content from the sample: ' + results.section01Leaks.join(', '));
+  failures.push('the no-borrowed-content check built an empty term list and tested nothing');
+if (results.portalLeaks?.length)
+  failures.push("/paact CARRIES ANOTHER ENGAGEMENT'S CONTENT: " + results.portalLeaks.join(', '));
+if (results.shortYears?.length)
+  failures.push('two-digit years, unreadable across a three-year engagement: ' + results.shortYears.join(', '));
 if (!results.paactTouchedNoDatabase) failures.push('/paact hit the database: ' + results.paactRestCalls.join(', '));
-if (!results.themeToggleFound) failures.push('no theme toggle was found');
+if (!results.themeToggleFound) failures.push('no theme toggle was found on /demo');
 if (results.themeToggleFound && !results.themeFlipped) failures.push('the theme toggle did not change the theme');
 if (results.themeToggleFound && !results.themeWipeClassCleared)
   failures.push('the wipe left .theme-wipe on <html> — every transition on the page is now dead');
 if (results.themeToggleFound && !/=(light|dark)\b/.test(results.themeStorage || ''))
   failures.push('the theme choice was not persisted. localStorage holds: ' + JSON.stringify(results.themeStorage));
-/* A mixed portal's theme is a signal, not a preference: it must never be
-   written to storage, or it would follow the person to their NEXT portal and
-   assert something about content it has never seen. */
-if (/paact/i.test(results.paactStorage || '') || /=(light|dark)\b/.test(results.paactStorage || ''))
-  failures.push('the section-driven theme was persisted; it must not outlive the portal: ' + JSON.stringify(results.paactStorage));
+if (results.rootBrand && !/^\/[a-z0-9-]+\b/.test(results.rootPath || ''))
+  failures.push(`the site root rendered "${results.rootBrand}" at ${JSON.stringify(results.rootPath)} — a portal whose URL does not say whose content it is`);
 
 if (errs.length) failures.push('page errors: ' + errs.join(' | '));
 

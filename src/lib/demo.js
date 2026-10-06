@@ -29,7 +29,7 @@ const ALL = ['scope', 'plan', 'findings', 'workplan', 'dashboard'];
    `engagement` jsonb, so a portal that moves to the database keeps this shape
    rather than needing a second adapter. */
 
-function filePortal({ id, slug, client, engagement, plan, findings, sampleSections, sampleClient }) {
+function filePortal({ id, slug, client, engagement, plan, findings, sections, sampleSections, sampleClient }) {
   return {
     id,
     slug,
@@ -41,7 +41,10 @@ function filePortal({ id, slug, client, engagement, plan, findings, sampleSectio
     adopted: client.adopted || null,
     brand: {},
     labels: {},
-    sections: ALL,
+    /* Which sections this portal SHOWS, in order. Defaults to all five; a
+       portal passes fewer when fewer exist yet. Settings writes this field, so
+       turning one on later is a click rather than a deploy. */
+    sections: sections && sections.length ? sections : ALL,
     engagement,
     plan: {
       vision: plan.vision,
@@ -92,8 +95,8 @@ function fileTasks(rows) {
    signed-in client portal must never pay for data it will not use. */
 export async function loadDemo() {
   const [{ PORTAL }, { FINDINGS }] = await Promise.all([
-    import('../../data/demo-plan.js'),
-    import('../../data/demo-findings.js'),
+    import('../../clients/demo/plan.js'),
+    import('../../clients/demo/findings.js'),
   ]);
 
   const portal = filePortal({
@@ -116,51 +119,45 @@ export async function loadDemo() {
 
 /* ---------- /paact ----------
    Real engagement, real names, and a kickoff in the room. Section 1 is PAACT's
-   own scope and timeline, from data/paact-plan.js. Sections 2-5 are the
+   own scope and timeline, from clients/paact/plan.js. It carries no other
    anonymised sample above, because PAACT has no plan, findings or workplan yet
    — they are the OUTPUT of the engagement section 1 describes. Three chunks so
    a database-backed portal still pays for none of it. */
 export async function loadPaact() {
-  const [{ PORTAL: PAACT }, { PORTAL: SAMPLE }, { FINDINGS }] = await Promise.all([
-    import('../../data/paact-plan.js'),
-    import('../../data/demo-plan.js'),
-    import('../../data/demo-findings.js'),
-  ]);
+  const { PORTAL: PAACT } = await import('../../clients/paact/plan.js');
 
   const portal = filePortal({
     id: 'paact',
     slug: PAACT_SLUG,
     client: PAACT.client,
     engagement: paactEngagement(PAACT),
-    plan: SAMPLE.plan,
-    findings: FINDINGS,
-    /* Scope & timeline is PAACT's. The other four are another client's,
-       anonymised, and have to say so wherever they are shown. */
-    sampleSections: ['plan', 'findings', 'workplan', 'dashboard'],
-    sampleClient: {
-      name: SAMPLE.client.name,
-      place: SAMPLE.client.place,
-      engagement: SAMPLE.client.engagement,
-    },
+    /* NOTHING BORROWED. This portal used to fill its other four sections with
+       another engagement's anonymised plan, findings and workplan, marked as
+       samples, so the client could see the shape of what was coming. It did
+       that job and it is over: the sample is somebody else's content, and the
+       moment a portal is the client's real workspace rather than a pitch, a
+       page of another organisation's priorities under their masthead is a
+       liability with no upside. */
+    plan: { vision: '', framing: '', priorities: [], track: null },
+    findings: { themes: [], responses: [] },
+    /* ONE SECTION, because one section is what exists. The plan, the findings
+       and the workplan are OUTPUTS of the engagement section one describes —
+       the findings close in November, the plan is drafted in January, the
+       implementation roadmap is a phase 4 deliverable. Each is switched on from
+       Settings on the day it has something in it. An empty tab a client clicks
+       into and finds nothing in is worse than a tab that is not there yet. */
+    sections: ['scope'],
   });
 
-  /* Sample tasks, so the Workplan and Dashboard previews have something in
-     them. They belong to the sample plan above, not to PAACT. */
-
-  /* NO PINNED CLOCK, deliberately — `now: null` and App.jsx reads the real
-     local date. This workspace is contract deliverable #4 and PAACT runs their
-     plan in it for seventeen months, so a frozen date is not a snapshot, it is
-     a sentence that is wrong every day after the one it was written on: on
-     kickoff morning a pin on the 22nd says the kickoff is "tomorrow" to the
-     room sitting in it. The brief's "Today's date for the app: 2026-09-22" told
-     the builder what date to assume while building; it is not a requirement to
-     stop the clock. /demo keeps its pin (see loadDemo) because its content is
-     dated sample content. */
-  return { portal, tasks: fileTasks(SAMPLE.tasks), now: null, role: DEMO_ROLE };
+  /* No pinned clock: `now: null` and App.jsx reads the real local date. This
+     workspace is contract deliverable #4 and PAACT runs their plan in it for
+     seventeen months, so a frozen date is not a snapshot — it is a sentence
+     that is wrong every day after the one it was written on. */
+  return { portal, tasks: [], now: null, role: DEMO_ROLE };
 }
 
 /* The brief's vocabulary -> the app's, in one function, so
-   data/paact-plan.js can stay the brief verbatim and can be pushed into the
+   clients/paact/plan.js can stay the brief verbatim and can be pushed into the
    Supabase `engagement` jsonb without a second translation to keep in step.
    Nothing here adds a fact; it renames and derives. */
 const PHASE_STATUS = { in_progress: 'active', complete: 'done', done: 'done', not_started: '' };
@@ -209,7 +206,7 @@ function paactEngagement(src) {
    Which slugs the app can serve from files. App.jsx consults this before the
    database, so a future database portal whose slug is literally 'paact' would
    be shadowed by the file: when PAACT moves to Supabase, delete the entry and
-   seed data/paact-plan.js instead. */
+   seed clients/paact/plan.js instead. */
 export const FILE_PORTALS = {
   [DEMO_SLUG]: loadDemo,
   [PAACT_SLUG]: loadPaact,

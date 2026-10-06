@@ -8,8 +8,8 @@
    because PAACT has none yet — the strategic planning kickoff is 23 Sep 2026,
    and the priorities, findings and tasks are the OUTPUT of the engagement
    described below. Sections 2-5 of the /paact portal (The plan, Findings,
-   Workplan, Dashboard) are served from data/demo-plan.js and
-   data/demo-findings.js: ILLUSTRATIVE SAMPLE CONTENT, anonymised from another
+   Workplan, Dashboard) ARE NOT SHOWN AT ALL until they exist. They were once
+   filled with anonymised sample content from another
    client, shown so the PAACT team can see the shape of what is coming. Those
    four sections are not PAACT's plan, and the portal marks them as sample —
    see `sampleSections` in src/lib/demo.js.
@@ -104,7 +104,7 @@ export const PORTAL = {
     { "name": "Peer collective impact calls: Cobb, Detroit, Memphis, Colorado", "done": false },
     { "name": "Quantitative data pull from Danielle's dashboard and Readiness Radar", "done": false }
    ],
-   "note": "No stakeholder-facing work Dec 18 – Jan 3."
+   "note": "No stakeholder-facing work 18 Dec 2026 \u2013 3 Jan 2027."
   },
   {
    "number": 3,

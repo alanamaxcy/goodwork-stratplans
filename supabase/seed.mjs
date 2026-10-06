@@ -41,21 +41,26 @@ const args = Object.fromEntries(
 const URL_ = (process.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '');
 const ANON = process.env.VITE_SUPABASE_ANON_KEY || '';
 const SLUG = args.slug || 'resonate';
-const DIR = args.from || path.join(root, 'data');
+/* One folder per client: clients/<slug>/plan.js, and findings.js where that
+   client has any. --from still overrides, for a staging copy. */
+const DIR = args.from || path.join(root, 'clients', SLUG);
 
 if (!URL_ || !ANON) {
   console.error('Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (see .env.example).');
   process.exit(1);
 }
 
-async function readBundle(file, name) {
-  const mod = await import(pathToFileURL(path.join(DIR, file)).href);
+async function readBundle(file, name, { optional = false } = {}) {
+  const at = path.join(DIR, file);
+  if (!fs.existsSync(at)) {
+    if (optional) return null;
+    throw new Error(`No ${file} in ${DIR}. Client content lives in clients/<slug>/.`);
+  }
+  const mod = await import(pathToFileURL(at).href);
   if (!mod[name]) throw new Error(`${file} does not export ${name}`);
   return mod[name];
 }
 
-const P = await readBundle('plan.js', 'PORTAL');
-const F = await readBundle('findings.js', 'FINDINGS');
 
 /* autoRefreshToken keeps a timer alive, which would stop this CLI from ever
    exiting. A seed run takes seconds; it never needs a refresh. */
@@ -92,6 +97,16 @@ if (!portal) {
   );
   process.exit(1);
 }
+
+/* AFTER the portal lookup, not before. These live in clients/<slug>/, so an
+   unknown slug used to die on a missing directory — an ENOENT about a path,
+   where the actual problem is that nobody has run bootstrap.sql yet. The
+   message that tells you what to do has to come first.
+
+   findings.js is optional: a client whose discovery has not happened has no
+   findings, and an empty themes list is the correct state rather than an error. */
+const P = await readBundle('plan.js', 'PORTAL');
+const F = await readBundle('findings.js', 'FINDINGS', { optional: true }) || { themes: [], responses: [] };
 
 /* ---- the plan document ---- */
 const { error: upErr } = await db
