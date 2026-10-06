@@ -1,7 +1,7 @@
 import React from 'react';
 import ThemeToggle from './ThemeToggle.jsx';
 
-const ROLE_WORD = { owner: 'Owner', staff: 'Staff', board: 'Board — read only' };
+const ROLE_WORD = { owner: 'Owner', staff: 'Staff', board: 'Board — read only', viewer: 'View only' };
 
 /* `isFile` is "this portal is served from a file, so there is nothing to save
    to and no session behind it". `isDemo` is the narrower "this is the all-sample
@@ -58,7 +58,9 @@ export default function Masthead({
         <div className="mast-right">
           {isFile || isDemo ? (
             <>
-              <span className="syncpill">not saved</span>
+              {/* "not saved" is a warning about edits. Where there are none to
+                  make, it reads as an error. */}
+              {role === 'viewer' ? null : <span className="syncpill">not saved</span>}
               {/* The role, then what it can reach. Only /demo says "Demo"; every
                   other file-backed portal states the access the viewer has and
                   lets the pill beside it say that nothing persists. */}

@@ -386,6 +386,14 @@ results.paactHasBar = await paact.evaluate(() => !!document.querySelector('.demo
    ones. With nothing borrowed the signal has nothing to say, so the manual
    toggle comes back. */
 results.paactThemeToggle = await paact.evaluate(() => !!document.querySelector('.themetoggle'));
+/* READ-ONLY while it is served from a file. Its address went out as a QR code
+   on a slide, and every person who scanned it was handed Owner, Edit plan and
+   Settings — with each change silently discarded on reload. No edit controls
+   at all is the honest offer until it is served from the database, where an
+   owner is a signed-in person rather than whoever holds the link. */
+results.paactEditControls = await paact.evaluate(() => [...document.querySelectorAll('button')]
+  .map((e) => e.textContent.trim()).filter((t) => /^(Edit plan|Settings|Access)$/.test(t)));
+results.paactRoleWord = (await paact.evaluate(() => document.querySelector('.mast-right .eyebrow')?.textContent || '')) || '';
 
 const paactScope = await paact.evaluate(() => document.querySelector('.main')?.innerText || '');
 results.paactPhasesShown = ['Foundation', 'Discovery', 'Synthesis', 'Plan design', 'Adoption']
@@ -609,6 +617,10 @@ if (!/scope|timeline/i.test(results.paactOpensOn || ''))
    content in it. */
 if (results.paactSectionTabs?.length !== 1)
   failures.push(`/paact shows ${results.paactSectionTabs?.length} sections; only Scope & timeline has content yet: ` + JSON.stringify(results.paactSectionTabs));
+if (results.paactEditControls?.length)
+  failures.push('/paact offers edit controls that cannot save — anyone holding the link is handed them: ' + results.paactEditControls.join(', '));
+if (!/view only/i.test(results.paactRoleWord || ''))
+  failures.push('/paact does not say it is view-only: ' + JSON.stringify(results.paactRoleWord));
 if (results.paactHasBar)
   failures.push('/paact still renders a sample/demo bar, but it carries nothing borrowed to disclaim');
 if (!results.paactThemeToggle)

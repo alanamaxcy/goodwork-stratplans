@@ -153,7 +153,16 @@ export async function loadPaact() {
      workspace is contract deliverable #4 and PAACT runs their plan in it for
      seventeen months, so a frozen date is not a snapshot — it is a sentence
      that is wrong every day after the one it was written on. */
-  return { portal, tasks: [], now: null, role: DEMO_ROLE };
+  /* READ-ONLY, not owner. A file-backed portal has nowhere to save to, and
+     this one's address was printed as a QR code on a slide: everybody who
+     scanned it was handed "Owner · full access", an Edit plan button and
+     Settings — and every change they made vanished on reload without a word.
+     Offering edits that are silently thrown away is worse than not offering
+     them. It becomes editable when it is served from the database, where an
+     owner is a signed-in person rather than anyone holding the link. /demo
+     keeps owner on purpose: its whole point is "everything works, nothing is
+     saved", and its banner says so. */
+  return { portal, tasks: [], now: null, role: 'viewer' };
 }
 
 /* The brief's vocabulary -> the app's, in one function, so
