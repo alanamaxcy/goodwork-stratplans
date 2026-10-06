@@ -12,8 +12,18 @@
    portal slug.
 
    Two tags matter, and both are set here so nobody hand-edits JSON:
-     gw_role    admin | staff   — kept for the Impact Suite's convention
      gw_tenant  the portal's tenant, or "*" for your own firm's staff
+     gw_role    always "viewer" — see below
+
+   THIS SIGN-IN PROJECT IS SHARED with the Impact Suite, which reads both tags
+   for its own sites. So an account made here is also an account there, and
+   two rules keep that from widening anyone's reach:
+     - "*" reaches every client in BOTH products. Only a caller who already
+       holds "*" may hand it out; a client's own portal owner never can.
+     - gw_role is the Impact Suite's, not ours (portal_members.role decides
+       what someone may do in a portal). It is set to the lowest tier that
+       product knows, so an account made for a strategy portal is never an
+       administrator of anything else.
 
    A missing gw_tenant is the classic failure: the person signs in fine and then
    sees nothing, which looks like a broken link rather than a missing tag. */
@@ -112,8 +122,11 @@ export default async function handler(req) {
       const ownFirm = !!body.ownFirm;
       if (!/.+@.+\..+/.test(email)) return json(400, { error: 'That does not look like an email address.' });
 
+      if (ownFirm && !isGw) {
+        return json(403, { error: 'Only your own firm\u2019s staff can give someone access to every client.' });
+      }
       const tenant = ownFirm ? '*' : portal.tenant;
-      const gwRole = role === 'owner' ? 'admin' : 'staff';
+      const gwRole = 'viewer';
 
       let user = await findUser(email);
       let created = false;

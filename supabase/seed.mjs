@@ -20,6 +20,7 @@ import { pathToFileURL } from 'node:url';
 import readline from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 import { createClient } from '@supabase/supabase-js';
+import { engagementOfFile, tidy } from '../src/lib/engagement.js';
 
 const root = path.resolve(import.meta.dirname, '..');
 
@@ -108,18 +109,27 @@ if (!portal) {
 const P = await readBundle('plan.js', 'PORTAL');
 const F = await readBundle('findings.js', 'FINDINGS', { optional: true }) || { themes: [], responses: [] };
 
-/* ---- the plan document ---- */
+/* ---- the plan document ----
+   OVERWRITES what the portal holds, including anything edited in the app
+   since. That is what an import is; for a portal people are already working
+   in, its supabase/clients/<slug>.sql is the safe route, and never overwrites. */
+const fields = {
+  client_name: P.client.name,
+  place: P.client.place || null,
+  engagement_name: P.client.engagement,
+  adopted: P.client.adopted || null,
+  /* The same canonical document the app edits, so the first edit after an
+     import does not quietly rewrite the whole thing into a new shape. */
+  engagement: tidy(engagementOfFile(P)),
+  findings: F,
+};
+/* A client whose plan has not been written yet (PAACT) has no plan to load. */
+if (P.plan) {
+  fields.plan = { vision: P.plan.vision, framing: P.plan.framing, priorities: P.plan.priorities, track: P.plan.track };
+}
 const { error: upErr } = await db
   .from('portals')
-  .update({
-    client_name: P.client.name,
-    place: P.client.place || null,
-    engagement_name: P.client.engagement,
-    adopted: P.client.adopted || null,
-    engagement: { phases: P.phases, scope: P.scope, firm: P.firm },
-    plan: { vision: P.plan.vision, framing: P.plan.framing, priorities: P.plan.priorities, track: P.plan.track },
-    findings: F,
-  })
+  .update(fields)
   .eq('id', portal.id);
 
 if (upErr) {
@@ -129,10 +139,10 @@ if (upErr) {
   );
   process.exit(1);
 }
-console.log(`plan: ${P.plan.priorities.length} priorities · findings: ${(F.themes || []).length} themes`);
+console.log(`plan: ${P.plan ? P.plan.priorities.length : 0} priorities · findings: ${(F.themes || []).length} themes`);
 
 /* ---- the workplan. Parents before children: the composite FK needs them. ---- */
-const rows = P.tasks.map((t, i) => ({
+const rows = (P.tasks || []).map((t, i) => ({
   portal_id: portal.id,
   id: t.id,
   parent_id: t.parent || null,

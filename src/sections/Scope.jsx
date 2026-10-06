@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { SectionHead, Panel, Dot } from '../components/ui.jsx';
 import { fmt, MON } from '../lib/format.js';
 import { ownerLoad } from './Workplan.jsx';
+import { STATUSES, STATUS_WORD } from '../lib/engagement.js';
 
 /* ---------------------------------------------------------------------------
    SCOPE & TIMELINE
@@ -247,6 +248,9 @@ function normalise(raw, nowMs) {
       const o = d && typeof d === 'object' ? d : null;
       return {
         key: `${id}-d${j}`,
+        /* The stored row's own id, which is what an edit names. Null on the
+           older string-only shape, which is never edited in place. */
+        rowId: o && o.id != null ? String(o.id) : null,
         name: o ? String(o.name ?? o.title ?? o.text ?? '') : String(d ?? ''),
         done: o && typeof o.done === 'boolean' ? o.done : null,
       };
@@ -260,6 +264,9 @@ function normalise(raw, nowMs) {
 
     const out = {
       id,
+      /* The id the DOCUMENT gives this phase — `id` above can be a
+         de-duplicated copy — so a tick names the phase that was ticked. */
+      rowId: typeof p.id === 'string' && p.id ? p.id : null,
       number,
       /* Alias, because the rail prints "Phase {n}" from the raw shape and now
          reads this one through currentPhaseOf(). Same value, both spellings. */
@@ -608,7 +615,28 @@ function Person({ m }) {
   );
 }
 
-export default function Scope({ portal, labels, scopeId, topTasks, now }) {
+/* The two edits a person makes straight from the timeline, without opening the
+   editor: tick a deliverable, and say where a phase stands. `onEngOp` sends
+   the edit as data (lib/engagement.js applyOp), so it can be shown at once,
+   saved in the background, and replayed if somebody else saved first. */
+function PhaseStatus({ p, onEngOp }) {
+  const id = `pc-status-${p.id}`;
+  return (
+    <div className="pc-statusrow">
+      <label className="eyebrow" htmlFor={id}>Status</label>
+      <select
+        id={id}
+        value={p.rawStatus == null ? '' : p.rawStatus}
+        onChange={(e) => onEngOp({ kind: 'status', phase: p.rowId, status: e.target.value || null })}
+      >
+        {p.rawStatus == null ? <option value="">Not set — follows the dates</option> : null}
+        {STATUSES.map((v) => <option key={v} value={v}>{STATUS_WORD[v]}</option>)}
+      </select>
+    </div>
+  );
+}
+
+export default function Scope({ portal, labels, scopeId, topTasks, now, canEditEng = false, onEngOp }) {
   const pl = portal || {};
   const eng = pl.engagement || {};
   const scope = eng.scope || {};
@@ -848,6 +876,10 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
 
   /* ------------------------------------------------ Who is on it -------- */
   if (view === 'team') {
+    /* Owners come from the workplan, so a portal that does not show one has
+       nothing to put here — and an empty panel headed "Owners in the
+       workplan" reads as a page that failed to load. */
+    const showsWorkplan = !Array.isArray(pl.sections) || !pl.sections.length || pl.sections.includes('workplan');
     const consultants = Array.isArray(scope.consultingTeam) ? scope.consultingTeam : [];
     const client = Array.isArray(scope.clientTeam) ? scope.clientTeam : [];
     const governance = Array.isArray(scope.governance) ? scope.governance : [];
@@ -927,7 +959,7 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
             reads as part of the team. On the sample church's workplan one of
             them is literally "Elder board". Say the panel is coming instead of
             filling it with names from another engagement. */}
-        {borrowedWorkplan ? (
+        {!showsWorkplan ? null : borrowedWorkplan ? (
           <Panel>
             <div className="pc-phead">
               <h4 className="eyebrow">Owners in the {workplan}</h4>
@@ -1285,6 +1317,7 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
                 </button>
 
                 <div className="pc-body" id={`pc-body-${p.id}`} hidden={!isOpen}>
+                  {canEditEng && p.rowId ? <PhaseStatus p={p} onEngOp={onEngOp} /> : null}
                   {p.purpose ? <p className="pc-purpose">{p.purpose}</p> : null}
 
                   {p.overlaps.length ? (
@@ -1320,14 +1353,32 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
                             things. */}
                         <span className="pc-count num">{m.kind === 'items' ? m.text : `${p.items.length} in this phase`}</span>
                       </h4>
-                      <ul className={`pc-list${p.items.length > 6 ? ' is-long' : ''}`} role="list">
+                      <ul className={`pc-list${p.items.length > 6 ? ' is-long' : ''}${canEditEng && p.rowId ? ' is-editable' : ''}`} role="list">
                         {p.items.map((d) => (
                           <li key={d.key} className={d.mark ? 'is-done' : ''}>
-                            <span className="pc-mk" aria-hidden="true">{d.mark ? '✓' : ''}</span>
-                            <span>
-                              <span className="sr">{d.mark === true ? 'Done: ' : d.mark === false ? 'To do: ' : ''}</span>
-                              {d.name}
-                            </span>
+                            {canEditEng && p.rowId && d.rowId ? (
+                              /* A real checkbox under the same mark, so a
+                                 keyboard and a screen reader get one, and the
+                                 whole line is the target rather than a 16px
+                                 square. */
+                              <label className="pc-tick">
+                                <input
+                                  type="checkbox"
+                                  checked={!!d.mark}
+                                  onChange={(e) => onEngOp({ kind: 'tick', phase: p.rowId, item: d.rowId, done: e.target.checked })}
+                                />
+                                <span className="pc-mk" aria-hidden="true">{d.mark ? '✓' : ''}</span>
+                                <span>{d.name}</span>
+                              </label>
+                            ) : (
+                              <>
+                                <span className="pc-mk" aria-hidden="true">{d.mark ? '✓' : ''}</span>
+                                <span>
+                                  <span className="sr">{d.mark === true ? 'Done: ' : d.mark === false ? 'To do: ' : ''}</span>
+                                  {d.name}
+                                </span>
+                              </>
+                            )}
                           </li>
                         ))}
                       </ul>
@@ -1356,7 +1407,12 @@ export default function Scope({ portal, labels, scopeId, topTasks, now }) {
           })}
         </ol>
       ) : (
-        <Panel><p style={{ color: 'var(--ink-2)' }}>The phase plan for this engagement has not been added yet.</p></Panel>
+        <Panel>
+          <p style={{ color: 'var(--ink-2)' }}>
+            The phase plan for this engagement has not been added yet.
+            {canEditEng ? ' Use Edit timeline, above, to add the phases.' : ''}
+          </p>
+        </Panel>
       )}
     </>
   );

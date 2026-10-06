@@ -5,3 +5,4 @@ dist/
 *.log
 test/shot-*.png
 test/shot-*.png
+dist-file/

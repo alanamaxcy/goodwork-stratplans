@@ -343,6 +343,11 @@ create trigger portals_touch before update on portals
 -- --------------------------------------------------------------- realtime ---
 -- Two people in the same workplan should see each other's changes without a
 -- reload. Guarded so re-running the file is not an error.
+--
+-- `portals` too: section 01 is one document several people edit, and each
+-- open screen hears that the row moved and re-reads it. Realtime applies the
+-- read policy above per subscriber, so nobody hears about a portal they
+-- cannot open.
 
 do $$
 begin
@@ -351,24 +356,14 @@ begin
       alter publication supabase_realtime add table tasks;
     exception when duplicate_object then null;
     end;
+    begin
+      alter publication supabase_realtime add table portals;
+    exception when duplicate_object then null;
+    end;
   end if;
 end $$;
 
--- ------------------------------------------------------------------ seed ---
--- Creating the first portal and its owner is a one-time job for the service
--- role (RLS above deliberately gives an anonymous caller no way in):
---
---   insert into portals (slug, tenant, client_name, engagement, adopted, plan, findings)
---   values ('resonate', 'resonate', 'Resonate Church',
---           'Strategic Plan 2026-2028', '2026-08-18',
---           '<contents of data/plan.js>'::jsonb,
---           '<contents of data/findings.js>'::jsonb);
---
---   insert into portal_members (portal_id, user_id, email, role)
---   select p.id, u.id, u.email, 'owner'
---     from portals p, auth.users u
---    where p.slug = 'resonate' and u.email = 'alan@goodworkatlanta.co';
---
--- Tag every user in Supabase → Authentication → Users → App metadata:
---   { "gw_role": "staff", "gw_tenant": "resonate" }   -- a client's staff
---   { "gw_role": "admin", "gw_tenant": "*" }          -- Good Work
+-- ------------------------------------------------------------------ next ---
+-- A client portal is created by its own generated file, run after this one:
+-- supabase/clients/<slug>.sql (see docs/GO-LIVE.md). People are added from the
+-- app's Access screen, or with supabase/add-member.sql.

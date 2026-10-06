@@ -715,12 +715,17 @@
      It wrapped once the toggle came back to this portal, and a 30px control on
      its own line cost 40px of the first screen a client sees. */
   .masthead-in { flex-wrap: nowrap; }
-  .brand-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* max-width, or the column layout sizes the line to its text and the
+     ellipsis never fires: it ran on underneath Sign out instead. */
+  .brand-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   /* Operator chrome, not client information. Somebody who scanned a code to read
      their timeline does not need to be told the demo does not save, and it cost
      a whole row. The desktop masthead still carries both. */
   .mast-right .syncpill, .mast-right .eyebrow, .mast-right .whoami { display: none; }
   .masthead-in { padding: 7px 16px; gap: 10px; }
+  /* Signed in, what is left is the theme toggle and Sign out: one row, beside
+     the name. Wrapping stacked them and made the header a row taller. */
+  .mast-right { flex-wrap: nowrap; flex: 0 0 auto; gap: 8px; }
   .tabstrip { padding: 5px 16px !important; }
   .subnav-in { padding: 5px 16px; }
   .rail { max-height: none; }
@@ -1003,3 +1008,80 @@
   .teamadd { grid-template-columns: 1fr; }
   .teamrow { grid-template-columns: minmax(0, 1fr) 96px 26px; }
 }
+
+/* ---------- section 01's editor ---------- */
+.ephase { margin-top: var(--sp-4); background: var(--surface); border: 1px solid var(--rule-2); border-radius: var(--r-md); padding: var(--sp-4) 18px; box-shadow: var(--shadow-sm); }
+.egrid.e3 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); }
+/* One row of a list: the fields, then the row tools. --cols comes from the
+   list, so cadence and key dates each get columns that fit what is in them. */
+.erow {
+  display: grid;
+  grid-template-columns: var(--cols, minmax(0, 1fr)) auto;
+  gap: 6px;
+  align-items: center;
+  margin-top: var(--sp-2);
+}
+.erow.e-text { grid-template-columns: minmax(0, 1fr) auto; }
+.erow.e-del { grid-template-columns: 22px minmax(0, 1fr) auto; }
+.erow.e-head { margin-top: var(--sp-2); margin-bottom: -2px; }
+.erow input:not([type="checkbox"]), .erow textarea, .erow select {
+  font: inherit; font-size: var(--fs-label); width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--rule); border-radius: var(--r-sm);
+  background: var(--raise); color: var(--ink);
+}
+.erow textarea { resize: vertical; min-height: 0; line-height: 1.45; }
+.erow input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--st-done); margin: 0 auto; }
+.erow input:focus, .erow textarea:focus { background: var(--surface); }
+.erow .rowtools { margin-left: 0; }
+
+/* What stopped a Save, at the top of the editor where the eye already is. */
+.eflag {
+  margin: var(--sp-3) 0;
+  padding: 12px 14px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--stop) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--stop) 35%, transparent);
+  font-size: 13.5px; line-height: 1.5; color: var(--ink);
+}
+.eflag.is-conflict {
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  border-color: var(--accent-line);
+}
+.eflag ul { margin: 6px 0 0 18px; padding: 0; }
+.eflag p { margin-top: 6px; color: var(--ink-2); }
+.eflag-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: 10px; }
+
+/* One line at the foot of the screen: a save confirmed, or a save refused. */
+.toast {
+  position: fixed;
+  left: 50%; bottom: 20px;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex; align-items: center; gap: 12px;
+  max-width: min(560px, calc(100% - 32px));
+  padding: 10px 10px 10px 16px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, .12));
+  font-size: 13.5px; line-height: 1.45; color: var(--ink);
+}
+.toast.is-error { border-color: color-mix(in srgb, var(--stop) 45%, transparent); background: color-mix(in srgb, var(--stop) 7%, var(--surface)); }
+.toast .ghost { flex: 0 0 auto; }
+
+@media (max-width: 720px) {
+  .egrid.e3 { grid-template-columns: 1fr 1fr; }
+  .egrid.e3 > :first-child { grid-column: 1 / -1; }
+  /* A row of four fields does not fit 390px: they wrap two to a line, the
+     wide one gets a line of its own, and the column heads give way to the
+     placeholders. */
+  .erow:not(.e-text):not(.e-del) { grid-template-columns: 1fr 1fr; }
+  .erow:not(.e-text):not(.e-del) > .wide { grid-column: 1 / -1; }
+  .erow:not(.e-text):not(.e-del) > .rowtools { grid-column: 1 / -1; justify-content: flex-end; }
+  .erow.e-head { display: none; }
+  .erow input:not([type="checkbox"]), .erow textarea { min-height: 40px; }
+  .ephase { padding: var(--sp-3) 14px; }
+  .toast { bottom: 12px; }
+}
+@media print { .toast, .eflag { display: none !important; } }

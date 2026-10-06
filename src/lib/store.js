@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js';
+import { toCanonical } from './engagement.js';
 
 /* The data layer. Two shapes, for two different write patterns:
 
@@ -14,7 +15,7 @@ export async function loadPortal(slug) {
 
   const { data: portal, error } = await supabase
     .from('portals')
-    .select('id, slug, client_name, place, engagement_name, adopted, brand, labels, sections, plan, engagement, findings')
+    .select('id, slug, tenant, client_name, place, engagement_name, adopted, brand, labels, sections, plan, engagement, findings, updated_at')
     .eq('slug', slug)
     .maybeSingle();
 
@@ -24,7 +25,10 @@ export async function loadPortal(slug) {
   if (!portal) return { portal: null, role: null, reason: 'not-visible' };
 
   const role = await roleFor(portal.id);
-  return { portal, role, reason: 'ok' };
+  /* One shape on screen whatever shape the row was seeded in. See
+     lib/engagement.js: an older portal's flat team and string deliverables
+     are read once, here, and saved back canonical the first time anyone edits. */
+  return { portal: { ...portal, engagement: toCanonical(portal.engagement) }, role, reason: 'ok' };
 }
 
 async function roleFor(portalId) {
@@ -121,6 +125,54 @@ export function watchTasks(portalId, onChange) {
         if (payload.eventType === 'DELETE') onChange({ type: 'delete', id: payload.old?.id });
         else if (payload.new) onChange({ type: 'upsert', task: fromRow(payload.new) });
       },
+    )
+    .subscribe();
+  return () => supabase.removeChannel(channel);
+}
+
+/* ---------- the engagement document (section 01) ----------
+
+   Edited by several people on one team, so every save is a compare-and-set:
+   it names the version it was built on (`updated_at`, which the portals_touch
+   trigger moves on every write) and the database applies it only if the row is
+   still on that version. A save that matches no row comes back { ok: false },
+   and lib/engagementSync.js re-reads the row and replays the change on top of
+   whatever the other person saved. */
+
+export async function loadEngagement(portalId) {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('portals')
+    .select('engagement, updated_at')
+    .eq('id', portalId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? { engagement: toCanonical(data.engagement), updated_at: data.updated_at } : null;
+}
+
+export async function saveEngagement(portalId, engagement, seen) {
+  if (!supabase) return { ok: false };
+  const { data, error } = await supabase
+    .from('portals')
+    .update({ engagement })
+    .eq('id', portalId)
+    .eq('updated_at', seen)
+    .select('updated_at');
+  if (error) throw error;
+  return data && data.length ? { ok: true, updated_at: data[0].updated_at } : { ok: false };
+}
+
+/* Somebody else saved this portal. Only the fact is used, never the payload:
+   a portal row can carry a findings document far larger than a realtime
+   message, and the caller re-reads what it needs anyway. */
+export function watchPortal(portalId, onChange) {
+  if (!supabase) return () => {};
+  const channel = supabase
+    .channel(`portal:${portalId}`)
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'portals', filter: `id=eq.${portalId}` },
+      () => onChange(),
     )
     .subscribe();
   return () => supabase.removeChannel(channel);

@@ -19,7 +19,9 @@ psql() { command psql -h "$SOCK" -U postgres -d postgres -v ON_ERROR_STOP=1 "$@"
 echo "=== stub the Supabase-provided pieces ==="
 psql -q <<'SQL'
 create schema if not exists auth;
-create table auth.users (id uuid primary key, email text);
+-- raw_app_meta_data is where Supabase keeps app_metadata: the gw_tenant tag
+-- the generated client files read and fill in.
+create table auth.users (id uuid primary key, email text, raw_app_meta_data jsonb not null default '{}'::jsonb);
 -- Supabase's auth.uid() reads the verified JWT claims GoTrue sets per request.
 create or replace function auth.uid() returns uuid language sql stable as $$
   select nullif(current_setting('request.jwt.claims', true)::jsonb ->> 'sub', '')::uuid;
@@ -31,6 +33,7 @@ insert into auth.users values
   ('22222222-2222-2222-2222-222222222222','staff@resonate.org'),
   ('33333333-3333-3333-3333-333333333333','board@resonate.org'),
   ('44444444-4444-4444-4444-444444444444','outsider@elsewhere.org');
+update auth.users set raw_app_meta_data = '{"gw_tenant":"*","gw_role":"admin"}' where email = 'alan@goodworkatlanta.co';
 create role authenticated nologin;
 grant usage on schema public, auth to authenticated;
 SQL
@@ -121,6 +124,81 @@ refuses() { # name, expected-error-fragment, sql
 refuses "unknown status  " "violates check constraint \"[a-z_]*\"" "insert into tasks (portal_id,id,initiative,title,status) values ('$P','T-1','1.1','x','bogus')"
 refuses "task as own parent" "violates check constraint \"[a-z_]*\"" "insert into tasks (portal_id,id,parent_id,initiative,title) values ('$P','T-2','T-2','1.1','x')"
 refuses "parent that is gone" "violates foreign key constraint" "insert into tasks (portal_id,id,parent_id,initiative,title) values ('$P','T-3','T-nope','1.1','x')"
+echo
+echo "=== a client's portal in one paste: supabase/clients/paact.sql ==="
+# Everything from here ASSERTS: a wrong answer stops the script.
+CLIENT_SQL="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/clients/paact.sql"
+ADD_MEMBER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/add-member.sql"
+expect() { # label, expected, actual
+  if [[ "$3" == "$2" ]]; then echo "  ok    $1 -> $3"
+  else echo "  FAIL  $1 -> expected [$2], got [$3]"; exit 1; fi
+}
+q() { psql -t -A -c "$1"; }
+# as_user, without the "SET" command tags its two set-locals print first.
+asq() { as_user "$@" | sed -E 's/^(SET)+//'; }
+GINA=66666666-6666-6666-6666-666666666666
+SHAWNELL=77777777-7777-7777-7777-777777777777
+psql -q <<'SQL'
+insert into auth.users (id, email, raw_app_meta_data) values
+  ('66666666-6666-6666-6666-666666666666','gina@hti.example','{"gw_tenant":"paact","gw_role":"viewer"}'),
+  ('77777777-7777-7777-7777-777777777777','shawnell@paact.example','{"gw_tenant":"paact","gw_role":"viewer"}'),
+  ('88888888-8888-8888-8888-888888888888','untagged@hti.example','{}'),
+  ('99999999-9999-9999-9999-999999999999','someone@agape.org','{"gw_tenant":"agape","gw_role":"admin"}');
+SQL
+
+out="$(sed "s/'alan@goodworkatlanta.co'/'nobody@nowhere.example'/" "$CLIENT_SQL" | psql -q 2>&1 || true)"
+expect "no owner account: refused"        "yes" "$(grep -q 'No account for nobody@nowhere.example' <<<"$out" && echo yes || echo no)"
+expect "...and nothing was created"       "0"   "$(q "select count(*) from portals where slug='paact'")"
+
+expect "the paste, and what it shows"     "paact|5|alan@goodworkatlanta.co|owner|*" "$(psql -q -t -A -f "$CLIENT_SQL" 2>/dev/null | tail -1)"
+expect "section 01, and only it"          '["scope"]' "$(q "select sections::text from portals where slug='paact'")"
+expect "39 deliverables, 2 already ticked" "39|2" "$(q "select count(*)||'|'||count(*) filter (where (d->>'done')::boolean) from portals, jsonb_array_elements(engagement->'phases') ph, jsonb_array_elements(ph->'deliverables') d where slug='paact'")"
+expect "a * account keeps its tag"        "*"   "$(q "select raw_app_meta_data->>'gw_tenant' from auth.users where email='alan@goodworkatlanta.co'")"
+
+as_user 11111111-1111-1111-1111-111111111111 '*' alan@goodworkatlanta.co "update portals set engagement = jsonb_set(engagement, '{planHorizon}', '\"Edited in the app\"') where slug='paact'" >/dev/null
+psql -q -f "$CLIENT_SQL" >/dev/null 2>&1
+expect "an edit made in the app survives a re-run" "Edited in the app" "$(q "select engagement->>'planHorizon' from portals where slug='paact'")"
+q "update portal_members set role='board' where email='alan@goodworkatlanta.co' and portal_id=(select id from portals where slug='paact')" >/dev/null
+psql -q -f "$CLIENT_SQL" >/dev/null 2>&1
+expect "a role changed in the app survives a re-run" "board" "$(q "select m.role from portal_members m join portals p on p.id=m.portal_id where p.slug='paact' and m.email='alan@goodworkatlanta.co'")"
+q "update portal_members set role='owner' where email='alan@goodworkatlanta.co' and portal_id=(select id from portals where slug='paact')" >/dev/null
+
+sed "s/'alan@goodworkatlanta.co'/'untagged@hti.example'/" "$CLIENT_SQL" | psql -q >/dev/null 2>&1
+expect "an untagged owner is tagged for this client, never *" "paact|viewer" "$(q "select (raw_app_meta_data->>'gw_tenant')||'|'||(raw_app_meta_data->>'gw_role') from auth.users where email='untagged@hti.example'")"
+
+P2=$(q "select id from portals where slug='paact'")
+psql -q -c "insert into portal_members (portal_id,user_id,email,role) values ('$P2','$GINA','gina@hti.example','owner'), ('$P2','$SHAWNELL','shawnell@paact.example','board')"
+
+echo
+echo "=== saving section 01: one version at a time ==="
+# The app's save: change the document only if the row is still on the version
+# the change was built from. "0" is a collision or a refusal; the app tells
+# them apart by re-reading.
+cas() { # sub tenant email version-expression
+  asq "$1" "$2" "$3" "with u as (update portals set engagement = jsonb_set(engagement,'{convener}','\"$3\"') where id='$P2' and updated_at = $4 returning 1) select count(*) from u"
+}
+CURRENT="(select updated_at from portals where id='$P2')"
+before=$(q "select updated_at from portals where id='$P2'")
+expect "an owner saves on the current version"   "1" "$(cas $GINA paact gina@hti.example "$CURRENT")"
+expect "...and the version moves"                "moved" "$([[ "$(q "select updated_at from portals where id='$P2'")" != "$before" ]] && echo moved || echo same)"
+expect "a save built on an old version: 0 rows"  "0" "$(cas $GINA paact gina@hti.example "'2000-01-01'::timestamptz")"
+expect "a board member cannot save"              "0" "$(cas $SHAWNELL paact shawnell@paact.example "$CURRENT")"
+expect "...but can read it"                      "1" "$(asq $SHAWNELL paact shawnell@paact.example "select count(*) from portals where slug='paact'")"
+expect "...and nobody else's"                    "0" "$(asq $SHAWNELL paact shawnell@paact.example "select count(*) from portals where slug='resonate'")"
+expect "another client's staff cannot read it"   "0" "$(asq 22222222-2222-2222-2222-222222222222 resonate staff@resonate.org "select count(*) from portals where slug='paact'")"
+expect "an owner of PAACT cannot edit Resonate"  "0" "$(asq $GINA paact gina@hti.example "with u as (update portals set client_name='x' where slug='resonate' returning 1) select count(*) from u")"
+expect "portal saves are published to realtime"  "1" "$(q "select count(*) from pg_publication_tables where pubname='supabase_realtime' and tablename='portals'")"
+
+echo
+echo "=== add-member.sql ==="
+sed "s/'someone@example.org'/'someone@agape.org'/" "$ADD_MEMBER" | psql -q >/dev/null 2>&1
+expect "a mis-tagged account is added but keeps its tag" "board|agape" "$(q "select m.role||'|'||(u.raw_app_meta_data->>'gw_tenant') from portal_members m join auth.users u on u.id=m.user_id where m.portal_id='$P2' and u.email='someone@agape.org'")"
+psql -q -c "insert into auth.users (id, email) values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa','new.board@paact.example')"
+sed "s/'someone@example.org'/'new.board@paact.example'/" "$ADD_MEMBER" | psql -q >/dev/null 2>&1
+expect "an untagged account is tagged and added"  "board|paact" "$(q "select m.role||'|'||(u.raw_app_meta_data->>'gw_tenant') from portal_members m join auth.users u on u.id=m.user_id where m.portal_id='$P2' and u.email='new.board@paact.example'")"
+out="$(sed "s/'someone@example.org'/'ghost@paact.example'/" "$ADD_MEMBER" | psql -q 2>&1 || true)"
+expect "no account: refused with directions"      "yes" "$(grep -q 'Create it first' <<<"$out" && echo yes || echo no)"
+
 echo
 echo "=== sharing a project: a name collision is refused, not half-applied ==="
 # The dangerous order without the guard: `create table if not exists` skips,

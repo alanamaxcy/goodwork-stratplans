@@ -165,6 +165,34 @@ await test('your own firm is tagged * so they reach every client', async () => {
   assert.equal(created.at(-1).app_metadata.gw_tenant, '*');
 });
 
+await test('a portal owner who is NOT your firm cannot hand out "*"', async () => {
+  /* The client's own owner. "*" would reach every client in this portal AND in
+     the Impact Suite, which shares the sign-in project. */
+  const promote = (role) => {
+    members = members.map((m) => (m.user_id === '22222222-2222-2222-2222-222222222222' ? { ...m, role } : m));
+  };
+  promote('owner');
+  try {
+    const listed = await post('22222222-2222-2222-2222-222222222222', { portalSlug: 'resonate', action: 'list' });
+    assert.equal(listed.status, 200, 'the setup really is an owner — otherwise the refusal below proves nothing');
+    const before = created.length;
+    const r = await post('22222222-2222-2222-2222-222222222222', { portalSlug: 'resonate', action: 'invite', email: 'friend@x.com', role: 'board', ownFirm: true });
+    assert.equal(r.status, 403);
+    assert.match((await r.json()).error, /every client/);
+    assert.equal(created.length, before, 'no account was created');
+    const plain = await post('22222222-2222-2222-2222-222222222222', { portalSlug: 'resonate', action: 'invite', email: 'friend@x.com', role: 'board' });
+    assert.equal(plain.status, 200, 'the same owner can still add someone to THEIR portal');
+    assert.equal(created.at(-1).app_metadata.gw_tenant, 'resonate');
+  } finally {
+    promote('staff');
+  }
+});
+
+await test('accounts made here are the lowest tier in the other product', async () => {
+  assert.ok(created.length > 0);
+  assert.ok(created.every((u) => u.app_metadata.gw_role === 'viewer'), JSON.stringify(created.map((u) => u.app_metadata)));
+});
+
 await test('an unknown role falls back to the least access, never the most', async () => {
   await post('11111111-1111-1111-1111-111111111111', { portalSlug: 'resonate', action: 'invite', email: 'sneaky@x.com', role: 'superuser' });
   assert.equal(members.find((m) => m.email === 'sneaky@x.com').role, 'board');

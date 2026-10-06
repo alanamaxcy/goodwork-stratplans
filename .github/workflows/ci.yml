@@ -21,12 +21,21 @@ jobs:
       - run: npm ci
       - name: Plan editor logic (renumbering, task migration)
         run: node test/plan-edit.mjs
+      - name: Section 01 edits, and two people saving at once
+        run: node test/engagement.mjs
       - name: Access function — every refusal it has to make itself
         run: node test/team-fn.mjs
       - name: Regenerate the public demo data and assert it identifies nobody
         run: node scripts/make-demo.mjs
       - name: Fail if the generated demo data drifted from the scrubber
         run: git diff --exit-code -- clients/demo/plan.js clients/demo/findings.js
+      # The one-paste SQL that creates a client's portal is generated from its
+      # client file. Hand-editing either one without the other is the drift
+      # this catches.
+      - name: Regenerate the PAACT setup SQL and fail if it drifted from clients/paact/plan.js
+        run: |
+          node scripts/client-sql.mjs paact
+          git diff --exit-code -- supabase/clients/paact.sql
       # The package, then the browser. Adding playwright to package.json would
       # desync package-lock.json and break `npm ci` above; --no-save installs it
       # for this job only and leaves the lockfile alone. test/smoke.mjs resolves

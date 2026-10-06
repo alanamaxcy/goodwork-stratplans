@@ -841,3 +841,40 @@
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent 100%);
           mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent 100%);
 }
+
+/* ---- editing in place: ticks and status, for a portal's owners ---------- */
+/* The whole line is the target, not the 18px square: a tick is the edit made
+   most often, and often on a phone. The real checkbox sits under the mark so a
+   keyboard and a screen reader get one; the mark stays the picture. */
+.pc-list.is-editable li { display: block; padding: 0; }
+.pc-tick {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 5px 6px;
+  margin: 0 -6px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  position: relative;
+  transition: background .12s ease;
+}
+.pc-tick:hover { background: var(--raise); }
+.pc-tick input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.pc-tick input:focus-visible + .pc-mk { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pc-tick:hover .pc-mk { box-shadow: inset 0 0 0 1.5px var(--accent-line); }
+.pc-list li.is-done .pc-tick:hover .pc-mk { box-shadow: none; }
+
+.pc-statusrow { display: flex; align-items: center; gap: var(--sp-2); padding-top: var(--sp-3); }
+.pc-statusrow select {
+  font: inherit; font-size: var(--fs-label);
+  padding: 5px 9px;
+  border: 1px solid var(--rule); border-radius: var(--r-sm);
+  background: var(--raise); color: var(--ink);
+}
+@media (max-width: 460px) {
+  /* 44px, the floor a thumb needs, for a one-line deliverable as for a long one. */
+  .pc-tick { padding: 10px 6px; min-height: 44px; }
+  .pc-statusrow select { min-height: 40px; }
+}
+@media print { .pc-statusrow { display: none !important; } }

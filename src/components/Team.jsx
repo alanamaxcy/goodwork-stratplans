@@ -2,14 +2,17 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 
 const ROLE_HELP = {
-  owner: 'Edits the plan and the workplan. Manages who has access.',
-  staff: 'Runs the workplan — status, owners, dates, notes. Cannot change the plan.',
+  owner: 'Edits everything — timeline, scope, plan, workplan — and manages who has access.',
+  staff: 'Runs the workplan — status, owners, dates, notes. Cannot change the timeline or the plan.',
   board: 'Reads everything. Writes nothing.',
 };
 
 /* Who can reach this portal. Talks to netlify/functions/team.mjs, because
    creating an account needs the admin key and that stays on the server. */
-export default function Team({ portal, onClose }) {
+/* `canTagFirm`: the person using this screen is your own firm's staff (tagged
+   "*"). Only they are offered the box that makes someone else "*", and the
+   server refuses it from anyone else anyway. */
+export default function Team({ portal, onClose, canTagFirm = false }) {
   const [members, setMembers] = useState(null);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
@@ -27,8 +30,13 @@ export default function Team({ portal, onClose }) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ portalSlug: portal.slug, action, ...extra }),
       });
-      const out = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(out.error || `Request failed (${res.status})`);
+      /* Anything but a JSON answer means the function is not there to answer
+         — a deploy without netlify/functions, or a local dev server — and
+         reading `.members` off a page of HTML used to take the whole app down. */
+      const out = await res.json().catch(() => null);
+      if (!res.ok || !out) {
+        throw new Error((out && out.error) || `The access service did not answer (${res.status}). Use supabase/add-member.sql instead.`);
+      }
       return out;
     },
     [portal.slug],
@@ -38,7 +46,7 @@ export default function Team({ portal, onClose }) {
     setErr('');
     try {
       const out = await call('list');
-      setMembers(out.members);
+      setMembers(Array.isArray(out.members) ? out.members : []);
     } catch (e) {
       setMembers([]);
       setErr(e.message);
@@ -56,7 +64,7 @@ export default function Team({ portal, onClose }) {
 
   const invite = () =>
     run(async () => {
-      const out = await call('invite', { email: email.trim(), role, ownFirm });
+      const out = await call('invite', { email: email.trim(), role, ownFirm: canTagFirm && ownFirm });
       setNote(
         out.created
           ? `Account created for ${out.email}. Send them ${window.location.origin}/${portal.slug} — they sign in with a code.`
@@ -86,19 +94,22 @@ export default function Team({ portal, onClose }) {
           <select value={role} onChange={(e) => setRole(e.target.value)}>
             <option value="board">Board — read only</option>
             <option value="staff">Staff — runs the workplan</option>
-            <option value="owner">Owner — edits the plan</option>
+            <option value="owner">Owner — edits and manages access</option>
           </select>
           <button className="solid" disabled={busy || !email.trim()} onClick={invite}>
             {busy ? 'Working…' : 'Add'}
           </button>
         </div>
         <p className="sethint" style={{ marginTop: 6 }}>{ROLE_HELP[role]}</p>
-        <label className="teamcheck">
-          <input type="checkbox" checked={ownFirm} onChange={(e) => setOwnFirm(e.target.checked)} />
-          <span>
-            They work for your firm — tag them <code>*</code> so they can reach every client, not just this one.
-          </span>
-        </label>
+        {canTagFirm ? (
+          <label className="teamcheck">
+            <input type="checkbox" checked={ownFirm} onChange={(e) => setOwnFirm(e.target.checked)} />
+            <span>
+              Good Work staff only. Gives access to every client — here and in the Impact Suite, which
+              shares this sign-in. Leave it unticked for clients and partner firms.
+            </span>
+          </label>
+        ) : null}
 
         <h4 className="eyebrow setgroup">Current access</h4>
         {members === null ? (

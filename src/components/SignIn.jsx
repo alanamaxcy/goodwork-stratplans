@@ -1,6 +1,25 @@
 import React, { useState } from 'react';
 import { sendCode, verifyCode, currentSession } from '../lib/supabase.js';
 
+/* Supabase's own wording, for the three refusals people actually meet, in
+   words that say what to do next. Anything else is shown as it came. */
+function plain(x, fallback) {
+  const m = String((x && x.message) || '');
+  if (/signups? not allowed|user not found/i.test(m)) {
+    return 'There is no account for that address. Check the spelling, or ask whoever invited you to add it.';
+  }
+  if (/not authori[sz]ed/i.test(m)) {
+    return 'This site cannot email that address yet: the sign-in service is not set up to send to it. Tell whoever runs the portal.';
+  }
+  if (/rate limit|too many|security purposes/i.test(m)) {
+    return 'Too many codes have been asked for in a short time. Wait a few minutes, then try again.';
+  }
+  if (/expired|invalid/i.test(m) && /token|otp|code/i.test(m)) {
+    return 'That code did not work. Codes expire after about an hour — go back and ask for a new one.';
+  }
+  return m || fallback;
+}
+
 /* Email plus a one-time code. Never a magic link — see lib/supabase.js. */
 export default function SignIn({ slug, onSignedIn }) {
   const [step, setStep] = useState('email');
@@ -14,7 +33,7 @@ export default function SignIn({ slug, onSignedIn }) {
     if (!/.+@.+\..+/.test(email)) return setErr('That does not look like an email address.');
     setBusy(true); setErr('');
     try { await sendCode(email.trim()); setStep('code'); }
-    catch (x) { setErr(x.message || 'Could not send the code.'); }
+    catch (x) { setErr(plain(x, 'Could not send the code.')); }
     finally { setBusy(false); }
   }
 
@@ -26,7 +45,7 @@ export default function SignIn({ slug, onSignedIn }) {
       await verifyCode(email.trim(), code.trim());
       onSignedIn(await currentSession());
     } catch (x) {
-      setErr(x.message || 'That code did not work. Codes expire after about an hour.');
+      setErr(plain(x, 'That code did not work. Codes expire after about an hour.'));
     } finally { setBusy(false); }
   }
 

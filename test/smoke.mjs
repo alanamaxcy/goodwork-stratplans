@@ -28,22 +28,68 @@ const { chromium } = await (async () => {
 const root = path.resolve(import.meta.dirname, '..');
 const API_PORT = 8777;
 const WEB_PORT = 8778;
+const WEB_PORT_FILE = 8780;
 
 /* ---------- the data the stub serves ---------- */
 const { PORTAL: P } = await import(path.join(root, 'clients', 'resonate', 'plan.js'));
 const { FINDINGS: F } = await import(path.join(root, 'clients', 'resonate', 'findings.js'));
+const { PORTAL: PAACT_FILE } = await import(path.join(root, 'clients', 'paact', 'plan.js'));
+const ENG = await import(path.join(root, 'src', 'lib', 'engagement.js'));
 
 const PORTAL_ID = '00000000-0000-0000-0000-0000000000aa';
-const USER = { id: '11111111-1111-1111-1111-111111111111', email: 'alan@goodworkatlanta.co', app_metadata: { gw_tenant: '*', gw_role: 'admin' } };
+const PAACT_ID = '00000000-0000-0000-0000-0000000000bb';
+
+/* Three people, the way the real project has them: Good Work's own staff
+   tagged "*", an HTI colleague who owns PAACT, and someone from PAACT who
+   reads it. Each gets a token naming them, so the stub can answer as RLS
+   would for THAT person. */
+const ALAN = { id: '11111111-1111-1111-1111-111111111111', email: 'alan@goodworkatlanta.co', app_metadata: { gw_tenant: '*', gw_role: 'admin' } };
+const GINA = { id: '66666666-6666-6666-6666-666666666666', email: 'gina@hti.example', app_metadata: { gw_tenant: 'paact', gw_role: 'viewer' } };
+const SHAWNELL = { id: '77777777-7777-7777-7777-777777777777', email: 'shawnell@paact.example', app_metadata: { gw_tenant: 'paact', gw_role: 'viewer' } };
+const USERS = [ALAN, GINA, SHAWNELL];
+const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+const tokenFor = (u) => `${b64({ alg: 'none', typ: 'JWT' })}.${b64({
+  sub: u.id, email: u.email, role: 'authenticated', aud: 'authenticated', app_metadata: u.app_metadata,
+  exp: Math.floor(Date.now() / 1000) + 3600,
+})}.`;
+const userOf = (req) => {
+  const t = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  try { return USERS.find((u) => u.id === JSON.parse(Buffer.from(t.split('.')[1], 'base64url')).sub) || null; }
+  catch (e) { return null; }
+};
+
+/* updated_at the way Postgres prints it — microseconds and a "+00:00" — because
+   the save sends it back as a filter, and a "+" that is not escaped on the way
+   is exactly the bug that would make every save look like a collision. */
+let tick = 0;
+const stamp = () => `${new Date(Date.now() + (tick += 1)).toISOString().slice(0, 23)}${String(tick % 1000).padStart(3, '0')}+00:00`;
 
 const portalRow = {
-  id: PORTAL_ID, slug: 'resonate', client_name: P.client.name, place: P.client.place,
+  id: PORTAL_ID, slug: 'resonate', tenant: 'resonate', client_name: P.client.name, place: P.client.place,
   engagement_name: P.client.engagement, adopted: P.client.adopted,
   brand: {}, labels: {}, sections: ['scope', 'plan', 'findings', 'workplan', 'dashboard'],
   engagement: { phases: P.phases, scope: P.scope, firm: P.firm },
   plan: { vision: P.plan.vision, framing: P.plan.framing, priorities: P.plan.priorities, track: P.plan.track },
   findings: F,
+  updated_at: stamp(),
 };
+/* PAACT as supabase/clients/paact.sql creates it: the canonical document. */
+const paactRow = {
+  id: PAACT_ID, slug: 'paact', tenant: 'paact', client_name: PAACT_FILE.client.name, place: PAACT_FILE.client.place,
+  engagement_name: PAACT_FILE.client.engagement, adopted: null,
+  brand: {}, labels: {}, sections: ['scope'],
+  engagement: ENG.tidy(ENG.engagementOfFile(PAACT_FILE)),
+  plan: {}, findings: {},
+  updated_at: stamp(),
+};
+const PAACT_START = JSON.parse(JSON.stringify(paactRow.engagement));
+const PORTALS = [portalRow, paactRow];
+const MEMBERS = { [PAACT_ID]: { [GINA.id]: 'owner', [SHAWNELL.id]: 'board' }, [PORTAL_ID]: {} };
+const roleOf = (u, p) => (u ? MEMBERS[p.id]?.[u.id] || (u.app_metadata.gw_tenant === '*' ? 'owner' : null) : null);
+const canRead = (u, p) => !!roleOf(u, p) && (u.app_metadata.gw_tenant === '*' || u.app_metadata.gw_tenant === p.tenant);
+/* Somebody else, saving between this screen's read and its write. */
+const otherEditor = (fn) => { paactRow.engagement = fn(JSON.parse(JSON.stringify(paactRow.engagement))); paactRow.updated_at = stamp(); };
+const paactPatches = [];
 let taskRows = P.tasks.map((t, i) => ({
   portal_id: PORTAL_ID, id: t.id, parent_id: t.parent || null, initiative: t.obj,
   title: t.title, owner_name: t.owner, start_date: t.start, due_date: t.due,
@@ -73,33 +119,58 @@ const api = http.createServer((req, res) => {
   req.on('end', () => {
     const body = raw ? JSON.parse(raw) : {};
 
-    if (url.pathname === '/auth/v1/otp') return send(200, {});
+    /* Accounts are provisioned, never self-served: an unknown address is
+       refused, as Supabase does with shouldCreateUser: false. */
+    if (url.pathname === '/auth/v1/otp') {
+      return USERS.some((u) => u.email === body.email) ? send(200, {}) : send(422, { msg: 'Signups not allowed for otp' });
+    }
     if (url.pathname === '/auth/v1/verify' || url.pathname === '/auth/v1/token') {
+      const u = USERS.find((x) => x.email === body.email)
+        || USERS.find((x) => `refresh:${x.id}` === body.refresh_token) || ALAN;
       return send(200, {
-        access_token: 'stub-token', token_type: 'bearer', expires_in: 3600,
+        access_token: tokenFor(u), token_type: 'bearer', expires_in: 3600,
         expires_at: Math.floor(Date.now() / 1000) + 3600,
-        refresh_token: 'stub-refresh', user: USER,
+        refresh_token: `refresh:${u.id}`, user: u,
       });
     }
-    if (url.pathname === '/auth/v1/user') return send(200, USER);
+    if (url.pathname === '/auth/v1/user') return send(200, userOf(req) || ALAN);
     if (url.pathname === '/auth/v1/logout') return send(204, {});
 
     if (url.pathname === '/rest/v1/portals') {
+      const user = userOf(req);
+      const eqOf = (k) => (url.searchParams.has(k) ? url.searchParams.get(k).replace(/^eq\./, '') : null);
+      const match = (p) => ['slug', 'id'].every((k) => eqOf(k) === null || p[k] === eqOf(k));
       if (req.method === 'GET') {
-        const slug = (url.searchParams.get('slug') || '').replace('eq.', '');
-        const rows = !slug || slug === 'resonate' ? [portalRow] : [];
-        return send(200, rows);
+        return send(200, PORTALS.filter((p) => canRead(user, p) && match(p)));
       }
       if (req.method === 'PATCH') {
-        Object.assign(portalRow, body);
-        planPatches.push(body);
-        return send(200, [portalRow]);
+        const row = PORTALS.find((p) => match(p));
+        /* RLS: a row this person may not write is simply not matched. */
+        if (!row || !canRead(user, row) || roleOf(user, row) !== 'owner') return send(200, []);
+        const seen = eqOf('updated_at');
+        if (seen !== null && seen !== row.updated_at) {
+          if (row === paactRow) paactPatches.push({ stale: true, who: user.email });
+          return send(200, []);
+        }
+        Object.assign(row, body);
+        row.updated_at = stamp();
+        if (row === paactRow) paactPatches.push({ ok: true, who: user.email, keys: Object.keys(body), guarded: seen !== null });
+        else planPatches.push(body);
+        return send(200, [row]);
       }
       return send(200, []);
     }
-    if (url.pathname === '/rest/v1/portal_members') return send(200, [{ role: 'owner' }]);
+    if (url.pathname === '/rest/v1/portal_members') {
+      const user = userOf(req);
+      const pid = (url.searchParams.get('portal_id') || '').replace(/^eq\./, '');
+      const role = user && MEMBERS[pid]?.[user.id];
+      return send(200, role ? [{ role }] : []);
+    }
     if (url.pathname === '/rest/v1/tasks') {
-      if (req.method === 'GET') return send(200, taskRows);
+      if (req.method === 'GET') {
+        const pid = (url.searchParams.get('portal_id') || '').replace(/^eq\./, '');
+        return send(200, taskRows.filter((t) => !pid || t.portal_id === pid));
+      }
       if (req.method === 'DELETE') {
         const raw = url.searchParams.get('id') || '';
         const ids = raw.replace(/^in\.\(|\)$/g, '').split(',').map((x) => x.replace(/^"|"$/g, ''));
@@ -121,15 +192,16 @@ const api = http.createServer((req, res) => {
 });
 
 /* ---------- serve the built bundle ---------- */
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.map': 'application/json' };
-const web = http.createServer((req, res) => {
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.map': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png' };
+const serve = (dir) => http.createServer((req, res) => {
   const clean = decodeURIComponent(req.url.split('?')[0]);
-  let file = path.join(root, 'dist', clean);
+  let file = path.join(dir, clean);
   // One deploy, many portals: every unknown path is the app, as netlify.toml does.
-  if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(root, 'dist', 'index.html');
+  if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(dir, 'index.html');
   res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
   fs.createReadStream(file).pipe(res);
 });
+const web = serve(path.join(root, 'dist'));
 
 /* ---------- run ---------- */
 console.log('building against the stub…');
@@ -349,27 +421,45 @@ results.demoRestCalls = restCalls.slice(0, 3);
 await demo.screenshot({ path: path.join(root, 'test/shot-08-demo-workplan.png') });
 
 
-/* ---- /paact: a real client portal, carrying only its own content ----------
-   This block used to assert a portal that showed PAACT's timeline and another
-   engagement's anonymised plan, findings and workplan beside it, marked as
-   samples. That arrangement did its job — it let a client see the shape of
-   what was coming before any of it existed — and it is gone. The sample is
-   somebody else's content, and the moment the portal became the client's real
-   workspace rather than a pitch, a page of another organisation's priorities
-   under their masthead was a liability with no upside.
+/* ---- /paact, from the database --------------------------------------------
+   The portal the HTI Catalysts team signs in to and edits, and PAACT's own
+   people read. The real app and the real supabase-js run against the stub,
+   which answers as RLS would for whoever is signed in. The old file-served
+   /paact is checked further down, on a build with no project at all. */
+const signIn = async (pg, email) => {
+  await pg.fill('#email', email);
+  await pg.click('button:has-text("Send code")');
+  await pg.waitForSelector('#code');
+  await pg.fill('#code', '123456');
+  await pg.click('button:has-text("Sign in")');
+};
+const mainText = (pg) => pg.evaluate(() => document.querySelector('.main')?.innerText || '');
+const editButtons = (pg) => pg.evaluate(() => [...document.querySelectorAll('button')]
+  .map((e) => e.textContent.trim()).filter((t) => /^(Edit (timeline|scope|team|plan)|Settings|Access)$/.test(t)));
+const phaseOf = (id) => paactRow.engagement.phases.find((x) => x.id === id);
+/* Wait for the thing itself rather than a fixed time: a save is two or three
+   round trips, and a slow CI runner should not turn that into a failure. A
+   short pause after, so a save that should NOT have happened has the chance. */
+const until = async (fn, ms = 8000) => {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    if (await fn()) { await new Promise((r) => setTimeout(r, 250)); return true; }
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  return false;
+};
 
-   So the assertions below are mostly about ABSENCE, which is the harder thing
-   to keep true: no borrowed content anywhere, no sample bar, no second
-   masthead identity, and no tab that opens onto nothing. */
+/* -- someone from PAACT, who reads. First, so the content checks below see
+      the document exactly as supabase/clients/paact.sql creates it. */
 const paact = await browser.newPage({ viewport: { width: 1320, height: 1050 }, deviceScaleFactor: 2 });
 paact.on('pageerror', (e) => errs.push('PAACT ' + e.message));
-const paactRest = [];
-paact.on('request', (r) => { if (r.url().includes('/rest/v1/')) paactRest.push(r.method() + ' ' + r.url()); });
-
 await paact.goto(`http://127.0.0.1:${WEB_PORT}/paact`, { waitUntil: 'networkidle' });
-await paact.waitForTimeout(900);
+results.paactAsksSignIn = await paact.isVisible('#email');
+await signIn(paact, SHAWNELL.email);
+await paact.waitForSelector('.masthead', { timeout: 10000 });
+await paact.waitForTimeout(800);
 
-results.paactSkipsSignIn = await paact.isVisible('.masthead');
+results.paactPath = await paact.evaluate(() => location.pathname);
 results.paactClient = (await paact.textContent('.brand-name').catch(() => '')) || '';
 results.paactTopbarText = (await paact.evaluate(
   () => (document.querySelector('.topbar')?.innerText || '').replace(/\s+/g, ' ').trim(),
@@ -379,23 +469,17 @@ results.paactOpensOn = (await paact.textContent('.railnav [aria-current="true"] 
    and finds nothing in is worse than a tab that is not there yet; each of the
    other four is switched on from Settings on the day it has content. */
 results.paactSectionTabs = await paact.$$eval('.railnav .rn-t', (n) => n.map((x) => x.textContent.trim()));
-/* No sample bar at all — there is nothing borrowed left to disclaim. */
 results.paactHasBar = await paact.evaluate(() => !!document.querySelector('.demobar'));
-/* The theme is a preference again. It carried information only while the
-   portal was mixed: light for the client's own sections, dark for the borrowed
-   ones. With nothing borrowed the signal has nothing to say, so the manual
-   toggle comes back. */
 results.paactThemeToggle = await paact.evaluate(() => !!document.querySelector('.themetoggle'));
-/* READ-ONLY while it is served from a file. Its address went out as a QR code
-   on a slide, and every person who scanned it was handed Owner, Edit plan and
-   Settings — with each change silently discarded on reload. No edit controls
-   at all is the honest offer until it is served from the database, where an
-   owner is a signed-in person rather than whoever holds the link. */
-results.paactEditControls = await paact.evaluate(() => [...document.querySelectorAll('button')]
-  .map((e) => e.textContent.trim()).filter((t) => /^(Edit plan|Settings|Access)$/.test(t)));
-results.paactRoleWord = (await paact.evaluate(() => document.querySelector('.mast-right .eyebrow')?.textContent || '')) || '';
+/* Read-only means no way to change anything, not buttons that fail. */
+results.boardRoleWord = (await paact.evaluate(() => document.querySelector('.mast-right .eyebrow')?.textContent || '')) || '';
+results.boardEditControls = await editButtons(paact);
+results.boardTickControls = await paact.$$eval('.pc-tick, .pc-statusrow', (n) => n.length);
+/* The rail counts what this client has: the current phase's deliverables, not
+   a workplan that does not exist yet ("0 of 0 done"). */
+results.paactRail = (await paact.evaluate(() => document.querySelector('.rail')?.innerText || '')).replace(/\s+/g, ' ');
 
-const paactScope = await paact.evaluate(() => document.querySelector('.main')?.innerText || '');
+const paactScope = await mainText(paact);
 results.paactPhasesShown = ['Foundation', 'Discovery', 'Synthesis', 'Plan design', 'Adoption']
   .filter((n) => paactScope.includes(n)).length;
 results.paactShowsRealProgress = /\b2\b[^.]{0,12}\b7\b/.test(paactScope);
@@ -407,17 +491,18 @@ results.overrunBars = await paact.$$eval('.pt-bar.is-over', (n) => n.length);
 
 await paact.click('.subnav button:has-text("Team")');
 await paact.waitForTimeout(400);
-const paactTeam = await paact.evaluate(() => document.querySelector('.main')?.innerText || '');
+const paactTeam = await mainText(paact);
 results.paactTeamNames = ['Dr. Folami Prescott-Adams', 'Gina Glymph', 'Rachel Alterman Wallack', 'Shawnell']
   .filter((n) => paactTeam.includes(n)).length;
+/* No workplan section, so no "Owners in the workplan" panel standing empty. */
+results.paactEmptyOwnersPanel = /Owners in the/i.test(paactTeam);
 
 await paact.click('.subnav button:has-text("Scope")');
 await paact.waitForTimeout(400);
-const paactAgreement = await paact.evaluate(() => document.querySelector('.main')?.innerText || '');
+const paactAgreement = await mainText(paact);
 results.paactKeyDatesShown = ['Fall Luncheon', 'Impact Report', 'RFP project end date']
   .filter((n) => paactAgreement.includes(n)).length;
 results.paactCadenceShown = /Prescott-Adams/.test(paactAgreement) && /Weekly/i.test(paactAgreement);
-/* From the scope-of-work document, and absent from the brief that preceded it. */
 results.paactSowContent = ['Expected outcomes', 'Questions this process answers', 'Documents under review']
   .filter((n) => paactAgreement.includes(n)).length;
 await paact.screenshot({ path: path.join(root, 'test/shot-09-paact-timeline.png'), fullPage: true });
@@ -425,9 +510,7 @@ await paact.screenshot({ path: path.join(root, 'test/shot-09-paact-timeline.png'
 /* NOTHING BORROWED, ANYWHERE. Built from the sample portal's own data rather
    than a hand-written list, so a name added to the sample later is covered the
    day it lands — minus whatever PAACT legitimately shares, since both
-   engagements really do have phases called Discovery and Synthesis and Alan's
-   own org really is Good Work Atlanta. This is the assertion that would catch
-   the old arrangement coming back by accident. */
+   engagements really do have phases called Discovery and Synthesis. */
 const { PORTAL: SAMPLE } = await import(path.join(root, 'clients', 'demo', 'plan.js'));
 const paactSource = fs.readFileSync(path.join(root, 'clients', 'paact', 'plan.js'), 'utf8');
 const sampleOnly = (() => {
@@ -458,8 +541,165 @@ results.portalLeaks = sampleOnly.filter((x) => whole.includes(x));
    month-first, where the two digits are a day and the year follows. */
 results.shortYears = [...whole.matchAll(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ?(\d{2})(?!\d)(?!,? ?\d{4})/g)]
   .map((m) => m[0]).filter((v, i, a) => a.indexOf(v) === i);
-results.paactTouchedNoDatabase = paactRest.length === 0;
-results.paactRestCalls = paactRest.slice(0, 3);
+results.paactUnchangedByReading = JSON.stringify(paactRow.engagement) === JSON.stringify(PAACT_START);
+
+/* -- an address with no account: refused at the code step, in words. */
+const stranger = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+await stranger.goto(`http://127.0.0.1:${WEB_PORT}/paact`, { waitUntil: 'networkidle' });
+await stranger.fill('#email', 'stranger@nowhere.example');
+await stranger.click('button:has-text("Send code")');
+await stranger.waitForTimeout(700);
+results.strangerRefused = (await stranger.textContent('.errnote').catch(() => '')) || '';
+results.strangerGotCodeBox = await stranger.isVisible('#code');
+await stranger.close();
+
+/* -- the HTI team: an owner, arriving at the FRONT DOOR with no address. */
+const own = await browser.newPage({ viewport: { width: 1320, height: 1050 }, deviceScaleFactor: 2 });
+own.on('pageerror', (e) => errs.push('OWNER ' + e.message));
+own.on('dialog', (d) => d.accept());
+await own.goto(`http://127.0.0.1:${WEB_PORT}/`, { waitUntil: 'networkidle' });
+results.frontDoorAsksSignIn = await own.isVisible('#email');
+await signIn(own, GINA.email);
+await own.waitForSelector('.masthead', { timeout: 10000 });
+await own.waitForTimeout(800);
+results.frontDoorLandsOn = await own.evaluate(() => location.pathname);
+results.ownerRoleWord = (await own.evaluate(() => document.querySelector('.mast-right .eyebrow')?.textContent || '')) || '';
+results.ownerEditControls = await editButtons(own);
+results.ownerTickControls = await own.$$eval('.pc-card.is-open .pc-tick', (n) => n.length);
+const openId = await own.evaluate(() => (document.querySelector('.pc-card.is-open')?.id || '').replace('pc-card-', ''));
+/* Another person's edits go to a phase that is NOT the open one, whatever
+   date this test runs on, so theirs and ours never touch the same row. */
+const otherPhase = openId === 'p4' ? 'p3' : 'p4';
+
+// 1. A tick: shown at once, saved behind, guarded by the version it read.
+const firstBox = own.locator('.pc-card.is-open .pc-tick:has(input:not(:checked))').first();
+const firstName = (await firstBox.innerText()).trim();
+let mark = paactPatches.length;
+await firstBox.click();
+await until(() => paactPatches.length > mark);
+results.tickSaves = paactPatches.slice(mark).map((x) => (x.stale ? 'stale' : x.guarded ? 'saved' : 'UNGUARDED'));
+results.tickInDatabase = paactRow.engagement.phases.some((x) => x.deliverables.some((d) => d.name === firstName && d.done === true));
+
+// 2. A tick that loses a race: someone else saved first, and both survive.
+const theirs = phaseOf(otherPhase).deliverables[0];
+otherEditor((e) => ENG.tick(e, otherPhase, theirs.id, true));
+const secondBox = own.locator('.pc-card.is-open .pc-tick:has(input:not(:checked))').first();
+const secondName = (await secondBox.innerText()).trim();
+mark = paactPatches.length;
+await secondBox.click();
+await until(() => paactPatches.slice(mark).some((x) => x.ok));
+results.raceSaves = paactPatches.slice(mark).map((x) => (x.stale ? 'stale' : 'saved'));
+results.raceKeptMine = paactRow.engagement.phases.some((x) => x.deliverables.some((d) => d.name === secondName && d.done === true));
+results.raceKeptTheirs = phaseOf(otherPhase).deliverables[0].done === true;
+results.raceShowsTheirs = await own.evaluate(
+  (id) => !!document.querySelector(`#pc-card-${id} .pc-list li.is-done`), otherPhase,
+);
+
+// 3. Where a phase stands, from the card itself.
+const statusSel = own.locator('.pc-card.is-open .pc-statusrow select');
+const statusWas = await statusSel.inputValue();
+const statusTo = statusWas === 'done' ? 'in_progress' : 'done';
+await statusSel.selectOption(statusTo);
+await until(() => phaseOf(openId).status === statusTo);
+results.statusSaved = phaseOf(openId).status === statusTo;
+const statusBack = statusWas === '' ? 'in_progress' : statusWas;
+await statusSel.selectOption(statusBack);
+await until(() => phaseOf(openId).status === statusBack);
+
+// 4. The editor, while somebody else ticks something: both kept, no question.
+await own.click('button:has-text("Edit timeline")');
+await own.waitForTimeout(400);
+results.editorPhases = await own.$$eval('.ephase', (n) => n.length);
+await own.locator('.ephase').nth(3).locator('input[type="text"]').first().fill('Plan design and drafting');
+await own.locator('.ephase').nth(3).locator('button:has-text("Add deliverable")').click();
+await own.locator('.ephase').nth(3).locator('.erow.e-del input[type="text"]').last().fill('Board briefing pack');
+await own.click('.subnav button:has-text("Scope")');
+await own.waitForTimeout(300);
+await own.click('button:has-text("Add a key date")');
+const newDate = own.locator('.esub:has(h4:text-is("Key dates")) .erow:not(.e-head)').last();
+await newDate.locator('input[type="date"]').fill('2026-10-28');
+await newDate.locator('input[type="text"]').fill('Partner convening #1');
+const theirs2 = phaseOf(otherPhase).deliverables[1];
+otherEditor((e) => ENG.tick(e, otherPhase, theirs2.id, true));
+mark = paactPatches.length;
+await own.click('.savebar button:has-text("Save")');
+await until(async () => !(await own.isVisible('.savebar')));
+results.editorSaves = paactPatches.slice(mark).map((x) => (x.stale ? 'stale' : 'saved'));
+results.editorClosedOnSave = !(await own.isVisible('.savebar'));
+results.editorToast = (await own.textContent('.toast').catch(() => '')) || '';
+{
+  const e = paactRow.engagement;
+  results.editorKeptMine = e.phases.some((x) => x.name === 'Plan design and drafting'
+    && x.deliverables.some((d) => d.name === 'Board briefing pack'))
+    && e.scope.keyDates.some((d) => d.date === '2026-10-28' && d.what === 'Partner convening #1');
+  results.editorKeptTheirs = phaseOf(otherPhase).deliverables[1].done === true;
+  results.editorKeptEarlierTicks = e.phases.some((x) => x.deliverables.some((d) => d.name === firstName && d.done));
+}
+
+// 5. A date that cannot be right stops the save, in words.
+await own.click('.subnav button:has-text("Timeline")');
+await own.waitForTimeout(300);
+await own.click('button:has-text("Edit timeline")');
+await own.waitForTimeout(300);
+await own.locator('.ephase').nth(0).locator('input[type="date"]').nth(1).fill('2026-08-01');
+mark = paactPatches.length;
+await own.click('.savebar button:has-text("Save")');
+await own.waitForTimeout(500);
+results.validationText = (await own.textContent('.eflag').catch(() => '')) || '';
+results.validationWroteNothing = paactPatches.length === mark;
+await own.click('.savebar button:has-text("Discard")');
+await own.waitForTimeout(300);
+
+// 6. Both changed the SAME date: the editor asks, and the answer is honoured.
+await own.click('button:has-text("Edit timeline")');
+await own.waitForTimeout(300);
+await own.locator('.ephase').nth(1).locator('input[type="date"]').nth(1).fill('2026-12-11');
+otherEditor((e) => ENG.setIn(e, ['phases', e.phases.findIndex((x) => x.id === 'p2'), 'end'], '2026-12-20'));
+await own.click('.savebar button:has-text("Save")');
+await until(() => own.isVisible('.eflag.is-conflict'));
+results.conflictText = ((await own.textContent('.eflag.is-conflict').catch(() => '')) || '').replace(/\s+/g, ' ');
+results.conflictHeldBack = phaseOf('p2').end === '2026-12-20';
+await own.click('button:has-text("Keep mine and save")');
+await until(async () => !(await own.isVisible('.savebar')));
+results.conflictKeptMine = phaseOf('p2').end === '2026-12-11';
+results.conflictEditorClosed = !(await own.isVisible('.savebar'));
+await own.screenshot({ path: path.join(root, 'test/shot-13-paact-owner.png'), fullPage: true });
+
+// 7. The Access screen offers "every client" only to your own firm's staff.
+await own.click('button:has-text("Access")');
+await own.waitForTimeout(500);
+results.ownerSeesEveryClientBox = await own.isVisible('.teamcheck');
+await own.click('.modal button:has-text("Close")');
+
+// 8. Every other section switched on from Settings before it has content:
+//    the plan and findings are still {} in the database, and nothing may crash.
+const errsBefore = errs.length;
+await own.click('button:has-text("Settings")');
+await own.waitForTimeout(400);
+for (const box of await own.$$('.setsections input[type="checkbox"]:not(:checked)')) await box.click();
+await own.click('button:has-text("Save settings")');
+await own.waitForTimeout(800);
+results.allSectionsTabs = await own.$$eval('.railnav .rn-t', (n) => n.length);
+results.allSectionsSaved = JSON.stringify(paactRow.sections);
+results.emptySectionsRendered = [];
+for (const name of ['The plan', 'Findings', 'Workplan', 'Dashboard', 'Scope & timeline']) {
+  await own.click(`.railnav button:has-text("${name}")`);
+  await own.waitForTimeout(400);
+  if (await own.isVisible('.shead h2')) results.emptySectionsRendered.push(name);
+}
+results.emptySectionsErrors = errs.slice(errsBefore);
+paactRow.sections = ['scope']; // back to one section for the phone checks below
+paactRow.updated_at = stamp();
+
+/* -- Good Work's own staff ("*") reach more than one portal: the front door
+      lets them choose rather than guessing. */
+const gw = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+gw.on('pageerror', (e) => errs.push('GW ' + e.message));
+await gw.goto(`http://127.0.0.1:${WEB_PORT}/`, { waitUntil: 'networkidle' });
+await signIn(gw, ALAN.email);
+await gw.waitForSelector('.portalpick', { timeout: 10000 }).catch(() => {});
+results.gwPicker = await gw.$$eval('.portalpick strong', (n) => n.map((x) => x.textContent.trim()));
+await gw.close();
 
 /* ---- the theme toggle, on /demo ----
    Checked here and not on /paact: the toggle is suppressed only on a MIXED
@@ -486,19 +726,11 @@ if (themeBtn) {
   });
 }
 
-/* The bare root, before anything else touches this context. */
-const rootPage = await browser.newPage({ viewport: { width: 1200, height: 800 } });
-await rootPage.goto(`http://127.0.0.1:${WEB_PORT}/`, { waitUntil: 'networkidle' });
-await rootPage.waitForTimeout(900);
-results.rootPath = await rootPage.evaluate(() => location.pathname);
-results.rootBrand = (await rootPage.textContent('.brand-name').catch(() => '')) || '';
-await rootPage.close();
-
 const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+phone.on('pageerror', (e) => errs.push('PHONE ' + e.message));
 await phone.goto(`http://127.0.0.1:${WEB_PORT}/demo`, { waitUntil: 'networkidle' });
 await phone.waitForTimeout(500);
 results.phoneHScroll = await phone.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
-/* A sticky header that eats the phone is a bug even when nothing overlaps. */
 /* The banner lost its text once to a cascade collision and showed a bare
    "DEMO" chip, so assert it actually says something at this width. */
 results.phoneBannerText = await phone.evaluate(
@@ -506,9 +738,11 @@ results.phoneBannerText = await phone.evaluate(
 );
 /* A QR CODE ON A SLIDE MAKES THE PHONE THE PRIMARY SURFACE, so these are not
    "does it survive at 390px" checks — this is the first screen a client ever
-   sees. The header was 23% of the viewport, most of it the registered name
-   wrapping to two lines of display type while the engagement was hidden. */
+   sees: the sign-in, then their timeline. */
 await phone.goto(`http://127.0.0.1:${WEB_PORT}/paact`, { waitUntil: 'networkidle' });
+results.phoneSignInHScroll = await phone.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+await signIn(phone, SHAWNELL.email);
+await phone.waitForSelector('.masthead', { timeout: 10000 });
 await phone.waitForTimeout(900);
 /* innerText, not textContent: the parenthetical is hidden with display:none
    rather than removed, so textContent still reports it and an assertion
@@ -526,19 +760,70 @@ results.phonePaactHeaderPct = await phone.evaluate(() => {
   const el = document.querySelector('.topbar');
   return el ? Math.round((el.getBoundingClientRect().height / window.innerHeight) * 100) : -1;
 });
+results.phonePaactHScroll = await phone.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
 await phone.screenshot({ path: path.join(root, 'test/shot-12-phone-paact.png') });
 await phone.goto(`http://127.0.0.1:${WEB_PORT}/demo`, { waitUntil: 'networkidle' });
 await phone.waitForTimeout(600);
-
 results.phoneHeaderPctOfScreen = await phone.evaluate(() => {
   const el = document.querySelector('.topbar');
   if (!el) return -1; // no header on this screen: the assertion below catches it
   return Math.round((el.getBoundingClientRect().height / window.innerHeight) * 100);
 });
 
+/* An owner editing on a phone: the editor's rows have to fit 390px too. */
+const phoneOwner = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+phoneOwner.on('pageerror', (e) => errs.push('PHONE OWNER ' + e.message));
+await phoneOwner.goto(`http://127.0.0.1:${WEB_PORT}/paact`, { waitUntil: 'networkidle' });
+await signIn(phoneOwner, GINA.email);
+await phoneOwner.waitForSelector('.masthead', { timeout: 10000 });
+await phoneOwner.waitForTimeout(700);
+results.phoneTickHeights = await phoneOwner.$$eval('.pc-card.is-open .pc-tick',
+  (els) => els.map((e) => Math.round(e.getBoundingClientRect().height)).filter((h) => h < 40));
+await phoneOwner.click('.subnav button:has-text("Scope")');
+await phoneOwner.waitForTimeout(300);
+await phoneOwner.click('.subnav button:has-text("Edit scope")');
+await phoneOwner.waitForTimeout(500);
+results.phoneEditorHScroll = await phoneOwner.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+await phoneOwner.screenshot({ path: path.join(root, 'test/shot-14-phone-editor.png'), fullPage: false });
+await phoneOwner.click('.savebar button:has-text("Discard")');
+await phoneOwner.close();
+
+/* ---- no database at all: the file fallback --------------------------------
+   A deploy with no Supabase project still serves /paact, from its file, to
+   anyone, read-only — the address on the slide worked before the database
+   existed and must not break if it is ever switched off. And the bare root
+   says /demo in the address bar rather than showing a client's name at "/". */
+console.log('building with no project configured…');
+execSync('npx vite build --outDir dist-file --emptyOutDir', {
+  cwd: root,
+  stdio: 'pipe',
+  env: { ...process.env, VITE_SUPABASE_URL: '', VITE_SUPABASE_ANON_KEY: '' },
+});
+const web2 = serve(path.join(root, 'dist-file'));
+await new Promise((r) => web2.listen(WEB_PORT_FILE, r));
+const fb = await browser.newPage({ viewport: { width: 1320, height: 1050 } });
+fb.on('pageerror', (e) => errs.push('FALLBACK ' + e.message));
+const fbCalls = [];
+fb.on('request', (r) => { if (/\/(rest|auth)\/v1\//.test(r.url())) fbCalls.push(r.method() + ' ' + r.url()); });
+await fb.goto(`http://127.0.0.1:${WEB_PORT_FILE}/paact`, { waitUntil: 'networkidle' });
+await fb.waitForTimeout(800);
+results.fallbackOpens = await fb.isVisible('.masthead');
+results.fallbackPath = await fb.evaluate(() => location.pathname);
+results.fallbackRoleWord = (await fb.evaluate(() => document.querySelector('.mast-right .eyebrow')?.textContent || '')) || '';
+results.fallbackEditControls = await editButtons(fb);
+results.fallbackTickControls = await fb.$$eval('.pc-tick, .pc-statusrow', (n) => n.length);
+results.fallbackPhases = await fb.$$eval('.pc-card', (n) => n.length);
+results.fallbackSections = await fb.$$eval('.railnav .rn-t', (n) => n.length);
+await fb.goto(`http://127.0.0.1:${WEB_PORT_FILE}/`, { waitUntil: 'networkidle' });
+await fb.waitForTimeout(800);
+results.rootPath = await fb.evaluate(() => location.pathname);
+results.rootBrand = (await fb.textContent('.brand-name').catch(() => '')) || '';
+results.fallbackCalls = fbCalls.slice(0, 3);
+
 await browser.close();
 api.close();
 web.close();
+web2.close();
 
 console.log(JSON.stringify(results, null, 1));
 console.log('\npage errors:', errs.length ? errs : 'none');
@@ -576,12 +861,6 @@ if (!/Strategic Plan/.test(results.phoneSub || ''))
   failures.push('the engagement name is hidden on a phone: ' + JSON.stringify(results.phoneSub));
 if (results.phoneSmallTargets?.length)
   failures.push(`${results.phoneSmallTargets.length} nav targets are under 40px on a phone: ` + JSON.stringify(results.phoneSmallTargets));
-/* The site root falls back to the demo. It must SAY so in the address bar: a
-   QR code pointing at the root would otherwise put a whole room in front of
-   another client's plan under that client's name, which is exactly how this
-   was found. */
-if (results.rootBrand && !/^\/[a-z0-9-]+\b/.test(results.rootPath || ''))
-  failures.push(`the site root rendered "${results.rootBrand}" at ${JSON.stringify(results.rootPath)} — a portal whose URL does not say whose content it is`);
 if (!results.demoSkipsSignIn) failures.push('demo asked for a sign-in');
 if (results.demoBanner !== 'Demo') failures.push('demo banner missing');
 if (results.demoSections !== 5) failures.push('demo did not render all five sections');
@@ -604,8 +883,10 @@ if (!results.editorClosedOnSave) failures.push('the editor stayed open after sav
 if (!/Northside/.test(results.demoClient || '')) failures.push('demo is not showing the anonymised client');
 if (!results.demoInteractive) failures.push('demo workplan is not interactive');
 if (!results.demoTouchedNoDatabase) failures.push('demo hit the database: ' + results.demoRestCalls.join(', '));
-/* ---- /paact: a real client portal ---- */
-if (!results.paactSkipsSignIn) failures.push('/paact asked for a sign-in — the client cannot open it');
+/* ---- /paact, from the database ---- */
+if (!results.paactAsksSignIn) failures.push('/paact opened without a sign-in on a deploy with a database');
+if (!/^\/paact\/scope\/timeline$/.test(results.paactPath || ''))
+  failures.push('after signing in, /paact landed on ' + JSON.stringify(results.paactPath));
 if (!/PAACT/.test(results.paactClient || ''))
   failures.push('/paact is not showing PAACT: ' + JSON.stringify(results.paactClient));
 if (/\bdemo\b/i.test(results.paactTopbarText || ''))
@@ -617,14 +898,14 @@ if (!/scope|timeline/i.test(results.paactOpensOn || ''))
    content in it. */
 if (results.paactSectionTabs?.length !== 1)
   failures.push(`/paact shows ${results.paactSectionTabs?.length} sections; only Scope & timeline has content yet: ` + JSON.stringify(results.paactSectionTabs));
-if (results.paactEditControls?.length)
-  failures.push('/paact offers edit controls that cannot save — anyone holding the link is handed them: ' + results.paactEditControls.join(', '));
-if (!/view only/i.test(results.paactRoleWord || ''))
-  failures.push('/paact does not say it is view-only: ' + JSON.stringify(results.paactRoleWord));
 if (results.paactHasBar)
   failures.push('/paact still renders a sample/demo bar, but it carries nothing borrowed to disclaim');
 if (!results.paactThemeToggle)
   failures.push('the theme toggle is hidden on /paact; it is only suppressed where the theme carries information, and nothing is borrowed here');
+if (!/board/i.test(results.boardRoleWord || ''))
+  failures.push('a read-only account is not told it is read-only: ' + JSON.stringify(results.boardRoleWord));
+if (results.boardEditControls?.length || results.boardTickControls)
+  failures.push('a read-only account is offered edits: ' + JSON.stringify(results.boardEditControls) + ` and ${results.boardTickControls} tick/status controls`);
 if (results.paactPhasesShown !== 5)
   failures.push(`only ${results.paactPhasesShown} of 5 PAACT phases are on screen`);
 if (!results.paactShowsRealProgress)
@@ -639,6 +920,10 @@ if (results.overrunBars !== 1)
   failures.push(`${results.overrunBars} bars are drawn open-ended; phase 5 runs past the axis and exactly one should be`);
 if (results.paactTeamNames !== 4)
   failures.push(`only ${results.paactTeamNames} of 4 named people appear on the Team tab`);
+if (/\b0 of 0\b/.test(results.paactRail || '') || !/delivered/.test(results.paactRail || ''))
+  failures.push('the rail reports a workplan PAACT does not have, instead of the phase it is in: ' + JSON.stringify(results.paactRail));
+if (results.paactEmptyOwnersPanel)
+  failures.push('the Team tab shows an "Owners in the workplan" panel on a portal with no workplan');
 if (results.paactKeyDatesShown !== 3)
   failures.push(`only ${results.paactKeyDatesShown} of 3 checked key dates appear on Scope & cadence`);
 if (!results.paactCadenceShown) failures.push('the working cadence (owner and rhythm) is missing');
@@ -650,15 +935,70 @@ if (results.portalLeaks?.length)
   failures.push("/paact CARRIES ANOTHER ENGAGEMENT'S CONTENT: " + results.portalLeaks.join(', '));
 if (results.shortYears?.length)
   failures.push('two-digit years, unreadable across a three-year engagement: ' + results.shortYears.join(', '));
-if (!results.paactTouchedNoDatabase) failures.push('/paact hit the database: ' + results.paactRestCalls.join(', '));
+if (!results.paactUnchangedByReading) failures.push('a read-only visit changed the stored document');
+if (!/no account for that address/i.test(results.strangerRefused || '') || results.strangerGotCodeBox)
+  failures.push('an address with no account was not refused at the code step: ' + JSON.stringify(results.strangerRefused));
+/* ---- the team, editing ---- */
+if (!results.frontDoorAsksSignIn) failures.push('the front door did not ask for a sign-in');
+if (results.frontDoorLandsOn !== '/paact/scope/timeline')
+  failures.push('an account with one portal was not taken straight to it from the front door: ' + JSON.stringify(results.frontDoorLandsOn));
+if (!/owner/i.test(results.ownerRoleWord || '')) failures.push('the owner is not shown as an owner: ' + JSON.stringify(results.ownerRoleWord));
+if (JSON.stringify(results.ownerEditControls) !== JSON.stringify(['Edit timeline', 'Access', 'Settings']))
+  failures.push('the owner\'s controls on section 01 are wrong (no Edit plan where there is no plan): ' + JSON.stringify(results.ownerEditControls));
+if (!results.ownerTickControls) failures.push('an owner cannot tick a deliverable on the timeline');
+if (JSON.stringify(results.tickSaves) !== '["saved"]')
+  failures.push('a tick was not saved exactly once, guarded by the version it read: ' + JSON.stringify(results.tickSaves));
+if (!results.tickInDatabase) failures.push('the ticked deliverable is not ticked in the database');
+if (JSON.stringify(results.raceSaves) !== '["stale","saved"]')
+  failures.push('a tick that lost a race was not replayed onto the newer version: ' + JSON.stringify(results.raceSaves));
+if (!results.raceKeptMine || !results.raceKeptTheirs)
+  failures.push(`TWO PEOPLE TICKING AT ONCE LOST ONE TICK — mine kept: ${results.raceKeptMine}, theirs kept: ${results.raceKeptTheirs}`);
+if (!results.raceShowsTheirs) failures.push("after the collision, the screen does not show the other person's tick");
+if (!results.statusSaved) failures.push("a phase's status set from the card was not saved");
+if (results.editorPhases !== 5) failures.push(`the editor shows ${results.editorPhases} phases, not 5`);
+if (JSON.stringify(results.editorSaves) !== '["stale","saved"]')
+  failures.push('the editor did not merge onto the newer version: ' + JSON.stringify(results.editorSaves));
+if (!results.editorKeptMine) failures.push("the editor's own changes (a renamed phase, a new deliverable, a new key date) were not all saved");
+if (!results.editorKeptTheirs) failures.push("SAVING THE EDITOR WIPED A COLLEAGUE'S TICK made while it was open");
+if (!results.editorKeptEarlierTicks) failures.push('saving the editor undid an earlier tick');
+if (!results.editorClosedOnSave) failures.push('the section 01 editor stayed open after saving');
+if (!/Saved/.test(results.editorToast || '')) failures.push('no confirmation after saving: ' + JSON.stringify(results.editorToast));
+if (!/Foundation ends before it starts/.test(results.validationText || '') || !results.validationWroteNothing)
+  failures.push('an end date before the start was not stopped before saving: ' + JSON.stringify(results.validationText));
+if (!/Phase 2, Discovery — end date/.test(results.conflictText || ''))
+  failures.push('two people changing the same date was not put to the editor in words: ' + JSON.stringify(results.conflictText));
+if (!results.conflictHeldBack) failures.push('the conflicting save was written before anyone chose');
+if (!results.conflictKeptMine || !results.conflictEditorClosed) failures.push('"Keep mine" did not save the editor\'s version');
+if (results.allSectionsTabs !== 5 || results.emptySectionsRendered?.length !== 5 || results.emptySectionsErrors?.length)
+  failures.push(`switching every section on before it has content broke something: ${results.allSectionsTabs} tabs, rendered ${JSON.stringify(results.emptySectionsRendered)}, errors ${JSON.stringify(results.emptySectionsErrors)}`);
+if (results.ownerSeesEveryClientBox)
+  failures.push('an owner who is not your own firm is offered the box that grants access to every client');
+if (JSON.stringify((results.gwPicker || []).slice().sort()) !== JSON.stringify([P.client.name, PAACT_FILE.client.name].sort()))
+  failures.push('your own staff at the front door did not get a choice of portals: ' + JSON.stringify(results.gwPicker));
+if (results.phoneTickHeights?.length) failures.push('deliverable ticks are under 40px tall on a phone: ' + JSON.stringify(results.phoneTickHeights));
+if (results.phoneEditorHScroll) failures.push('the section 01 editor scrolls sideways on a phone');
+if (results.phoneSignInHScroll || results.phonePaactHScroll) failures.push('the sign-in or the client portal scrolls sideways on a phone');
+/* ---- no database: the file fallback ---- */
+if (!results.fallbackOpens) failures.push('with no database, /paact asked for a sign-in or failed to open');
+if (results.fallbackPath !== '/paact/scope/timeline') failures.push('the fallback /paact landed on ' + JSON.stringify(results.fallbackPath));
+if (!/view only/i.test(results.fallbackRoleWord || '')) failures.push('the fallback does not say it is view-only: ' + JSON.stringify(results.fallbackRoleWord));
+if (results.fallbackEditControls?.length || results.fallbackTickControls)
+  failures.push('the fallback offers edits it cannot save: ' + JSON.stringify(results.fallbackEditControls));
+if (results.fallbackPhases !== 5 || results.fallbackSections !== 1)
+  failures.push(`the fallback shows ${results.fallbackPhases} phases and ${results.fallbackSections} sections`);
+if (results.fallbackCalls?.length) failures.push('the no-database build called a database: ' + results.fallbackCalls.join(', '));
 if (!results.themeToggleFound) failures.push('no theme toggle was found on /demo');
 if (results.themeToggleFound && !results.themeFlipped) failures.push('the theme toggle did not change the theme');
 if (results.themeToggleFound && !results.themeWipeClassCleared)
   failures.push('the wipe left .theme-wipe on <html> — every transition on the page is now dead');
 if (results.themeToggleFound && !/=(light|dark)\b/.test(results.themeStorage || ''))
   failures.push('the theme choice was not persisted. localStorage holds: ' + JSON.stringify(results.themeStorage));
-if (results.rootBrand && !/^\/[a-z0-9-]+\b/.test(results.rootPath || ''))
-  failures.push(`the site root rendered "${results.rootBrand}" at ${JSON.stringify(results.rootPath)} — a portal whose URL does not say whose content it is`);
+/* With no database, the site root falls back to the demo. It must SAY so in
+   the address bar: a QR code pointing at the root would otherwise put a whole
+   room in front of another client's plan under that client's name, which is
+   exactly how this was found. */
+if (!/^\/demo\b/.test(results.rootPath || '') || !/Northside/.test(results.rootBrand || ''))
+  failures.push(`with no database, the site root rendered "${results.rootBrand}" at ${JSON.stringify(results.rootPath)} — it should be the demo, at /demo`);
 
 if (errs.length) failures.push('page errors: ' + errs.join(' | '));
 

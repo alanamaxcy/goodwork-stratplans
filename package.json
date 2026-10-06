@@ -10,12 +10,14 @@
     "preview": "vite preview --port 4173",
     "seed": "node supabase/seed.mjs",
     "demo:build": "node scripts/make-demo.mjs",
+    "client-sql": "node scripts/client-sql.mjs",
     "test:plan": "node test/plan-edit.mjs",
+    "test:engagement": "node test/engagement.mjs",
     "test:team": "node test/team-fn.mjs",
     "test:smoke": "node test/smoke.mjs",
     "test:seed": "node test/seed.mjs",
     "test:rls": "supabase/test-rls.sh",
-    "verify": "npm run demo:build && npm run test:plan && npm run test:team && npm run test:smoke && npm run test:seed && npm run test:rls"
+    "verify": "npm run demo:build && npm run client-sql -- paact && npm run test:plan && npm run test:engagement && npm run test:team && npm run test:smoke && npm run test:seed && npm run test:rls"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.116.0",

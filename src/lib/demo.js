@@ -1,21 +1,21 @@
 /* File-backed portals.
-   A portal anyone can open with no account and no database, so the product can
-   be shown to a prospect, a board, or a client team without provisioning
-   anything. Two of them today:
+   A portal served from a file in this repo rather than from the database:
+   no account, no sign-in, and nothing an edit could be saved to.
 
      /demo    the anonymised sample portal — every section is illustrative.
-     /paact   the PAACT engagement. Scope & timeline is that engagement's own
-              content; the other four sections carry the anonymised sample, so
-              the client can see the shape of what is coming. Which is which is
-              declared, not implied: see `sampleSections` below.
+              Always from its file, configured or not: it is public by design,
+              and its banner says nothing is saved.
+     /paact   the PAACT engagement's own content, from clients/paact/plan.js —
+              but ONLY on a deploy with no Supabase project. Once a project is
+              configured, /paact is the database portal its team signs in to
+              and edits, and this file is what supabase/clients/paact.sql was
+              generated from. The file copy is the read-only fallback that kept
+              the address working before the database existed.
 
-   It is the same application in both: the same five sections, the same
-   scoping, the same workplan interactions. Only the store is different. Edits
-   live in memory and vanish on reload, which the banner says plainly rather
-   than letting someone believe they saved something.
+   A deploy with no Supabase project at all falls back to /demo for every other
+   slug, so a fresh Netlify site shows the product instead of an error. */
 
-   /demo is also the fallback for a deploy with no Supabase project configured,
-   so a fresh Netlify site shows the product instead of an error. */
+import { engagementOfFile } from './engagement.js';
 
 export const DEMO_SLUG = 'demo';
 export const PAACT_SLUG = 'paact';
@@ -24,10 +24,8 @@ export const PAACT_SLUG = 'paact';
 const ALL = ['scope', 'plan', 'findings', 'workplan', 'dashboard'];
 
 /* ---------- the shared shape ----------
-   One place where a data file becomes the portal record the app reads.
-   supabase/seed.mjs writes the same { phases, scope, firm } object into the
-   `engagement` jsonb, so a portal that moves to the database keeps this shape
-   rather than needing a second adapter. */
+   One place where a data file becomes the portal record the app reads — the
+   same fields a database row carries, so every section renders either. */
 
 function filePortal({ id, slug, client, engagement, plan, findings, sections, sampleSections, sampleClient }) {
   return {
@@ -117,12 +115,11 @@ export async function loadDemo() {
   return { portal, tasks: fileTasks(PORTAL.tasks), now: PORTAL.today, role: DEMO_ROLE };
 }
 
-/* ---------- /paact ----------
-   Real engagement, real names, and a kickoff in the room. Section 1 is PAACT's
-   own scope and timeline, from clients/paact/plan.js. It carries no other
-   anonymised sample above, because PAACT has no plan, findings or workplan yet
-   — they are the OUTPUT of the engagement section 1 describes. Three chunks so
-   a database-backed portal still pays for none of it. */
+/* ---------- /paact, when there is no database ----------
+   The engagement's own content, read-only. It carries no plan, findings or
+   workplan, because PAACT has none yet — they are the OUTPUT of the engagement
+   section 1 describes — and each is switched on from Settings on the day it
+   has something in it. */
 export async function loadPaact() {
   const { PORTAL: PAACT } = await import('../../clients/paact/plan.js');
 
@@ -130,105 +127,40 @@ export async function loadPaact() {
     id: 'paact',
     slug: PAACT_SLUG,
     client: PAACT.client,
-    engagement: paactEngagement(PAACT),
-    /* NOTHING BORROWED. This portal used to fill its other four sections with
-       another engagement's anonymised plan, findings and workplan, marked as
-       samples, so the client could see the shape of what was coming. It did
-       that job and it is over: the sample is somebody else's content, and the
-       moment a portal is the client's real workspace rather than a pitch, a
-       page of another organisation's priorities under their masthead is a
-       liability with no upside. */
+    /* The same canonical document the database holds, so the fallback and
+       the live portal render from one shape. */
+    engagement: engagementOfFile(PAACT),
     plan: { vision: '', framing: '', priorities: [], track: null },
     findings: { themes: [], responses: [] },
-    /* ONE SECTION, because one section is what exists. The plan, the findings
-       and the workplan are OUTPUTS of the engagement section one describes —
-       the findings close in November, the plan is drafted in January, the
-       implementation roadmap is a phase 4 deliverable. Each is switched on from
-       Settings on the day it has something in it. An empty tab a client clicks
-       into and finds nothing in is worse than a tab that is not there yet. */
     sections: ['scope'],
   });
 
-  /* No pinned clock: `now: null` and App.jsx reads the real local date. This
-     workspace is contract deliverable #4 and PAACT runs their plan in it for
-     seventeen months, so a frozen date is not a snapshot — it is a sentence
-     that is wrong every day after the one it was written on. */
-  /* READ-ONLY, not owner. A file-backed portal has nowhere to save to, and
-     this one's address was printed as a QR code on a slide: everybody who
-     scanned it was handed "Owner · full access", an Edit plan button and
-     Settings — and every change they made vanished on reload without a word.
-     Offering edits that are silently thrown away is worse than not offering
-     them. It becomes editable when it is served from the database, where an
-     owner is a signed-in person rather than anyone holding the link. /demo
-     keeps owner on purpose: its whole point is "everything works, nothing is
-     saved", and its banner says so. */
+  /* No pinned clock: `now: null`, and App.jsx reads the real local date.
+     READ-ONLY, not owner: a file has nowhere to save to, and this address was
+     printed as a QR code, so whoever scanned it would otherwise be handed edit
+     controls whose every change vanished on reload. */
   return { portal, tasks: [], now: null, role: 'viewer' };
 }
 
-/* The brief's vocabulary -> the app's, in one function, so
-   clients/paact/plan.js can stay the brief verbatim and can be pushed into the
-   Supabase `engagement` jsonb without a second translation to keep in step.
-   Nothing here adds a fact; it renames and derives. */
-const PHASE_STATUS = { in_progress: 'active', complete: 'done', done: 'done', not_started: '' };
-
-function paactEngagement(src) {
-  const phases = (src.phases || []).map((p) => ({
-    ...p,
-    /* Panel state key and React list key. Derived from the phase number rather
-       than the array index, because Phase 4's dates are expected to move and an
-       index key would reopen the wrong panel when the order changes. */
-    id: `p${p.number}`,
-    n: p.number, // the strip and the rail print "Phase {n}"
-    blurb: p.purpose, // display alias; `purpose` stays beside it
-    /* 'active' is the only "you are here" the app knows, and '' is how it
-       spells not-started. Left unmapped, no phase is active and the portal
-       tells the room the engagement is in its final phase. */
-    status: PHASE_STATUS[p.status] || '',
-  }));
-
-  const scope = { ...(src.scope || {}) };
-
-  /* Display aliases for the cadence panel's two-line rows. The brief gives a
-     rhythm, an activity and an owner, and no dates — there is no next
-     occurrence to print, so none is invented. */
-  scope.cadence = (src.scope?.cadence || []).map((c) => ({
-    ...c,
-    label: c.rhythm,
-    detail: c.owner ? `${c.what} · ${c.owner}` : c.what,
-  }));
-
-  /* One flat list beside the three real groups, for a panel that expects a
-     single `team` array. `side` is explicit: the older panel inferred
-     consultant-vs-client by matching the org string against the firm name,
-     which files Alan — HTI team, different org name — with the client. */
-  scope.team = [
-    ...(src.scope?.consultingTeam || []).map((m) => ({ ...m, side: 'Consultant' })),
-    ...(src.scope?.clientTeam || []).map((m) => ({ ...m, side: 'Client' })),
-  ];
-
-  /* convener, location, planHorizon and the engagement dates ride alongside
-     phases/scope/firm, which is where the rail and masthead look. */
-  return { phases, scope, firm: src.firm, ...(src.meta || {}) };
-}
-
 /* ---------- the registry ----------
-   Which slugs the app can serve from files. App.jsx consults this before the
-   database, so a future database portal whose slug is literally 'paact' would
-   be shadowed by the file: when PAACT moves to Supabase, delete the entry and
-   seed clients/paact/plan.js instead. */
+   Which slugs the app can serve from files, and when. */
 export const FILE_PORTALS = {
   [DEMO_SLUG]: loadDemo,
   [PAACT_SLUG]: loadPaact,
 };
 
-/* The file-backed portal that serves this slug, or null if none does.
-   `unconfigured: true` — a deploy with no Supabase project — makes /demo the
-   answer for every slug, which is how a fresh Netlify site shows the product
-   instead of an error. */
+/* The file-backed portal that serves this slug, or null if the database does.
+
+   /demo always comes from its file. Everything else comes from the database
+   whenever one is configured — including /paact, whose file is only the
+   fallback for a deploy with no project. Without a project (`unconfigured`),
+   a slug with a file of its own gets it, and every other slug gets /demo,
+   which is how a fresh Netlify site shows the product instead of an error. */
 export function fileBackedSlug(slug, { unconfigured = false } = {}) {
   const s = String(slug || '').toLowerCase();
-  if (Object.prototype.hasOwnProperty.call(FILE_PORTALS, s)) return s;
-  return unconfigured ? DEMO_SLUG : null;
+  if (s === DEMO_SLUG) return DEMO_SLUG;
+  if (!unconfigured) return null;
+  return Object.prototype.hasOwnProperty.call(FILE_PORTALS, s) ? s : DEMO_SLUG;
 }
 
 /* Load one. Resolves to { portal, tasks, now, role }, or to null when no file

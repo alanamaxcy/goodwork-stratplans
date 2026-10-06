@@ -26,8 +26,8 @@ replaces the organisation, the neighbourhood and every named person, keeps the
 analysis intact, and **refuses to write the files if anything identifying
 survives**. CI regenerates them and fails if they drift.
 
-The real `data/plan.js` and `data/findings.js` stay put, for seeding that
-client's own portal behind sign-in.
+Each client's real content lives in its own folder, `clients/<slug>/`, for
+setting up that client's portal behind sign-in.
 
 ```bash
 npm run demo:build         # regenerate after changing the source data
@@ -41,8 +41,12 @@ cp .env.example .env          # fill in the two public Supabase values
 npm run dev                   # http://localhost:5173/resonate
 ```
 
-Without a Supabase project configured the app says so plainly rather than
-failing; with one, it goes straight to the sign-in screen.
+Without a Supabase project configured the app falls back to `/demo`; with one,
+`/` is the front door — sign in, and it takes you to your portal, or lets you
+choose if your account reaches more than one.
+
+**Putting a client live** is a short checklist with no terminal in it:
+[docs/GO-LIVE.md](docs/GO-LIVE.md), written for PAACT.
 
 ## The five sections
 
@@ -102,6 +106,26 @@ work. Two rules keep it honest:
 
 Save refuses outright if the result would leave any task without an initiative.
 
+## Editing section 01
+
+Scope & timeline is one document (`portals.engagement`), edited by a portal's
+owners in two ways:
+
+- **On the timeline itself:** tick a deliverable, or set where a phase stands.
+  Saved as you click.
+- **Edit timeline / Edit scope / Edit team:** the same three tabs as fields.
+  Held as a draft until Save.
+
+Several people edit it at once, so every save names the version it was built
+on and the database applies it only if nothing has changed since
+(`lib/engagementSync.js`). When somebody else saved first, a tick is replayed
+onto their version, and an editor draft is merged three ways
+(`lib/engagement.js`): anything only one person changed is kept, and only when
+two people changed the *same* thing is the second asked which to keep. Every
+row carries an id, so "Gina ticked one deliverable" and "Alan renamed another"
+are told apart by identity rather than by position. Open screens hear about
+each other's saves through realtime, and re-read whenever the tab is looked at.
+
 `Settings` covers who the portal is for, **what this client calls things**, which
 sections appear, and one accent colour.
 
@@ -112,7 +136,7 @@ member of the next:
 
 | Role | Reads | Writes |
 |---|---|---|
-| `owner` | everything | the plan document and the workplan |
+| `owner` | everything | everything: section 01, the plan, the workplan, settings, access |
 | `staff` | everything | the workplan |
 | `board` | everything | nothing |
 
@@ -144,7 +168,10 @@ tagged `*` to see the client list and still be `board` on a given engagement.
 creates the account, tags `gw_role` and `gw_tenant`, and adds the membership
 row. Then send them the portal link — they sign in with an emailed code.
 
-Tick *they work for your firm* to tag them `*` instead of this client's tenant.
+The box that tags someone `*` instead of this client's tenant is shown only to
+people who are `*` themselves, and the function refuses it from anyone else: a
+client's own owner can add people to *their* portal, never hand out access to
+every client.
 
 The list flags **tag mismatches**, which is the failure worth knowing about: the
 account exists, the membership row exists, and RLS still returns nothing because
@@ -167,16 +194,21 @@ a search result is its own breach of trust.
 ## Setting up a new client
 
 1. Run `supabase/schema.sql` once per project (it is idempotent).
-2. Create the person's account in Supabase → Authentication → Users, and tag
-   `app_metadata`: `{ "gw_role": "staff", "gw_tenant": "<slug>" }`
-   (Good Work's own accounts get `"gw_tenant": "*"`.)
-3. Edit the four values at the top of `supabase/bootstrap.sql` and run it in
-   the SQL editor. It creates the portal and makes you its owner.
-4. Load the content as yourself — you will be emailed a code:
+2. Put the client's scope and timeline in `clients/<slug>/plan.js` and generate
+   its one-paste setup:
    ```bash
-   npm run seed -- --slug agape
+   npm run client-sql -- agape    # writes supabase/clients/agape.sql
    ```
-5. Send them `https://plans.example.org/agape`.
+3. Run that file in the SQL editor. It creates the portal with section 01
+   filled in and makes you its owner; run again, it changes nothing — edits
+   made in the app since are never overwritten. CI fails if the SQL and the
+   client file disagree.
+4. Sign in at the site root and add everyone else from **Access**.
+
+A client with an existing plan, findings and workplan to import (a migration,
+not a new engagement) can still use `supabase/bootstrap.sql` and then
+`npm run seed -- --slug agape`, which loads all of it as you.
+`docs/GO-LIVE.md` is the same list for PAACT, in plain words.
 
 **No service-role key anywhere.** Creating the first portal is the one write RLS
 is built to refuse — there is no owner yet — so it happens in the SQL editor,
@@ -188,8 +220,9 @@ Once the plan editor lands (milestone 2), steps 3 and 4 become a form.
 ## Tests
 
 ```bash
-npm run verify             # all three
+npm run verify             # all of them
 npm run test:plan          # renumbering and task migration, no browser
+npm run test:engagement    # section 01's edits, and two people saving at once
 npm run test:team          # every refusal the access function makes itself
 npm run test:smoke         # builds, then drives the real app in Chromium
 npm run test:seed          # seeding works with no service-role key
@@ -199,7 +232,11 @@ npm run test:rls           # the permission boundary, on a throwaway Postgres
 `smoke.mjs` stands up a stub that speaks Supabase's REST and auth surface, then
 signs in for real, renders all five sections from that data, expands subtasks,
 advances a status and asserts the write reached the server with the right column
-shape — plus that a portal this account cannot reach renders nothing.
+shape — plus that a portal this account cannot reach renders nothing. On /paact
+it signs in as a read-only client and as an HTI owner from the front door, ticks
+deliverables while "someone else" saves in between, saves the editor through a
+collision, and checks that every edit survived. It then builds again with no
+project configured and checks the read-only file fallback.
 
 `test-rls.sh` is the one that matters. It applies the schema twice (proving it is
 idempotent), then signs in as Good Work, client staff, a board member and an
@@ -242,6 +279,14 @@ visibility only.
 **One service-role key.** It opens both apps' data. It lives on the Netlify
 site and nowhere else — see `netlify/functions/team.mjs`.
 
+**One account is an account in both apps.** Somebody added here (an HTI
+colleague, a client's board member) can sign in to any Impact Suite site that
+has `SUPABASE_URL` set but no `GW_TENANT` — that check is opt-in per site over
+there. Every Impact Suite site using this project must have `GW_TENANT` set.
+To keep the worst case small regardless, every account this portal creates is
+`gw_role: "viewer"`, the lowest tier the Impact Suite knows; the role that
+matters here is `portal_members.role`.
+
 ### Separating later
 
 Cheap, if nothing new couples the two. The migration is:
@@ -262,15 +307,16 @@ it — read across the boundary through an API, never through the database.
 
 ## Still to build
 
-1. **Creating a portal in the app.** Still `supabase/bootstrap.sql` then
-   `npm run seed`. Labels, visible sections and branding are editable in
-   Settings once a portal exists — bringing a new client aboard is the last
-   step that needs a terminal.
-2. **Adding and deleting tasks in the workplan.** `newTask` and `nextTaskId`
+1. **Creating a portal in the app.** Still a generated
+   `supabase/clients/<slug>.sql`, pasted into the SQL editor. Labels, visible
+   sections and branding are editable in Settings once a portal exists.
+2. **No history for section 01.** The workplan records who changed what
+   (`task_events`); the engagement document does not, yet.
+3. **Adding and deleting tasks in the workplan.** `newTask` and `nextTaskId`
    are in `src/lib/planEdit.js` and covered by tests; no UI calls them yet, so
    the task list can be re-ordered and re-homed but not grown.
-3. **Task assignment to real accounts.** `tasks.owner_user_id` exists and
+4. **Task assignment to real accounts.** `tasks.owner_user_id` exists and
    nothing populates it; owners are free text today.
-4. **Due-date reminders.** Port the Impact Suite's `grant-tasks.mjs`.
-5. **The audit trail has no UI.** `task_events` records every field change with
+5. **Due-date reminders.** Port the Impact Suite's `grant-tasks.mjs`.
+6. **The audit trail has no UI.** `task_events` records every field change with
    who and when; nothing shows it yet.
